@@ -5,15 +5,15 @@ from CybORG.Shared.Actions.ConcreteActions.ExploitAction import ExploitAction
 from CybORG.Shared.Enums import OperatingSystemPatch, OperatingSystemType, OperatingSystemDistribution
 from CybORG.Simulator.Host import Host
 from CybORG.Simulator.Process import Process
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 class BlueKeep(ExploitAction):
     def __init__(self, session: int, agent: str, ip_address: IPv4Address, target_session: int):
         super().__init__(session, agent, ip_address, target_session)
 
-    def sim_execute(self, state: State) -> Observation:
-        return self.sim_exploit(state, 3389, 'rdp')
+    def sim_execute(self, environment: Environment) -> Observation:
+        return self.sim_exploit(environment, 3389, 'rdp')
 
     def test_exploit_works(self, target_host: Host, vuln_proc: Process):
         # the exact patches and OS distributions are described here:

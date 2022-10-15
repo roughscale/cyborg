@@ -6,7 +6,7 @@ from CybORG.Shared.Enums import FileType, SessionType, FileVersion, OperatingSys
 from CybORG.Shared.Observation import Observation
 from CybORG.Simulator.File import File
 from CybORG.Simulator.Session import Session
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 class ShellPrivilegeEscalation(ShellAction):
@@ -15,7 +15,7 @@ class ShellPrivilegeEscalation(ShellAction):
         self.target_session = target_session
         self.obs = Observation()
 
-    def sim_execute(self, state: State):
+    def sim_execute(self, environment: Environment):
         pass
 
     def run_web_server(self, session: Session):

@@ -2,7 +2,7 @@
 from CybORG.Shared.Actions.ShellActionsFolder.ShellAction import ShellAction
 from CybORG.Shared.Enums import OperatingSystemType, SessionType
 from CybORG.Shared.Observation import Observation
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 # Call 'ps -o user,uid,pid,ppid,command ax' from a shell or msf shell session
@@ -12,11 +12,11 @@ class ShellPS(ShellAction):
     def __init__(self, session: int, agent: str):
         super().__init__(session=session, agent=agent)
 
-    def sim_execute(self, state: State):
+    def sim_execute(self, environment: Environment):
         obs = Observation()
         obs.set_success(False)
-        if self.session in state.sessions[self.agent]:
-            session = state.sessions[self.agent][self.session]
+        if self.session in environment.sessions[self.agent]:
+            session = environment.sessions[self.agent][self.session]
 
             if session.active:
                 if session.host.os_type != OperatingSystemType.LINUX:
@@ -39,6 +39,6 @@ class ShellPS(ShellAction):
 
                 for user in users:
                     obs.add_user_info(hostid="0", username=user.username, uid=user.uid)
-                state.remove_process(host=session.host.hostname, pid=proc_ps.pid)
+                environment.remove_process(host=session.host.hostname, pid=proc_ps.pid)
 
         return obs

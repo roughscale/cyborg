@@ -30,20 +30,20 @@ from CybORG.Shared.Enums import FileType, AppProtocol
 from CybORG.Shared.Observation import Observation
 from CybORG.Simulator.File import File
 from CybORG.Simulator.Host import Host
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 class LinuxKernelPrivilegeEscalation(ShellPrivilegeEscalation):
     def __init__(self, session: int, agent: str, target_session: int):
         super().__init__(session, agent, target_session)
 
-    def sim_execute(self, state: State):
+    def sim_execute(self, environment: Environment):
         self.obs = Observation()
         self.obs.set_success(False)
-        if self.session not in state.sessions[self.agent]:
+        if self.session not in environment.sessions[self.agent]:
             return self.obs
         # get hosts
-        attacker_session = state.sessions[self.agent][self.session]
+        attacker_session = environment.sessions[self.agent][self.session]
         user = attacker_session.user
         attacker_host = attacker_session.host
 
@@ -78,10 +78,10 @@ class LinuxKernelPrivilegeEscalation(ShellPrivilegeEscalation):
 
         exploit_file = self.copy_files_to_webserver(attacker_session, exploit_file)
 
-        if self.target_session not in state.sessions[self.agent]:
+        if self.target_session not in environment.sessions[self.agent]:
             return self.obs
 
-        target_session = state.sessions[self.agent][self.target_session]
+        target_session = environment.sessions[self.agent][self.target_session]
         if not target_session.active:
             self.obs.set_success(False)
             return self.obs
@@ -133,7 +133,7 @@ class LinuxKernelPrivilegeEscalation(ShellPrivilegeEscalation):
         executed = False
         if executable_file.check_executable(target_session.user) and nc_process is not None:
             if run_file.check_executable(target_session.host.get_user('root')):
-                new_session = state.add_session(user='root', agent=self.agent, host=target_session.host.hostname, parent=None)
+                new_session = environment.add_session(user='root', agent=self.agent, host=target_session.host.hostname, parent=None)
                 self.obs.add_session_info(hostid="hostid1", session_type="shell", timeout=0,
                                           session_id=new_session.ident, agent=self.agent)
                 new_ephemeral_port = target_session.host.get_ephemeral_port()

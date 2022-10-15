@@ -16,3 +16,5 @@ windows_user_host:
   path: windows_user_host_image
 OP_Server:
   path: OP_Server_image
+External:
+  path: external_host_image

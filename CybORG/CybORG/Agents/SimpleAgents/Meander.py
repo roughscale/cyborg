@@ -37,7 +37,8 @@ class RedMeanderAgent(BaseAgent):
                     self.exploited_ips.remove(self.host_ip_map[self.last_host])
             self.last_host = None
 
-        session = list(action_space['session'].keys())[0]
+        #session = list(action_space['session'].keys())[0]
+        session = None
         # start by scanning
         for subnet in action_space["subnet"]:
             if not action_space["subnet"][subnet] or subnet in self.scanned_subnets:
@@ -79,6 +80,7 @@ class RedMeanderAgent(BaseAgent):
             self.last_ip = address
             return ExploitRemoteService(ip_address=address, agent='Red', session=session)
 
+        # default action 
         self.last_host = 'Op_Server0'
         return Impact(agent='Red', hostname='Op_Server0', session=session)
 

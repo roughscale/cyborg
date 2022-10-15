@@ -2,7 +2,7 @@
 from CybORG.Shared.Actions.MSFActionsFolder.MeterpreterActionsFolder.MeterpreterAction import MeterpreterAction
 from CybORG.Shared.Enums import OperatingSystemType, SessionType
 from CybORG.Shared.Observation import Observation
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 # Call ps from a meterpreter session - gives a list of processes with PID, name, user and path
@@ -10,12 +10,12 @@ class MeterpreterPS(MeterpreterAction):
     def __init__(self, session: int, agent: str):
         super().__init__(session=session, agent=agent)
 
-    def sim_execute(self, state: State):
+    def sim_execute(self, environment: Environment):
         obs = Observation()
         obs.set_success(False)
-        if self.session not in state.sessions[self.agent]:
+        if self.session not in environment.sessions[self.agent]:
             return obs
-        session = state.sessions[self.agent][self.session]
+        session = environment.sessions[self.agent][self.session]
 
         if session.session_type != SessionType.METERPRETER or not session.active:
             return obs
@@ -41,22 +41,22 @@ class MeterpreterPS(MeterpreterAction):
                     for user in users:
                         obs.add_user_info(hostid="0", username=user)
                     # Need to be able to remove processes as well - remove /bin/sh and ps processes created above?
-                    state.remove_process(host=session.host.hostname, pid=proc_sh.pid)
-                    state.remove_process(host=session.host.hostname, pid=proc_ps.pid)
+                    environment.remove_process(host=session.host.hostname, pid=proc_sh.pid)
+                    environment.remove_process(host=session.host.hostname, pid=proc_ps.pid)
                     return obs
 
             obs.add_system_info(hostid="0", architecture=session.host.architecture)
             if root:
-                state.remove_process(host=session.host.hostname, pid=proc_sh.pid)
-                state.remove_process(host=session.host.hostname, pid=proc_ps.pid)
+                environment.remove_process(host=session.host.hostname, pid=proc_sh.pid)
+                environment.remove_process(host=session.host.hostname, pid=proc_ps.pid)
                 for proc in session.host.processes:
                     if proc.user.username not in users:
                         users.append(proc.user.username)
                     obs.add_process(hostid="0", pid=proc.pid, process_name=proc.name,
                                     username=proc.user.username, parent_pid=proc.ppid, path=proc.path)
             else:
-                state.remove_process(host=session.host.hostname, pid=proc_sh.pid)
-                state.remove_process(host=session.host.hostname, pid=proc_ps.pid)
+                environment.remove_process(host=session.host.hostname, pid=proc_sh.pid)
+                environment.remove_process(host=session.host.hostname, pid=proc_ps.pid)
                 for proc in session.host.processes:
                     if proc.user is not None and proc.user.username not in users:
                         users.append(proc.user.username)
@@ -67,8 +67,8 @@ class MeterpreterPS(MeterpreterAction):
             return obs
 
         else:
-            state.remove_process(host=session.host.hostname, pid=proc_sh.pid)
-            state.remove_process(host=session.host.hostname, pid=proc_ps.pid)
+            environment.remove_process(host=session.host.hostname, pid=proc_sh.pid)
+            environment.remove_process(host=session.host.hostname, pid=proc_ps.pid)
             obs.add_system_info(hostid="0", architecture=session.host.architecture)
             for proc in session.host.processes:
                 if proc.user is not None and proc.user.username not in users:

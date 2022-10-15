@@ -15,7 +15,7 @@ from CybORG.Shared.Enums import OperatingSystemType, DecoyType
 from CybORG.Simulator.Host import Host
 from CybORG.Simulator.Process import Process
 from CybORG.Simulator.Session import Session
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 class EscalateAction(ConcreteAction):
     """
@@ -23,25 +23,25 @@ class EscalateAction(ConcreteAction):
     """
     def __init__(self, session: int, agent: str, target_session: int):
         super().__init__(session, agent)
-        self.state = None
+        self.environment = None
         self.target_session = target_session
 
     def emu_execute(self) -> Observation:
         raise NotImplementedError
 
-    def sim_escalate(self, state: State, user: str) -> Observation:
+    def sim_escalate(self, environment: Environment, user: str) -> Observation:
         """
         escalate the session on the host if it works
         """
-        self.state = state
+        self.environment = environment
         obs = Observation()
-        if (self.session not in state.sessions[self.agent]
-                or self.target_session not in state.sessions[self.agent]):
+        if (self.session not in environment.sessions[self.agent]
+                or self.target_session not in environment.sessions[self.agent]):
             obs.set_success(False)
             return obs
-        target_host = state.hosts[state.sessions[self.agent][self.target_session].host]
-        session = state.sessions[self.agent][self.session]
-        target_session = state.sessions[self.agent][self.target_session]
+        target_host = environment.hosts[environment.sessions[self.agent][self.target_session].host]
+        session = environment.sessions[self.agent][self.session]
+        target_session = environment.sessions[self.agent][self.target_session]
 
         if not session.active or not target_session.active:
             obs.set_success(False)
@@ -108,11 +108,11 @@ class ExploreHost(ConcreteAction):
     def emu_execute(self) -> Observation:
         raise NotImplementedError
 
-    def sim_execute(self, state: State) -> Observation:
-        if (self.session not in state.sessions[self.agent]
-                or self.target_session not in state.sessions[self.agent]):
+    def sim_execute(self, environment: Environment) -> Observation:
+        if (self.session not in environment.sessions[self.agent]
+                or self.target_session not in environment.sessions[self.agent]):
             return Observation(success=False)
-        target_host = state.hosts[state.sessions[self.agent][self.target_session].host]
-        obs = state.get_true_state(target_host.info)
+        target_host = environment.hosts[environment.sessions[self.agent][self.target_session].host]
+        obs = environment.get_true_state({ "hosts": target_host.info})
         obs.set_success(True)
         return obs

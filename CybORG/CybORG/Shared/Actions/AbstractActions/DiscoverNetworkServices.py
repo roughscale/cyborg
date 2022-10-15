@@ -12,23 +12,26 @@ class DiscoverNetworkServices(Action):
     Calls the low level action PortScan then modifies the observation. Must be used on a host to
     successfully run the high level action ExploitRemoteServices.
     """
-    def __init__(self, session: int, agent: str, ip_address: IPv4Address):
+    def __init__(self, session: int, agent: str, ip_address: str):
         super().__init__()
         self.ip_address = ip_address
         self.agent = agent
         self.session = session
 
-    def sim_execute(self, state) -> Observation:
+    def sim_execute(self, environment) -> Observation:
         # find session inside or close to the target subnet
         session = self.session
         # run portscan on the target ip address from the selected session
         sub_action = Portscan(session=self.session, agent=self.agent, ip_address=self.ip_address, target_session=session)
-        obs = sub_action.sim_execute(state)
-        if str(self.ip_address) in obs.data:
-            for proc in obs.data[str(self.ip_address)]["Processes"]:
+        obs = sub_action.sim_execute(environment)
+
+        # FULLY OBS ASSUMPTION: Agent has full knowledge of ALL host to ip address mappings in target environment
+        for host in obs.data['hosts']:
+          if host == environment.ip_addresses[self.ip_address]:
+            for proc in obs.data['hosts'][host]["Processes"]:
                 for conn in proc['Connections']:
                     port = conn["local_port"]
-                    state.sessions[self.agent][self.session].addport(self.ip_address, port)
+                    environment.sessions[self.agent][self.session].addport(self.ip_address, port)
         return obs
 
     def __str__(self):

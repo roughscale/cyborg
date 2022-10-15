@@ -1,0 +1,8 @@
+Test_Host:
+  Processes: []
+  SystemInfo:
+    Architecture: "unknown"
+    OSDistribution: "unknown"
+    OSType: "unknown"
+    OSVersion: "unknown"
+  UserInfo: []

@@ -8,7 +8,7 @@ from CybORG.Shared.Actions.MSFActionsFolder.MSFAction import lo, lo_subnet
 from CybORG.Shared.Enums import SessionType, ProcessType, OperatingSystemType, DecoyType
 from CybORG.Shared.Observation import Observation
 from CybORG.Simulator.Host import Host
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 from CybORG.Simulator.Process import Process
 
 
@@ -19,15 +19,15 @@ class SSHBruteForce(ExploitAction):
         self.ip_address = ip_address
         self.target_session = target_session
 
-    def sim_execute(self, state: State):
-        self.state = state
+    def sim_execute(self, environment: Environment):
+        self.environment = environment
         length_of_wordlist = 10
         obs = Observation()
-        if self.session not in state.sessions[self.agent]:
+        if self.session not in environment.sessions[self.agent]:
             obs.set_success(False)
             return obs
-        from_host: Host = state.hosts[state.sessions['Red'][self.session].host]
-        session = state.sessions['Red'][self.session]
+        from_host: Host = environment.hosts[environment.sessions['Red'][self.session].host]
+        session = environment.sessions['Red'][self.session]
 
         if not session.active:
             obs.set_success(False)
@@ -39,10 +39,10 @@ class SSHBruteForce(ExploitAction):
             target_host: Host = from_host
             originating_ip_address = self.ip_address
         else:
-            target_host: Host = state.hosts[state.ip_addresses[self.ip_address]]
+            target_host: Host = environment.hosts[environment.ip_addresses[self.ip_address]]
             ports = self.check_routable(
-                [state.subnets[i.subnet] for i in from_host.interfaces if i.ip_address != lo],
-                [s for s in state.subnets.values() if self.ip_address in s.cidr])
+                [environment.subnets[str(i.subnet)] for i in from_host.interfaces if i.ip_address != lo],
+                [s for s in environment.subnets.values() if IPv4Address(self.ip_address) in s.cidr])
             if ports is None or (22 not in ports and 'all' not in ports):
                 obs.set_success(False)
                 return obs
@@ -67,7 +67,9 @@ class SSHBruteForce(ExploitAction):
         if vuln_proc is None:
             obs.set_success(False)
             return obs
-        obs.add_process(hostid=str(self.ip_address), local_address=self.ip_address, local_port=22, status="open",
+        # FULLY OBS ASSUMPTION: Agent has full knowledge of ALL host to ip address mappings in target environment
+        hostid = environment.ip_addresses[self.ip_address]
+        obs.add_process(hostid=hostid, local_address=self.ip_address, local_port=22, status="open",
                         process_type='SSH')
 
         # test if there is a bruteforceable user-pass on the system
@@ -91,12 +93,12 @@ class SSHBruteForce(ExploitAction):
 
             if bool(vuln_proc.decoy_type & DecoyType.SANDBOXING_EXPLOIT):
 
-                new_session = state.add_session(host=target_host.hostname, agent=self.agent,
+                new_session = environment.add_session(host=target_host.hostname, agent=self.agent,
                                             user=user.username, session_type="ssh", parent=session, process=new_proc.pid,
                                             is_escalate_sandbox=True)
             else:
 
-                new_session = state.add_session(host=target_host.hostname, agent=self.agent,
+                new_session = environment.add_session(host=target_host.hostname, agent=self.agent,
                                             user=user.username, session_type="ssh", parent=session, process=new_proc.pid)
 
             remote_port = target_host.get_ephemeral_port()
@@ -119,15 +121,26 @@ class SSHBruteForce(ExploitAction):
                                 "remote_port": 22
                                 }
             from_host.get_process(session.pid).connections.append(remote_port_dict)
-            obs.add_process(hostid=str(originating_ip_address), local_address=originating_ip_address, remote_address=self.ip_address,
+            # FULLY OBS ASSUMPTION: Agent has full knowledge of ALL host to ip address mappings in target environment
+            origin_hostid = environment.ip_addresses[str(originating_ip_address)]
+            hostid = environment.ip_addresses[self.ip_address]
+
+            obs.add_process(hostid=origin_hostid, local_address=originating_ip_address, remote_address=self.ip_address,
                             local_port=remote_port, remote_port=22)
-            obs.add_process(hostid=str(self.ip_address), local_address=self.ip_address, remote_address=originating_ip_address,
+            obs.add_process(hostid=hostid, local_address=self.ip_address, remote_address=originating_ip_address,
                             local_port=22, remote_port=remote_port, process_type='ssh')
-            obs.add_session_info(hostid=str(self.ip_address), username=user.username, session_id=new_session.ident, session_type="ssh", agent=self.agent)
-            obs.add_user_info(hostid=str(self.ip_address), username=user.username, password=user.password, uid=user.uid)
+            obs.add_session_info(hostid=hostid, username=user.username, session_id=new_session.ident, session_type="ssh", agent=self.agent)
+            obs.add_user_info(hostid=hostid, username=user.username, password=user.password, uid=user.uid)
 
-            obs.add_system_info(hostid=str(self.ip_address), hostname=target_host.hostname, os_type=target_host.os_type)
-
+            obs.add_system_info(hostid=hostid, hostname=target_host.hostname, os_type=target_host.os_type)
+            # for multi-homed hosts, also return the details of the other interfaces
+            # Q whether this should be a separate action.  However this info will be
+            # automatically retrieved in C2 frameworks upon sucessful installation of
+            # C2 agent.
+            target_interface = target_host.get_interface(ip_address=self.ip_address)
+            for interface in target_host.interfaces:
+                  if interface.ip_address != lo and interface.ip_address != target_interface.ip_address:
+                       obs.add_interface_info(hostid=hostid,ip_address=interface.ip_address, subnet=interface.subnet)
         else:
             obs.set_success(False)
         return obs

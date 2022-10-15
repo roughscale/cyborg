@@ -1,12 +1,12 @@
 # Copyright DST Group. Licensed under the MIT license.
 from CybORG.Shared import Observation
 from CybORG.Shared import CybORGLogger
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 class Action:
 
-    def sim_execute(self, state: State) -> Observation:
+    def sim_execute(self, environment: Environment) -> Observation:
         raise NotImplementedError
 
     def emu_execute(self) -> Observation:
@@ -24,7 +24,7 @@ class Action:
 
 
 class Sleep(Action):
-    def sim_execute(self, state):
+    def sim_execute(self, environment):
         return Observation()
 
     def emu_execute(self) -> Observation:
@@ -32,7 +32,7 @@ class Sleep(Action):
 
 
 class InvalidAction(Action):
-    def sim_execute(self, state):
+    def sim_execute(self, environment):
         return Observation(success=False)
 
     def emu_execute(self) -> Observation:

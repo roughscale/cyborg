@@ -18,7 +18,7 @@ from CybORG.Shared.Actions.ConcreteActions.JuicyPotato import JuicyPotato
 from CybORG.Shared.Actions.ConcreteActions.V4L2KernelExploit import V4L2KernelExploit
 from CybORG.Shared.Enums import (
         OperatingSystemType, TrinaryEnum)
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 from CybORG.Simulator.Session import Session
 
 # pylint: disable=too-few-public-methods
@@ -29,7 +29,7 @@ class EscalateActionSelector(ABC):
     """
     # pylint: disable=missing-function-docstring
     @abstractmethod
-    def get_escalate_action(self, *, state: State, session: int, target_session: int,
+    def get_escalate_action(self, *, environment: Environment, session: int, target_session: int,
             agent: str, hostname: str) -> \
                     Optional[EscalateAction]:
         pass
@@ -38,10 +38,12 @@ class DefaultEscalateActionSelector(EscalateActionSelector):
     """
     Attempts to use Juicy Potato if windows, otherwise V4l2 kernel
     """
-    def get_escalate_action(self, *, state: State, session: int, target_session: int,
+    def get_escalate_action(self, *, environment: Environment, session: int, target_session: int,
             agent: str, hostname: str) -> \
                     Optional[EscalateAction]:
-        if state.sessions[agent][session].operating_system[hostname] == OperatingSystemType.WINDOWS:
+        print(environment.sessions[agent][session])
+        print(environment.sessions[agent][session].operating_system)
+        if environment.sessions[agent][session].operating_system[hostname] == OperatingSystemType.WINDOWS:
             return JuicyPotato(session=session, target_session=target_session,
                     agent=agent)
 
@@ -62,7 +64,7 @@ class PrivilegeEscalate(Action):
     def emu_execute(self) -> Observation:
         raise NotImplementedError
 
-    def __perform_escalate(self, state:State, sessions:List[Session]) -> Tuple[Observation, int]:
+    def __perform_escalate(self, environment:Environment, sessions:List[Session]) -> Tuple[Observation, int]:
         target_session = choice(sessions)
 
         #print(f"""
@@ -71,23 +73,23 @@ class PrivilegeEscalate(Action):
 
         # test if session is in a sandbox
         if target_session.is_escalate_sandbox:
-            state.remove_process(target_session.host, target_session.pid)
+            environment.remove_process(target_session.host, target_session.pid)
             return Observation(success=False), -1
 
         target_session_ident = target_session.ident
 
         sub_action = self.escalate_action_selector.get_escalate_action(
-                state=state, session=self.session, target_session=target_session_ident,
+                environment=environment, session=self.session, target_session=target_session_ident,
                 agent=self.agent, hostname=self.hostname)
 
         if sub_action is None:
             return Observation(success=False), -1
 
-        return sub_action.sim_execute(state), target_session_ident
+        return sub_action.sim_execute(environment), target_session_ident
 
-    def sim_execute(self, state: State) -> Observation:
+    def sim_execute(self, environment: Environment) -> Observation:
         # find session on the chosen host
-        sessions = [s for s in state.sessions[self.agent].values() if s.host == self.hostname]
+        sessions = [s for s in environment.sessions[self.agent].values() if s.host == self.hostname]
         if len(sessions) == 0:
             # no valid session could be found on chosen host
             return Observation(success=False)
@@ -103,20 +105,20 @@ class PrivilegeEscalate(Action):
                 break
         # else use random session
         if target_session is None:
-            obs, target_session = self.__perform_escalate(state, sessions)
+            obs, target_session = self.__perform_escalate(environment, sessions)
 
         if obs.data['success'] is not TrinaryEnum.TRUE:
             return obs
 
         sub_action = ExploreHost(session=self.session, target_session=target_session,
                 agent=self.agent)
-        obs2 = sub_action.sim_execute(state)
+        obs2 = sub_action.sim_execute(environment)
         for host in obs2.data.values():
             try:
                 host_processes = host['Processes']
                 for proc in host_processes:
                     if proc.get('Service Name') == 'OTService':
-                        state.sessions[self.agent][self.session].ot_service = 'OTService'
+                        environment.sessions[self.agent][self.session].ot_service = 'OTService'
                         break
             except KeyError:
                 pass

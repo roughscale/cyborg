@@ -2,7 +2,7 @@
 from CybORG.Shared.Actions.MSFActionsFolder.MeterpreterActionsFolder.MeterpreterAction import MeterpreterAction
 from CybORG.Shared.Enums import OperatingSystemType, SessionType
 from CybORG.Shared.Observation import Observation
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 # Call getpid from a meterpreter session - gives the process id of the session
@@ -10,12 +10,12 @@ class GetPid(MeterpreterAction):
     def __init__(self, session: int, agent: str):
         super().__init__(session=session, agent=agent)
 
-    def sim_execute(self, state: State):
+    def sim_execute(self, environment: Environment):
         obs = Observation()
         obs.set_success(False)
-        if self.session not in state.sessions[self.agent]:
+        if self.session not in environment.sessions[self.agent]:
             return obs
-        session = state.sessions[self.agent][self.session]
+        session = environment.sessions[self.agent][self.session]
 
         if session.session_type != SessionType.METERPRETER or not session.active:
             return obs

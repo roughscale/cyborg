@@ -4,7 +4,7 @@ from ipaddress import IPv4Address, IPv4Network
 from CybORG.Shared.Actions.MSFActionsFolder.MSFScannerFolder.MSFScanner import MSFScanner
 from CybORG.Shared.Enums import InterfaceType, SessionType, ProcessType, ProcessVersion, AppProtocol
 from CybORG.Shared.Observation import Observation
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 # msf module is post/multi/gather/ping_sweep
@@ -15,20 +15,20 @@ class MSFPingsweep(MSFScanner):
         self.target_session = target_session
         self.lo = IPv4Address("127.0.0.1")
 
-    def sim_execute(self, state: State):
+    def sim_execute(self, environment: Environment):
         obs = Observation()
-        if self.session not in state.sessions[self.agent]:
+        if self.session not in environment.sessions[self.agent]:
             obs.set_success(False)
             return obs
-        from_host = state.sessions['Red'][self.session].host
-        session = state.sessions['Red'][self.session]
+        from_host = environment.sessions['Red'][self.session].host
+        session = environment.sessions['Red'][self.session]
 
         if session.session_type != SessionType.MSF_SERVER or not session.active:
             obs.set_success(False)
             return obs
 
-        if self.target_session in state.sessions['Red']:
-            target_session = state.sessions['Red'][self.target_session]
+        if self.target_session in environment.sessions['Red']:
+            target_session = environment.sessions['Red'][self.target_session]
         else:
             obs.set_success(False)
             return obs
@@ -39,13 +39,13 @@ class MSFPingsweep(MSFScanner):
 
         target_session, from_interface = self.get_local_source_interface(local_session=target_session,
                                                                          remote_address=self.subnet.network_address,
-                                                                         state=state)
+                                                                         environment=environment)
 
         if from_interface is None:
             obs.set_success(False)
             return obs
         target_hosts = []
-        for host in state.subnets[self.subnet].ip_addresses:
+        for host in environment.subnets[self.subnet].ip_addresses:
             obs.set_success(True)
             target_hosts.append(host)
             obs.add_interface_info(hostid=str(host), ip_address=host, subnet=self.subnet)

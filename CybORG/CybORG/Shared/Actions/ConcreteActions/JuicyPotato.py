@@ -12,15 +12,15 @@ from CybORG.Shared.Actions.ConcreteActions.EscalateAction import EscalateAction
 from CybORG.Shared.Enums import OperatingSystemType
 from CybORG.Simulator.Host import Host
 from CybORG.Simulator.Process import Process
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 class JuicyPotato(EscalateAction):
     """
     Implements the Juicy Potato permissions escalation action
     """
-    def sim_execute(self, state: State) -> Observation:
-        return self.sim_escalate(state, "SYSTEM")
+    def sim_execute(self, environment: Environment) -> Observation:
+        return self.sim_escalate(environment, "SYSTEM")
 
     def emu_execute(self) -> Observation:
         raise NotImplementedError

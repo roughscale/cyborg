@@ -22,4 +22,5 @@ from .LocalShellActions import \
     LocalShellEcho, LocalShellSleep
 from .AgentActions import AgentSleep
 from .AbstractActions import Monitor, DiscoverNetworkServices, DiscoverRemoteSystems, ExploitRemoteService, Analyse, Remove, Restore, Misinform, PrivilegeEscalate, Impact
+#from .Caldera.AbstractActions import CMonitor, CDiscoverNetworkServices, CDiscoverRemoteSystems, CExploitRemoteService, CAnalyse, CRemove, CRestore, CMisinform, CPrivilegeEscalate, CImpact
 from .GreenActions import GreenPingSweep, GreenPortScan, GreenConnection

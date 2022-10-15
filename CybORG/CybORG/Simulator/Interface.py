@@ -16,3 +16,6 @@ class Interface(Entity):
 
     def get_state(self):
         return {"interface_name": self.name, "ip_address": self.ip_address, "subnet": str(self.subnet)}
+
+    def __str__(self):
+        return str(self.get_state())

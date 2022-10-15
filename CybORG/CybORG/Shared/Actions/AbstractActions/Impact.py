@@ -3,7 +3,7 @@ from random import choice
 from CybORG.Shared import Observation
 from CybORG.Shared.Actions import Action
 from CybORG.Shared.Actions.ConcreteActions.StopService import StopService
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 class Impact(Action):
@@ -13,9 +13,9 @@ class Impact(Action):
         self.session = session
         self.hostname = hostname
 
-    def sim_execute(self, state: State) -> Observation:
+    def sim_execute(self, environment: Environment) -> Observation:
         # find session on the chosen host
-        sessions = [s for s in state.sessions[self.agent].values() if s.host == self.hostname]
+        sessions = [s for s in environment.sessions[self.agent].values() if s.host == self.hostname]
         if len(sessions) == 0:
             # no valid session could be found on chosen host
             return Observation(success=False)
@@ -33,11 +33,11 @@ class Impact(Action):
         if session is None:
             session = choice(sessions).ident
 
-        if state.sessions[self.agent][self.session].ot_service is not None:
-            ot_service = state.sessions[self.agent][self.session].ot_service
+        if environment.sessions[self.agent][self.session].ot_service is not None:
+            ot_service = environment.sessions[self.agent][self.session].ot_service
             # stop the ot service if known else we will just return a failure
             sub_action = StopService(agent=self.agent, session=self.session, service=ot_service, target_session=session)
-            obs = sub_action.sim_execute(state)
+            obs = sub_action.sim_execute(environment)
         else:
             obs = Observation(success=False)
 

@@ -2,7 +2,7 @@ from typing import List
 
 from CybORG.Shared.Actions import Action
 from CybORG.Simulator.Subnet import Subnet
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 class ConcreteAction(Action):
@@ -74,8 +74,8 @@ class ConcreteAction(Action):
 
     def check_for_enterprise_sessions(self):
         permission = False
-        for session_id in self.state.sessions[self.agent]:
-            session = self.state.sessions[self.agent][session_id]
+        for session_id in self.environment.sessions[self.agent]:
+            session = self.environment.sessions[self.agent][session_id]
             if 'Enterprise' in session.host:
                 permission = True
 

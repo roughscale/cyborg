@@ -1,6 +1,6 @@
 # Copyright DST Group. Licensed under the MIT license.
 from CybORG.Shared.Actions.ShellActionsFolder.PersistenceFolder.Persistence import Persistence
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 from CybORG.Shared.Enums import OperatingSystemType
 from CybORG.Shared.Observation import Observation
 
@@ -11,19 +11,19 @@ class Schtasks(Persistence):
         self.step_installed = 0
         self.frequency = frequency
 
-    def sim_execute(self, state):
+    def sim_execute(self, environment):
         obs = Observation()
         obs.set_success(False)
-        if self.session not in state.sessions[self.agent]:
+        if self.session not in environment.sessions[self.agent]:
             return obs
-        if not state.sessions[self.agent][self.session].active:
+        if not environment.sessions[self.agent][self.session].active:
             return obs
 
-        host = state.sessions[self.agent][self.session].host
+        host = environment.sessions[self.agent][self.session].host
         obs.add_system_info(hostid="hostid0", os_type=host.os_type)
         host.add_scheduled_task(self)
         obs.set_success(True)
-        self.step_installed = state.step
+        self.step_installed = environment.step
         return obs
 
     def scheduled_task(self, step):

@@ -47,11 +47,14 @@ class RedAbstractSession(Session):
         self.operating_system = {} # a mapping of hostnames to os types
         self.ot_service = None
 
-    def addport(self, ip_address: IPv4Address, port: int):
+    def addport(self, ip_address: str, port: int):
+        #print("addport")
+        #print(ip_address)
         if ip_address in self.ports:
             self.ports[ip_address].append(port)
         else:
             self.ports[ip_address] = [port]
+        #print(self.ports)
 
     def addos(self, hostname: str, os: OperatingSystemType):
         self.operating_system[hostname] = os

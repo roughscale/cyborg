@@ -14,7 +14,7 @@ from CybORG.Shared.Enums import FileType, TrinaryEnum
 from CybORG.Shared.EnvironmentController import EnvironmentController
 from CybORG.Shared.Observation import Observation
 from CybORG.Shared.Results import Results
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 class SimulationController(EnvironmentController):
@@ -25,20 +25,20 @@ class SimulationController(EnvironmentController):
     The main thing this class currently does is parse the scenario file.
     """
     def __init__(self, scenario_filepath: str = None, scenario_mod: dict = None, agents: dict = None, verbose=True):
-        self.state = None
+        self.environment = None
         super().__init__(scenario_filepath, scenario_mod=scenario_mod, agents=agents)
 
     def reset(self, agent=None):
-        self.state.reset()
-        self.hostname_ip_map = {h: ip for ip, h in self.state.ip_addresses.items()}
-        self.subnet_cidr_map = self.state.subnet_name_to_cidr
+        self.environment.reset()
+        self.hostname_ip_map = {str(ip): h for ip, h in self.environment.ip_addresses.items()}
+        self.subnet_cidr_map = self.environment.subnet_name_to_cidr
         return super(SimulationController, self).reset(agent)
 
     def pause(self):
         pass
 
     def execute_action(self, action: Action) -> Observation:
-        return action.sim_execute(self.state)
+        return action.sim_execute(self.environment)
 
     def restore(self, file: str):
         pass
@@ -47,7 +47,7 @@ class SimulationController(EnvironmentController):
         pass
 
     def get_true_state(self, info: dict) -> Observation:
-        output = self.state.get_true_state(info)
+        output = self.environment.get_true_state(info)
         return output
 
     def shutdown(self, **kwargs):
@@ -71,9 +71,10 @@ class SimulationController(EnvironmentController):
         return scenario_dict
 
     def _create_environment(self):
-        self.state = State(self.scenario)
-        self.hostname_ip_map = {h: ip for ip, h in self.state.ip_addresses.items()}
-        self.subnet_cidr_map = self.state.subnet_name_to_cidr
+        self.environment = Environment(self.scenario)
+        self.hostname_ip_map = {str(ip): h for ip, h in self.environment.ip_addresses.items()}
+        #self.hostname_ip_map = {h: ip for ip, h in self.environment.ip_addresses.items()}
+        self.subnet_cidr_map = self.environment.subnet_name_to_cidr
 
     def run_schtasks(self):
         for host in self.hosts:

@@ -4,7 +4,7 @@ from ipaddress import IPv4Address
 from CybORG.Shared.Actions.MSFActionsFolder.MSFScannerFolder.MSFScanner import MSFScanner
 from CybORG.Shared.Enums import InterfaceType, SessionType, ProcessType, ProcessVersion, AppProtocol
 from CybORG.Shared.Observation import Observation
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 # msf module is auxiliary/scanner/http/tomcat_mgr_login - then set RHOSTS and RPORT
@@ -14,13 +14,13 @@ class TomcatCredentialScanner(MSFScanner):
         self.target = ip_address
         self.target_port = port
 
-    def sim_execute(self, state: State):
+    def sim_execute(self, environment: Environment):
         obs = Observation()
         obs.set_success(False)
-        if self.session not in state.sessions[self.agent]:
+        if self.session not in environment.sessions[self.agent]:
             return obs
-        from_host = state.sessions['Red'][self.session].host
-        session = state.sessions['Red'][self.session]
+        from_host = environment.sessions['Red'][self.session].host
+        session = environment.sessions['Red'][self.session]
 
         good = False
         if session.session_type == SessionType.MSF_SERVER and session.active:
@@ -39,7 +39,7 @@ class TomcatCredentialScanner(MSFScanner):
         if str(self.target) == "127.0.0.1":
             target_host = from_host
         else:
-            target_host = state.hosts[state.ip_addresses[self.target]]
+            target_host = environment.hosts[environment.ip_addresses[self.target]]
 
         target_proc = None
         for process in target_host.processes:

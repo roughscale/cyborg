@@ -212,6 +212,8 @@ class Host(Entity):
 
     def get_interface(self, name=None, cidr=None, ip_address=None, subnet_name=None):
         """A method to get an interface with a selected name, subnet, or IP Address"""
+        if isinstance(ip_address,str):
+            ip_address = IPv4Address(ip_address)
         for interface in self.interfaces:
             if name is not None:
                 if interface.name == name:
@@ -396,5 +398,16 @@ class Host(Entity):
                 self.services[service_name] = {'active': service_info.get('active'),
                                                         'process': service_info.get('PID')}
 
+    def get_dict(self):
+        tmp = deepcopy(self.__dict__)
+        output = { k: v for k,v in tmp.items() }
+        i_exp = []
+        for iobj in output['interfaces']:
+            i_exp.append(iobj.get_state())
+        output['interfaces'] = i_exp
+        return output
+
     def __str__(self):
         return f'{self.hostname}'
+
+

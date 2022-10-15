@@ -4,6 +4,8 @@ from CybORG.Shared.Actions import FindFlag, Impact
 from CybORG.Shared.Actions.Action import Action
 from CybORG.Shared.Enums import OperatingSystemType
 from CybORG.Shared.RewardCalculator import RewardCalculator
+from CybORG.Simulator.Session import RedAbstractSession
+from pprint import pprint
 
 WIN_REWARD = 0
 LOSE_REWARD = 0
@@ -32,19 +34,22 @@ class PwnRewardCalculator(RewardCalculator):
     def calculate_reward(self, current_state: dict, action: dict, agent_observations: dict, done: bool):
         root_sessions = 0
         system_sessions = 0
-        for host, info in current_state.items():
-            if host == 'success':
-                continue
+        #pprint(current_state['hosts'])
+        for host, info in current_state['hosts'].items():
+            # ignore external host processes
+            if 'SystemInfo' in info and info['SystemInfo']['Hostname'] == "Attacker0":
+                break 
 
             if 'Sessions' in info:
                 for session in info['Sessions']:
                     if session['Agent'] == self.agent_name:
+                        #print(host)
                         # count the number of root sessions
-                        if session['Username'] == 'root' and info['System info']['OSType'] == OperatingSystemType.LINUX:
+                        if session['Username'] == 'root' and info['SystemInfo']['OSType'] == OperatingSystemType.LINUX:
                             root_sessions += self.mapping[self.scenario.get_host(host).get('ConfidentialityValue', 'Low')]
                             break
                         # count the number of SYSTEM sessions
-                        if session['Username'] == 'SYSTEM' and info['System info']['OSType'] == OperatingSystemType.WINDOWS:
+                        if session['Username'] == 'SYSTEM' and info['SystemInfo']['OSType'] == OperatingSystemType.WINDOWS:
                             system_sessions += self.mapping[self.scenario.get_host(host).get('ConfidentialityValue', 'Low')]
                             break
 
@@ -76,24 +81,29 @@ class DistruptRewardCalculator(RewardCalculator):
         disrupted = []
         if self.ots is None:
             self.ots = []
-            for host_info in current_state.values():
-                if type(host_info) is not dict:
+            for host, info in current_state.items():
+                if host == "Attacker0":
                     continue
-                if 'Processes' in host_info:
-                    for proc in host_info['Processes']:
+                if type(info) is not dict:
+                    continue
+                if 'Processes' in info:
+                    for proc in info['Processes']:
                         if proc['Process Name'] == 'OTService':
-                            self.ots.append(host_info['System info']['Hostname'])
-        for host_info in current_state.values():
+                            self.ots.append(info['System info']['Hostname'])
+        for host,info in current_state['hosts'].items():
             working = False
-            if type(host_info) is not dict:
+            # ignore external host processes
+            if 'SystemInfo' in info and info['SystemInfo']['Hostname'] == "Attacker0":
                 continue
-            if host_info['System info']['Hostname'] in self.ots:
-                if 'Processes' in host_info:
-                    for proc in host_info['Processes']:
+            if type(info) is not dict:
+                continue
+            if info['SystemInfo']['Hostname'] in self.ots:
+                if 'Processes' in info:
+                    for proc in info['Processes']:
                         if proc['Process Name'] == 'OTService':
                             working = True
                     if not working:
-                        disrupted.append(host_info['System info']['Hostname'])
+                        disrupted.append(info['System info']['Hostname'])
         # if type(agent_action) is Impact and agent_observations[self.agent_name].data['success'] == True:
         #     if agent_action.hostname not in disrupted:
         #         disrupted.append(agent_action.hostname)

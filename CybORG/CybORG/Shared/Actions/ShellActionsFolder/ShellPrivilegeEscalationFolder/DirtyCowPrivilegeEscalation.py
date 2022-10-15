@@ -22,20 +22,20 @@ from CybORG.Shared.Actions.ShellActionsFolder.ShellPrivilegeEscalationFolder.She
 # gives a root privileged session as user firefart (which has replaced root user in /etc/passwd file)
 from CybORG.Shared.Enums import FileType
 from CybORG.Shared.Observation import Observation
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 class DirtyCowPrivilegeEscalation(ShellPrivilegeEscalation):
     def __init__(self, session: int, agent: str, target_session: int):
         super().__init__(session, agent, target_session)
 
-    def sim_execute(self, state: State):
+    def sim_execute(self, environment: Environment):
         self.obs = Observation()
         self.obs.set_success(False)
-        if self.session not in state.sessions[self.agent]:
+        if self.session not in environment.sessions[self.agent]:
             return self.obs
         # get hosts
-        attacker_session = state.sessions[self.agent][self.session]
+        attacker_session = environment.sessions[self.agent][self.session]
         user = attacker_session.user
         attacker_host = attacker_session.host
 
@@ -65,10 +65,10 @@ class DirtyCowPrivilegeEscalation(ShellPrivilegeEscalation):
 
         self.copy_files_to_webserver(attacker_session, dirty_cow_c_file)
 
-        if self.target_session not in state.sessions[self.agent]:
+        if self.target_session not in environment.sessions[self.agent]:
             return self.obs
 
-        target_session = state.sessions[self.agent][self.target_session]
+        target_session = environment.sessions[self.agent][self.target_session]
         if not target_session.active:
             self.obs.set_success(False)
             return self.obs

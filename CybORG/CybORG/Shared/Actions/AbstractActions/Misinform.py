@@ -15,7 +15,7 @@ from CybORG.Shared.Actions import Action
 from CybORG.Shared.Enums import DecoyType
 from CybORG.Simulator.Host import Host
 from CybORG.Simulator.Session import Session
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 @dataclass
@@ -157,17 +157,17 @@ class Misinform(Action):
     def emu_execute(self) -> Observation:
         raise NotImplementedError
 
-    def sim_execute(self, state: State) -> Observation:
+    def sim_execute(self, environment: Environment) -> Observation:
         obs_fail = Observation(False)
         obs_succeed = Observation(True)
 
-        sessions = [s for s in state.sessions[self.agent].values() if
+        sessions = [s for s in environment.sessions[self.agent].values() if
                 s.host == self.hostname]
         if len(sessions) == 0:
             return obs_fail
 
         session = choice(sessions)
-        host = state.hosts[self.hostname]
+        host = environment.hosts[self.hostname]
 
         try:
             decoy_factory = self.__select_one_factory(host)

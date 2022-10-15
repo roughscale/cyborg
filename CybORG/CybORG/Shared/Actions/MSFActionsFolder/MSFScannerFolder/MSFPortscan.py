@@ -5,7 +5,7 @@ from CybORG.Shared.Actions.MSFActionsFolder.MSFAction import lo_subnet, lo
 from CybORG.Shared.Actions.MSFActionsFolder.MSFScannerFolder.MSFScanner import MSFScanner
 from CybORG.Shared.Enums import InterfaceType, SessionType, ProcessType, ProcessVersion, AppProtocol
 from CybORG.Shared.Observation import Observation
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 # msf module is auxiliary/scanner/portscan/tcp
 class MSFPortscan(MSFScanner):
@@ -13,18 +13,18 @@ class MSFPortscan(MSFScanner):
         super().__init__(session, agent)
         self.ip_address = ip_address
 
-    def sim_execute(self, state: State):
+    def sim_execute(self, environment: Environment):
         obs = Observation()
-        if self.session not in state.sessions[self.agent]:
+        if self.session not in environment.sessions[self.agent]:
             obs.set_success(False)
             return obs
-        from_host = state.sessions['Red'][self.session].host
-        session = state.sessions['Red'][self.session]
+        from_host = environment.sessions['Red'][self.session].host
+        session = environment.sessions['Red'][self.session]
 
         if str(self.ip_address) == "127.0.0.1":
-            target_host = state.hosts[from_host]
+            target_host = environment.hosts[from_host]
         else:
-            target_host = state.hosts[state.ip_addresses[self.ip_address]]
+            target_host = environment.hosts[environment.ip_addresses[self.ip_address]]
 
         if session.session_type != SessionType.MSF_SERVER or not session.active:
             obs.set_success(False)
@@ -34,12 +34,12 @@ class MSFPortscan(MSFScanner):
             target_subnet = lo_subnet
             from_interface = [i for i in target_host.interfaces if i.ip_address == lo][0]
         else:
-            for subnet in state.subnets.values():
+            for subnet in environment.subnets.values():
                 if self.ip_address in subnet.ip_addresses:
                     target_subnet = subnet.cidr
                     break
 
-            session, from_interface = self.get_local_source_interface(local_session=session, remote_address=self.ip_address, state=state)
+            session, from_interface = self.get_local_source_interface(local_session=session, remote_address=self.ip_address, environment=environment)
 
         if from_interface is None:
             obs.set_success(False)
@@ -56,7 +56,7 @@ class MSFPortscan(MSFScanner):
                     if self.ip_address == IPv4Address("127.0.0.1"):
                         if (conn['local_address'] == IPv4Address("127.0.0.1") or conn['local_address'] == IPv4Address("0.0.0.0")) and 'remote_address' not in conn:
                             obs.add_process(hostid=str(self.ip_address), local_port=conn["local_port"], local_address=self.ip_address)
-                    elif ((conn['local_address'] == IPv4Address("0.0.0.0") or conn['local_address'] == self.ip_address) and 'remote_address' not in conn) and self.test_nacl(port=conn['local_port'], target_subnet=state.subnets[target_subnet], originating_subnet=state.subnets[from_interface.subnet]):
+                    elif ((conn['local_address'] == IPv4Address("0.0.0.0") or conn['local_address'] == self.ip_address) and 'remote_address' not in conn) and self.test_nacl(port=conn['local_port'], target_subnet=environment.subnets[target_subnet], originating_subnet=environment.subnets[from_interface.subnet]):
                         obs.add_process(hostid=str(self.ip_address), local_port=conn["local_port"], local_address=self.ip_address)
         return obs
 

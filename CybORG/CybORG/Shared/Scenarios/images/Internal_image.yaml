@@ -43,12 +43,12 @@ Test_Host:
     Process Type: webserver
     Properties:
       - rfi
-  System info:
+  SystemInfo:
     Architecture: x64
     OSDistribution: WINDOWS_SVR_2008
     OSType: WINDOWS
     OSVersion: W6_1_7601
-  User Info:
+  UserInfo:
     - Groups:
         - GID: 0
           Group Name: ADMINISTRATORS

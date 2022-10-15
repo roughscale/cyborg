@@ -4,7 +4,7 @@ from ipaddress import IPv4Address
 from CybORG.Shared.Actions.MSFActionsFolder.MeterpreterActionsFolder.MeterpreterAction import MeterpreterAction
 from CybORG.Shared.Enums import OperatingSystemType, SessionType, AppProtocol
 from CybORG.Shared.Observation import Observation
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 # Call shell from a meterpreter session - gives a shell session
@@ -14,12 +14,12 @@ class GetShell(MeterpreterAction):
     def __init__(self, agent: str, session: int, target_session: int):
         super().__init__(session=session, agent=agent, target_session=target_session)
 
-    def sim_execute(self, state: State):
+    def sim_execute(self, environment: Environment):
         obs = Observation()
         obs.set_success(False)
-        if self.meterpreter_session not in state.sessions[self.agent]:
+        if self.meterpreter_session not in environment.sessions[self.agent]:
             return obs
-        session = state.sessions[self.agent][self.meterpreter_session]
+        session = environment.sessions[self.agent][self.meterpreter_session]
 
         if session.session_type != SessionType.METERPRETER or not session.active:
             return obs
@@ -30,7 +30,7 @@ class GetShell(MeterpreterAction):
             obs.add_system_info(hostid="0", os_type=OperatingSystemType.WINDOWS,
                                 os_distribution=session.host.distribution, os_version=session.host.version)
 
-        new_session = state.add_session(host=session.host.hostname, agent=self.agent,
+        new_session = environment.add_session(host=session.host.hostname, agent=self.agent,
                                         user=session.user.username, session_type="msf shell", parent=session)
         process = new_session.process
         process.ppid = session.process.pid

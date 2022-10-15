@@ -4,7 +4,7 @@ from ipaddress import IPv4Address
 from CybORG.Shared.Actions.ShellActionsFolder.OpenConnectionFolder.OpenConnection import OpenConnection
 from CybORG.Shared.Enums import ProcessType, InterfaceType
 from CybORG.Shared.Observation import Observation
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 # smbclient -L //target -N
@@ -13,14 +13,14 @@ class SMBAnonymousConnection(OpenConnection):
         super().__init__(session=session, agent=agent)
         self.target = ip_address
 
-    def sim_execute(self, state: State):
+    def sim_execute(self, environment: Environment):
         obs = Observation()
         obs.set_success(False)
-        if self.session not in state.sessions[self.agent]:
+        if self.session not in environment.sessions[self.agent]:
             return obs
-        session = state.sessions[self.agent][self.session]
+        session = environment.sessions[self.agent][self.session]
 
-        if not session.active or self.target not in state.ip_addresses:
+        if not session.active or self.target not in environment.ip_addresses:
             return obs
 
         # check if smbclient is on session's dict
@@ -43,7 +43,7 @@ class SMBAnonymousConnection(OpenConnection):
             return obs
 
         smb_proc = None
-        for proc in state.hosts[state.ip_addresses[self.target]].processes:
+        for proc in environment.hosts[environment.ip_addresses[self.target]].processes:
             if proc.process_type == ProcessType.SMB:
                 smb_proc = proc
                 break
@@ -60,4 +60,4 @@ class SMBAnonymousConnection(OpenConnection):
 
         return obs
         # what else to check as far as obs is affected?
-        # do we change the state at all? Might create an event that blue can see
+        # do we change the environment at all? Might create an event that blue can see

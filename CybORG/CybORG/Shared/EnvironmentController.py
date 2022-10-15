@@ -3,6 +3,7 @@
 
 import sys
 import yaml
+from pprint import pprint
 
 from CybORG.Shared import Scenario
 from CybORG.Shared.Actions.Action import Sleep, InvalidAction
@@ -41,31 +42,71 @@ class EnvironmentController:
             environment. If None agents will be loaded from description in
             scenario file (default=None)
         """
+        # The following maps seem to have a very limited purpose
+        # hostname_ip_map only seems to be used in the _filter_obs() method
+        # to pass to the Observation.filter_addresses() method
+        # since ip to hostname is unique (hostname to ip is not unique)
+        # the map should be in the format { ip: hostname }
         self.hostname_ip_map = None
         self.subnet_cidr_map = None
         # self.scenario_dict = self._parse_scenario(scenario_path, scenario_mod=scenario_mod)
         scenario_dict = self._parse_scenario(scenario_path)
         self.scenario = Scenario(scenario_dict)
-        self._create_environment()
+        self._create_environment() # this is NOT implemented in simulated environments. must be to create emulated envs
+        # for simulation controllers
+        #print(self.state)
         self.agent_interfaces = self._create_agents(agents)
         self.reward = {}
         self.INFO_DICT = {}
         self.action = {}
         self.done = False
         self.observation = {}
-        self.INFO_DICT['True'] = {}
+        self.INFO_DICT['True'] = {"hosts": {}, "network": { "subnets": [] } }
+        #print("Populate host INFO_DICT")
+        # populate network subnets INFO_DICT
+        for subnet in self.scenario.subnets:
+            subnet_cidr = self.subnet_cidr_map[subnet]
+            self.INFO_DICT['True']['network']['subnets'].append(str(subnet_cidr))
+        # populate host INFO_DICT
         for host in self.scenario.hosts:
-            self.INFO_DICT['True'][host] = {'System info': 'All', 'Sessions': 'All', 'Interfaces': 'All', 'User info': 'All',
+            #hostip = [ k for k,v in self.hostname_ip_map.items() if v == host ][0]
+            hostid = host
+            self.INFO_DICT['True']['hosts'][hostid] = {'SystemInfo': 'All', 'Sessions': 'All', 'Interfaces': 'All', 'UserInfo': 'All',
                                       'Processes': ['All']}
+        #pprint(self.INFO_DICT)
+        #print("unfiltered init true state")
+        #pprint(self.get_true_state(self.INFO_DICT['True']).data)
+        #print(self.hostname_ip_map)
         self.init_state = self._filter_obs(self.get_true_state(self.INFO_DICT['True'])).data
-        for agent in self.scenario.agents:
-            self.INFO_DICT[agent] = self.scenario.get_agent_info(agent).osint.get('Hosts', {})
-            for host in self.INFO_DICT[agent].keys():
-                self.INFO_DICT[agent][host]['Sessions'] = agent
+        #print("init_state")
+        #pprint(self.init_state)
+        #print("Populate agent INFO_DICT")
+        self._get_agent_osint()
         # populate initial observations with OSINT
         for agent_name, agent in self.agent_interfaces.items():
             self.observation[agent_name] = self._filter_obs(self.get_true_state(self.INFO_DICT[agent_name]), agent_name)
+            #print("unfiltered true obs of agent")
+            #print(self.get_true_state(self.INFO_DICT[agent_name]))
             agent.set_init_obs(self.observation[agent_name].data, self.init_state)
+
+    def _get_agent_osint(self):
+        for agent in self.scenario.agents:
+            self.INFO_DICT[agent] = {}
+            osint_network = self.scenario.get_agent_info(agent).osint.get('Network',{})
+            if 'Subnets' in osint_network:
+                self.INFO_DICT[agent]['network'] = {}
+                self.INFO_DICT[agent]['network']['subnets'] = [ str(v) for k, v in self.subnet_cidr_map.items() if k in osint_network['Subnets'] ]
+            osint_hosts = self.scenario.get_agent_info(agent).osint.get('Hosts', {})
+            for hostname,hostinfo in osint_hosts.items():
+                self.INFO_DICT[agent]['hosts'] = {}
+                # assuming OSINT only provides 1 address per hostname
+                #hostip = str([ k for k,v in self.hostname_ip_map.items() if v == hostname ][0])
+                hostid = hostname
+                self.INFO_DICT[agent]['hosts'][hostid] = hostinfo
+                print(self.INFO_DICT[agent]['hosts'][hostid])
+            for host in self.INFO_DICT[agent]['hosts'].keys():
+                self.INFO_DICT[agent]['hosts'][host]['Sessions'] = agent
+        #pprint(self.INFO_DICT[agent])
 
     def reset(self, agent: str = None) -> Results:
         """Resets the environment and get initial agent observation and actions.
@@ -131,6 +172,13 @@ class EnvironmentController:
 
         # get true observation
         true_observation = self._filter_obs(self.get_true_state(self.INFO_DICT['True'])).data
+
+        # print true_state environment state representation
+        # remove success key
+        #
+        #true_observation.pop('success',None)
+        #print("true observation")
+        #pprint(true_observation)
 
         # Blue update step.
         # New idea: run the MONITOR action for the Blue agent, and update the observation.
@@ -366,6 +414,7 @@ class EnvironmentController:
                 agent_info.actions,
                 agent_info.reward_calculator_type,
                 allowed_subnets=agent_info.allowed_subnets,
+                external_hosts=agent_info.external_hosts,
                 wrappers=agent_info.wrappers,
                 scenario=self.scenario
             )
@@ -377,12 +426,17 @@ class EnvironmentController:
     def _filter_obs(self, obs: Observation, agent_name=None):
         """Filter obs to contain only hosts/subnets in scenario network """
         if agent_name is not None:
+            #print("filter obs allowed subnets: {0}".format(self.scenario.get_agent_info(agent_name).allowed_subnets))
             subnets = [self.subnet_cidr_map[s] for s in self.scenario.get_agent_info(agent_name).allowed_subnets]
         else:
             subnets = list(self.subnet_cidr_map.values())
 
+        #print("filter obs subnets: {0}".format(subnets))
+        #print("self.hostname_ip_map in filter_obs")
+        #print(self.hostname_ip_map)
+        #print("filter obs ips: {0}".format(self.hostname_ip_map.keys()))
         obs.filter_addresses(
-            ips=self.hostname_ip_map.values(),
+            ips=self.hostname_ip_map.keys(),
             cidrs=subnets,
             include_localhost=False
         )

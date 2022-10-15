@@ -19,7 +19,7 @@ MAX_PATHS = 20
 
 class ActionSpace:
 
-    def __init__(self, actions, agent, allowed_subnets):
+    def __init__(self, actions, agent, allowed_subnets, external_hosts):
         # load in the stuff that the agent is allowed to know about
 
         # save all params
@@ -38,6 +38,7 @@ class ActionSpace:
         self.port = {}
         self.hostname = {}
         self.agent = {agent: True}
+        self.external_hosts = external_hosts
 
     def get_name(self, action: int) -> str:
         pass
@@ -121,20 +122,28 @@ class ActionSpace:
     def update(self, observation: dict, known: bool = True):
         if observation is None:
             return
-        for key, info in observation.items():
-            if key == "success" or key == 'Valid' or key == 'action':
-                continue
+        for key, info in observation['hosts'].items():
+            #print(key)
+            #print(info)
             if not isinstance(info, dict):
                 continue
-            if "System info" in info:
-                if "Hostname" in info["System info"]:
-                    self.hostname[info["System info"]["Hostname"]] = known
+            if "SystemInfo" in info:
+                if "Hostname" in info["SystemInfo"]:
+                  # need to check the external host per attribute (and not at a higher level)
+                  # as we need to add the external host's session to the parameter space
+                  # TODO:
+                  # we should only ignore external host for non-blue type agents
+                  # as blue agents may need to take actions against an external host
+                  if info["SystemInfo"]["Hostname"] not in self.external_hosts:
+                    self.hostname[info["SystemInfo"]["Hostname"]] = known
             if "Interface" in info:
                 for interface in info["Interface"]:
+                  #if info[interface]["Subnet"] not in external_hosts["subnet"]
+                  #  or info[interface]["IP address"] not in external_hosts["ipaddr"]:
                     if "Subnet" in interface:
-                        self.subnet[interface["Subnet"]] = known
+                       self.subnet[str(interface["Subnet"])] = known
                     if "IP Address" in interface:
-                        self.ip_address[interface["IP Address"]] = known
+                        self.ip_address[str(interface["IP Address"])] = known
 
             if "Processes" in info:
                 for process in info["Processes"]:
@@ -147,8 +156,8 @@ class ActionSpace:
                             if "remote_port" in connection:
                                 self.port[connection["remote_port"]] = known
 
-            if "User Info" in info:
-                for user in info["User Info"]:
+            if "UserInfo" in info:
+                for user in info["UserInfo"]:
                     if "Username" in user:
                         self.username[user["Username"]] = known
                     if "Password" in user:
@@ -162,3 +171,6 @@ class ActionSpace:
                         else:
                             # assume if not a server session then its a client session
                             self.client_session[session["ID"]] = known
+        if 'subnets' in observation['network']:
+            for subnet in observation['network']['subnets']:
+                self.subnet[subnet] = known

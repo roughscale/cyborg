@@ -4,7 +4,7 @@ from ipaddress import IPv4Network
 from CybORG.Shared.Actions.MSFActionsFolder.MSFAction import MSFAction
 from CybORG.Shared.Enums import SessionType
 from CybORG.Shared.Observation import Observation
-from CybORG.Simulator.State import State
+from CybORG.Simulator.Environment import Environment
 
 
 class MSFAutoroute(MSFAction):
@@ -12,17 +12,17 @@ class MSFAutoroute(MSFAction):
         super().__init__(session, agent)
         self.meterpreter_session = target_session
 
-    def sim_execute(self, state: State):
+    def sim_execute(self, environment: Environment):
         obs = Observation()
-        if self.session not in state.sessions[self.agent] or self.meterpreter_session not in state.sessions[self.agent]:
+        if self.session not in environment.sessions[self.agent] or self.meterpreter_session not in environment.sessions[self.agent]:
             obs.set_success(False)
             return obs
         interfaces = []
-        meterpreter_session = state.sessions[self.agent][self.meterpreter_session]
-        msf_session = state.sessions[self.agent][self.session]
+        meterpreter_session = environment.sessions[self.agent][self.meterpreter_session]
+        msf_session = environment.sessions[self.agent][self.session]
         if meterpreter_session in msf_session.children.values() and meterpreter_session.session_type == SessionType.METERPRETER and msf_session.session_type == SessionType.MSF_SERVER:
             obs.set_success(True)
-            for interface in state.hosts[meterpreter_session.host].interfaces:
+            for interface in environment.hosts[meterpreter_session.host].interfaces:
                 if str(interface.ip_address) != '127.0.0.1':
                     interfaces.append(interface)
                     obs.add_interface_info(hostid=str(self.meterpreter_session), subnet=interface.subnet)

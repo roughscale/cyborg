@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from ipaddress import IPv4Network, IPv4Address
 from math import log2
 from random import sample, choice
+import pprint
 
 from CybORG.Shared import Scenario
 from CybORG.Shared.Enums import SessionType
@@ -15,11 +16,11 @@ from CybORG.Simulator.Session import Session
 from CybORG.Simulator.Subnet import Subnet
 
 
-class State:
-    """Simulates the Network State.
+class Environment:
+    """Simulates the Network Environment.
 
     This class contains all the data for the simulated network, including ips, subnets, hosts and sessions.
-    The methods mostly modify the network state, but tend to delegate most of the work to the Host class.
+    The methods mostly modify the network environment state, but tend to delegate most of the work to the Host class.
     """
     def __init__(self, scenario):
         self.scenario = scenario
@@ -31,71 +32,83 @@ class State:
         self.subnets = None  # contains mapping of subnet cidrs to subnet objects
 
         self.sessions_count = {}  # contains a mapping of agent name to number of sessions
-        self._initialise_state(scenario)
+        self._initialise_environment(scenario)
         self.step = 0
         self.original_time = datetime(2020, 1, 1, 0, 0)
         self.time = copy.deepcopy(self.original_time)
+
+        self.external_hosts = [ "Attacker0" ] # list of hostnames that are external of the system
 
     def get_true_state(self, info: dict) -> Observation:
         true_obs = Observation()
         if info is None:
             raise ValueError('None is not a valid argument for the get true state function in the State class')
         else:
+            #print("get_true_state info dict")
+            #print(info)
+            if 'network' in info and 'subnets' in info['network']:
+                for name, cidr in self.subnets.items():
+                    if str(cidr) in info['network']['subnets']:
+                        true_obs.add_subnet(cidr=str(cidr))
             for hostname, host in self.hosts.items():
-                if hostname in info:
-                    if 'Processes' in info[hostname]:
+                #hostip = str([ ip for ip, host in self.ip_addresses.items() if host == hostname ][0])
+                # use generic hostid var
+                hostid = hostname
+                if hostid in info['hosts']:
+                    if 'Processes' in info['hosts'][hostid] and hostname not in self.external_hosts:
                         for process in host.processes:
                             obs = process.get_state()
                             for o in obs:
-                                true_obs.add_process(hostid=hostname, **o)
-                    if 'Interfaces' in info[hostname]:
-                        if info[hostname]['Interfaces'] == 'All':
+                                true_obs.add_process(hostid=hostid, **o)
+                    if 'Interfaces' in info['hosts'][hostid] and hostname not in self.external_hosts:
+                        if info['hosts'][hostid]['Interfaces'] == 'All':
                             for interface in host.interfaces:
-                                true_obs.add_interface_info(hostid=hostname, **interface.get_state())
-                        elif info[hostname]['Interfaces'] == 'IP Address':
+                                true_obs.add_interface_info(hostid=hostid, **interface.get_state())
+                        elif info['hosts'][hostid]['Interfaces'] == 'IP Address':
                             for interface in host.interfaces:
                                 if interface.name != 'lo':
-                                    true_obs.add_interface_info(hostid=hostname, ip_address=interface.ip_address)
+                                    true_obs.add_interface_info(hostid=hostid, ip_address=interface.ip_address)
                         else:
-                            raise NotImplementedError(f"{info[hostname]['Interfaces']} cannot be collected from state")
-                    if 'Sessions' in info[hostname]:
-                        if info[hostname]['Sessions'] == 'All':
+                            raise NotImplementedError(f"{info[hostip]['Interfaces']} cannot be collected from state")
+                    if 'Sessions' in info['hosts'][hostid]:
+                        if info['hosts'][hostid]['Sessions'] == 'All':
                             for agent_name, sessions in host.sessions.items():
                                 for session in sessions:
-                                    true_obs.add_session_info(hostid=hostname,
+                                    true_obs.add_session_info(hostid=hostid,
                                                               **self.sessions[agent_name][session].get_state())
                         else:
-                            agent_name = info[hostname]['Sessions']
+                            agent_name = info['hosts'][hostid]['Sessions']
                             if agent_name in host.sessions:
                                 for session in host.sessions[agent_name]:
-                                    true_obs.add_session_info(hostid=hostname,
+                                    true_obs.add_session_info(hostid=hostid,
                                                               **self.sessions[agent_name][session].get_state())
-                    if 'Files' in info[hostname]:
+                    if 'Files' in info['hosts'][hostid] and hostname not in self.external_hosts:
                         for file in host.files:
-                            true_obs.add_file_info(hostid=hostname, **file.get_state())
-                    if 'User info' in info[hostname]:
+                            true_obs.add_file_info(hostid=hostid, **file.get_state())
+                    if 'UserInfo' in info['hosts'][hostid] and hostname not in self.external_hosts:
                         for user in host.users:
                             obs = user.get_state()
                             for o in obs:
-                                true_obs.add_user_info(hostid=hostname, **o)
-                    if 'System info' in info[hostname]:
-                        true_obs.add_system_info(hostid=hostname, **host.get_state())
-                    if 'Services' in info[hostname]:
-                        if 'All' in info[hostname]['Services']:
+                                true_obs.add_user_info(hostid=hostid, **o)
+                    if 'SystemInfo' in info['hosts'][hostid]:
+                        true_obs.add_system_info(hostid=hostid, **host.get_state())
+                    if 'Services' in info['hosts'][hostid] and hostname not in self.external_hosts:
+                        if 'All' in info[hostid]['Services']:
                             for service, service_info in host.services.items():
-                                true_obs.add_process(hostid=hostname, service_name=service, pid=service_info['process'])
+                                true_obs.add_process(hostid=hostid, service_name=service, pid=service_info['process'])
                         else:
-                            for service_name in info[hostname]['Services']:
+                            for service_name in info[hostid]['Services']:
                                 if service_name in host.services:
-                                    true_obs.add_process(hostid=hostname, service_name=service_name, pid=host.services[service_name]['process'])
+                                    true_obs.add_process(hostid=hostid, service_name=service_name, pid=host.services[service_name]['process'])
+        #print(true_obs)                            
         return true_obs
 
     def reset(self):
-        self._initialise_state(self.scenario)
+        #self._initialise_environment(self.scenario)
         self.step = 0
         self.time = copy.deepcopy(self.original_time)
 
-    def _initialise_state(self, scenario: Scenario):
+    def _initialise_environment(self, scenario: Scenario):
         self.subnet_name_to_cidr = {}  # contains mapping of subnet names to subnet cidrs
         self.ip_addresses = {}  # contains mapping of ip addresses to hostnames
 
@@ -121,21 +134,21 @@ class State:
             ip_address_selection = sample(list(subnet_cidr.hosts()), len(scenario.get_subnet_hosts(subnet_name)))
             allocated = 0
             for hostname in scenario.get_subnet_hosts(subnet_name):
-                self.ip_addresses[ip_address_selection[allocated]] = hostname
+                self.ip_addresses[str(ip_address_selection[allocated])] = hostname
                 interface = {"ip_address": ip_address_selection[allocated], "subnet": subnet_cidr}
                 if hostname in hostname_to_interface:
                     hostname_to_interface[hostname].append(interface)
                 else:
                     hostname_to_interface[hostname] = [interface]
                 allocated += 1
-            self.subnets[subnet_cidr] = Subnet(cidr=subnet_cidr, ip_addresses=ip_address_selection,
+            self.subnets[str(subnet_cidr)] = Subnet(cidr=subnet_cidr, ip_addresses=ip_address_selection,
                                                nacls=scenario.get_subnet_nacls(subnet_name), name=subnet_name)
 
         # create host objects for all host names in the scenario
         for hostname in scenario.hosts:
             host_info = scenario.get_host(hostname)
-            self.hosts[hostname] = Host(system_info=host_info['System info'], processes=host_info['Processes'],
-                                        users=host_info['User Info'], interfaces=hostname_to_interface[hostname],
+            self.hosts[hostname] = Host(system_info=host_info['SystemInfo'], processes=host_info['Processes'],
+                                        users=host_info['UserInfo'], interfaces=hostname_to_interface[hostname],
                                         hostname=hostname, info=host_info.get('info'), services=host_info.get('Services'))
 
         for agent in scenario.agents:
@@ -144,6 +157,7 @@ class State:
             self.sessions_count[agent] = 0
             # instantiate parentless sessions first
             for starting_session in agent_info.starting_sessions:
+                #print(starting_session)
                 if starting_session.parent is None:
                     self.sessions[agent][len(self.sessions[agent])] = self.hosts[starting_session.hostname].add_session(
                         username=starting_session.username,
@@ -154,6 +168,8 @@ class State:
                         name=starting_session.name,
                         artifacts=starting_session.event_artifacts)
                     self.sessions_count[agent] += 1
+                    #print(self.sessions[agent][0].ports)
+                    #print(self.hosts[starting_session.hostname])
             for starting_session in agent_info.starting_sessions:
                 if starting_session.parent is not None:
                     if starting_session.parent in [i.name for i in self.sessions[agent].values()]:
@@ -267,3 +283,11 @@ class State:
             if subnet.contains_ip_address(ip_address):
                 return subnet
         raise ValueError(f"No Subnet contains the ip address {ip_address}")
+
+    def get_dict(self):
+        removed_keys=['scenario','time','original_time']
+        tmp = copy.deepcopy(self.__dict__)
+        output = { k: v for k,v in tmp.items() if k not in removed_keys }
+        for name,obj in output['hosts'].items():
+            output["hosts"][name] = obj.get_dict()
+        return output
