@@ -22,17 +22,17 @@ class Pingsweep(ConcreteAction):
         """
         obs = Observation()
 
-        print("Subnet: {0}".format(self.subnet))
-        print("session: {0}".format(self.session))
-        print("target_session: {0}".format(self.target_session))
+        #print("Subnet: {0}".format(self.subnet))
+        #print("session: {0}".format(self.session))
+        #print("target_session: {0}".format(self.target_session))
         # Check the session running the code exists and is active.
         if self.session not in environment.sessions[self.agent]:
             obs.set_success(False)
             return obs
         from_host = environment.sessions[self.agent][self.session].host
-        print("from_host: {0}".format(from_host))
+        #print("from_host: {0}".format(from_host))
         session = environment.sessions[self.agent][self.session]
-        print("session active: {0}".format(session.active))
+        #print("session active: {0}".format(session.active))
         if not session.active:
             obs.set_success(False)
             return obs
@@ -40,7 +40,7 @@ class Pingsweep(ConcreteAction):
         # Check the target session exists and is active.
         if self.target_session in environment.sessions[self.agent]:
             target_session = environment.sessions[self.agent][self.target_session]
-            print("target session active: {0}".format(target_session.active))
+            #print("target session active: {0}".format(target_session.active))
         else:
             obs.set_success(False)
             return obs

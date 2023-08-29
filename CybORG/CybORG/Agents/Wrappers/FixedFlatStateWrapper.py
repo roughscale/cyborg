@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from CybORG.Agents.Wrappers.BaseWrapper import BaseWrapper
-from CybORG.Shared import Observation
+from CybORG.Shared import Observation, Results
 from CybORG.Shared.Actions import ShellSleep
 from CybORG.Shared.Enums import OperatingSystemType, SessionType, ProcessName, Path, ProcessType, ProcessVersion, \
     AppProtocol, FileType, ProcessState, Vulnerability, Vendor, PasswordHashType, BuiltInGroups, \
@@ -11,19 +11,20 @@ from CybORG.Shared.Enums import OperatingSystemType, SessionType, ProcessName, P
 import inspect, random
 
 
-class FixedFlatWrapper(BaseWrapper):
+class FixedFlatStateWrapper(BaseWrapper):
     def __init__(self, env: BaseWrapper=None, agent=None):
         super().__init__(env, agent)
         self.MAX_HOSTS = 5
-        self.MAX_PROCESSES = 20
+        self.MAX_PROCESSES = 6 #20
         self.MAX_CONNECTIONS = 2
         self.MAX_VULNERABILITIES = 1
-        self.MAX_INTERFACES = 4
-        self.MAX_FILES = 10
-        self.MAX_SESSIONS = 20
-        self.MAX_USERS = 10
-        self.MAX_GROUPS = 10
-        self.MAX_PATCHES = 10
+        self.MAX_INTERFACES = 2 # 4
+        self.MAX_SESSIONS = 5 # 20
+        # not currently used so disable
+        self.MAX_USERS = 0 #10 
+        self.MAX_FILES = 0 #10
+        self.MAX_GROUPS = 0 #10
+        self.MAX_PATCHES = 0 #10
         self.hostname = {}
         self.username = {}
         self.group_name = {}
@@ -33,6 +34,31 @@ class FixedFlatWrapper(BaseWrapper):
         self.password = {}
         self.password_hash = {}
         self.file = {}
+
+    
+    # This class binds the BaseWrapper method
+    def step(self, agent=None, action=None) -> Results:
+        # get the dict result from the EnumActionWrapper
+        result = self.env.step(agent, action)
+        # returns array (list) from dict
+        #print("ff result state")
+        #print(result.state)
+        #print("ff result.observation")
+        #print(result.observation)
+        # following converts dict into list
+        result.next_state = self.observation_change(result.next_state)
+        result.state = self.observation_change(result.state)
+        result.observation = self.observation_change(result.observation)
+        #print("ff result.observation")
+        #print(result.observation)
+        #print("ff result.state")
+        #print(result.state)
+        # returns array(list)
+        result.action_space = self.action_space_change(result.action_space)
+        return result
+    
+    def action_space_change(self, action_space: dict) -> dict:
+        return action_space
 
     def get_action(self, observation, action_space):
 

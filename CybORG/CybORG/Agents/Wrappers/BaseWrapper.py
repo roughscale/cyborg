@@ -13,15 +13,23 @@ class BaseWrapper:
         self.agent = agent
 
     def step(self, agent=None, action=None) -> Results:
+        #print(self.env)
+        #print(self.env.step)
         result = self.env.step(agent, action)
+        # following *_change methods don't transform the data, just passes it through.
         result.observation = self.observation_change(result.observation)
+        result.state = self.observation_change(result.state)
+        result.next_state = self.observation_change(result.next_state)
         result.action_space = self.action_space_change(result.action_space)
+        #print("BaseWrapper step")
+        #print(result.state)
         return result
 
     def reset(self, agent=None):
         result = self.env.reset(agent)
         result.action_space = self.action_space_change(result.action_space)
         result.observation = self.observation_change(result.observation)
+        result.state = self.observation_change(result.state)
         return result
 
     def get_action(self, observation: dict, action_space: dict):

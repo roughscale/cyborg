@@ -32,6 +32,7 @@ class Environment:
         self.subnets = None  # contains mapping of subnet cidrs to subnet objects
 
         self.sessions_count = {}  # contains a mapping of agent name to number of sessions
+        self.hostname_to_interface = {} # contains a mapping of hostname interfaces to ip addresses
         self._initialise_environment(scenario)
         self.step = 0
         self.original_time = datetime(2020, 1, 1, 0, 0)
@@ -104,29 +105,30 @@ class Environment:
         return true_obs
 
     def reset(self):
-        #self._initialise_environment(self.scenario)
+        self._initialise_environment(self.scenario, reset=True)
         self.step = 0
         self.time = copy.deepcopy(self.original_time)
 
-    def _initialise_environment(self, scenario: Scenario):
-        self.subnet_name_to_cidr = {}  # contains mapping of subnet names to subnet cidrs
-        self.ip_addresses = {}  # contains mapping of ip addresses to hostnames
+    def _initialise_environment(self, scenario: Scenario, reset=False):
+        if not reset:
+          self.subnet_name_to_cidr = {}  # contains mapping of subnet names to subnet cidrs
+          self.ip_addresses = {}  # contains mapping of ip addresses to hostnames
 
-        self.hosts = {}  # contains mapping of hostnames to host objects
-        self.sessions = {}  # contains mapping of agent names to mapping of session id to session objects
-        self.subnets = {}  # contains mapping of subnet cidrs to subnet objects
+          self.hosts = {}  # contains mapping of hostnames to host objects
+          self.sessions = {}  # contains mapping of agent names to mapping of session id to session objects
+          self.subnets = {}  # contains mapping of subnet cidrs to subnet objects
 
-        self.sessions_count = {}  # contains a mapping of agent name to number of sessions
-        hostname_to_interface = {}
+          self.sessions_count = {}  # contains a mapping of agent name to number of sessions
+          self.hostname_to_interface = {}
 
-        count = 0
-        # randomly generate subnets cidrs for all subnets in scenario and IP addresses for all hosts in those subnets and create Subnet objects
-        # using fixed size subnets (VLSM maybe viable alternative if required)
-        maximum_subnet_size = max([scenario.get_subnet_size(i) for i in scenario.subnets])
-        subnets_cidrs = sample(
+          count = 0
+          # randomly generate subnets cidrs for all subnets in scenario and IP addresses for all hosts in those subnets and create Subnet objects
+          # using fixed size subnets (VLSM maybe viable alternative if required)
+          maximum_subnet_size = max([scenario.get_subnet_size(i) for i in scenario.subnets])
+          subnets_cidrs = sample(
             list(IPv4Network("10.0.0.0/16").subnets(new_prefix=32 - max(int(log2(maximum_subnet_size + 5)), 4))),
             len(scenario.subnets))
-        for subnet_name in scenario.subnets:
+          for subnet_name in scenario.subnets:
             subnet_cidr = choice(list(subnets_cidrs[count].subnets(
                 new_prefix=32 - max(int(log2(scenario.get_subnet_size(subnet_name) + 5)), 4))))
             count += 1
@@ -136,10 +138,10 @@ class Environment:
             for hostname in scenario.get_subnet_hosts(subnet_name):
                 self.ip_addresses[str(ip_address_selection[allocated])] = hostname
                 interface = {"ip_address": ip_address_selection[allocated], "subnet": subnet_cidr}
-                if hostname in hostname_to_interface:
-                    hostname_to_interface[hostname].append(interface)
+                if hostname in self.hostname_to_interface:
+                    self.hostname_to_interface[hostname].append(interface)
                 else:
-                    hostname_to_interface[hostname] = [interface]
+                    self.hostname_to_interface[hostname] = [interface]
                 allocated += 1
             self.subnets[str(subnet_cidr)] = Subnet(cidr=subnet_cidr, ip_addresses=ip_address_selection,
                                                nacls=scenario.get_subnet_nacls(subnet_name), name=subnet_name)
@@ -148,7 +150,7 @@ class Environment:
         for hostname in scenario.hosts:
             host_info = scenario.get_host(hostname)
             self.hosts[hostname] = Host(system_info=host_info['SystemInfo'], processes=host_info['Processes'],
-                                        users=host_info['UserInfo'], interfaces=hostname_to_interface[hostname],
+                                        users=host_info['UserInfo'], interfaces=self.hostname_to_interface[hostname],
                                         hostname=hostname, info=host_info.get('info'), services=host_info.get('Services'))
 
         for agent in scenario.agents:
@@ -157,12 +159,14 @@ class Environment:
             self.sessions_count[agent] = 0
             # instantiate parentless sessions first
             for starting_session in agent_info.starting_sessions:
-                #print(starting_session)
+                #print("starting session")
+                #print(dir(starting_session))
                 if starting_session.parent is None:
                     self.sessions[agent][len(self.sessions[agent])] = self.hosts[starting_session.hostname].add_session(
                         username=starting_session.username,
                         agent=agent,
                         parent=None,
+                        pid=starting_session.pid,
                         session_type=starting_session.session_type,
                         ident=self.sessions_count[agent],
                         name=starting_session.name,
@@ -194,6 +198,21 @@ class Environment:
     def add_session(self, host: str, user: str, agent: str, parent: int, process=None, session_type: str = "shell",
             timeout: int = 0, is_escalate_sandbox: bool = False) -> Session:
         """Adds a session of a selected type to a dict as a selected user"""
+        # Add idempotency (Don't create a session if the same already exists)
+        # session similarity will depend (at the moment) upon user, host and session_type
+        # this gets the list of sessions from the simulated environment (total sessions within env)
+        existing_sessions = self.sessions
+        #print(user)
+        #print(SessionType.parse_string(session_type))
+        #print(host)
+        for idx, sess in existing_sessions[agent].items():
+            #print(sess.username)
+            #print(sess.session_type)
+            #print(sess.host)
+            #print(sess.process)
+            if user == sess.username and SessionType.parse_string(session_type) == sess.session_type and host == sess.host:
+              return sess
+
         ident = self.sessions_count[agent]
         if parent in self.sessions[agent]:
             parent = self.sessions[agent][parent]

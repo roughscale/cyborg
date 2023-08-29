@@ -18,6 +18,8 @@ class Results:
                  error: Exception = None,
                  error_msg: str = None,
                  next_observation=None,
+                 state=None,
+                 next_state=None,
                  action=None,
                  action_name: str = None):
         self.observation = observation
@@ -31,6 +33,8 @@ class Results:
         self.error = error
         self.error_msg = error_msg
         self.action_name = action_name
+        self.state = state
+        self.next_state = next_state
         self.selection_masks = None
 
     def has_error(self):
@@ -57,6 +61,15 @@ class Results:
         else:
             copy_kwargs["next_observation"] = deepcopy(self.next_observation)
 
+        if isinstance(self.state, Observation):
+            copy_kwargs["state"] = self.state.copy()
+        else:
+            copy_kwargs["state"] = deepcopy(self.state)
+
+        if isinstance(self.next_state, Observation):
+            copy_kwargs["next_state"] = self.next_state.copy()
+        else:
+            copy_kwargs["next_state"] = deepcopy(self.next_state)
         return Results(**copy_kwargs)
 
     def __str__(self):

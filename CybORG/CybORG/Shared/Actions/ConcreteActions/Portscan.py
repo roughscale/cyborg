@@ -31,7 +31,7 @@ class Portscan(ConcreteAction):
         else:
             target_host: Host = environment.hosts[environment.ip_addresses[str(self.ip_address)]]
             ports = self.check_routable([environment.subnets[str(i.subnet)] for i in environment.hosts[from_host].interfaces if i.ip_address != lo], [s for s in environment.subnets.values() if IPv4Address(self.ip_address) in IPv4Network(s.cidr)])
-            print("PortScan ports: {0}".format(ports))
+            #print("PortScan ports: {0}".format(ports))
 
         if ports is None or ports == []:
             obs.set_success(False)

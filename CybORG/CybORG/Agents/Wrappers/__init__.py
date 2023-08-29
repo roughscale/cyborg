@@ -1,5 +1,6 @@
 from .BaseWrapper import BaseWrapper
 from .FixedFlatWrapper import FixedFlatWrapper
+from .FixedFlatStateWrapper import FixedFlatStateWrapper
 from .OpenAIGymWrapper import OpenAIGymWrapper
 from .BlueTableWrapper import BlueTableWrapper
 from .RedTableWrapper import RedTableWrapper

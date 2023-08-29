@@ -1,4 +1,5 @@
 import numpy as np
+import copy
 from gym import spaces, Env
 from typing import Union, List
 from prettytable import PrettyTable
@@ -23,20 +24,30 @@ class OpenAIGymWrapper(Env, BaseWrapper):
         self.action = None
 
     def step(self, action: Union[int, List[int]] = None) -> (object, float, bool, dict):
+        #print("OpenAIGymWrapper step")
         self.action = action
         result = self.env.step(self.agent_name, action)
         result.observation = self.observation_change(result.observation)
+        result.next_state = self.observation_change(result.next_state)
+        result.state = self.observation_change(result.state)
         result.action_space = self.action_space_change(result.action_space)
         info = vars(result)
-        return np.array(result.observation, dtype=np.float32), result.reward, result.done, info
+        #return result.observation, result.reward, result.done, info
+        return result.next_state, result.reward, result.done, info
 
     def reset(self, agent=None):
+        #print("OpenAIGymWrapper reset")
+        #print(self.env.reset)
         result = self.env.reset(self.agent_name)
         result.action_space = self.action_space_change(result.action_space)
         result.observation = self.observation_change(result.observation)
-        return np.array(result.observation, dtype=np.float32)
+        result.state = self.observation_change(result.state)
+        #return result.observation
+        return result.state
 
-    def render(self):
+    def render(self, mode=None, kwargs=None):
+        print(self.get_observation(self, self.agent_name))
+        """
         # TODO: If FixedFlatWrapper it will error out!
         if self.agent_name == 'Red':
             table = PrettyTable({
@@ -68,6 +79,12 @@ class OpenAIGymWrapper(Env, BaseWrapper):
                 red_action = self.get_last_action(agent=self.agent_name)
                 return print(f'\nBlue Action: {_action}\nRed Action: {red_action}\n{table}')
         return print(table)
+        """
+
+
+    def observation_change(self, observation: list):
+        # convert python list into np.array
+        return np.array(observation, dtype=np.float32)
 
     def get_attr(self,attribute:str):
         return self.env.get_attr(attribute)

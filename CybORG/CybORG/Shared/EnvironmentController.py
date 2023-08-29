@@ -3,6 +3,7 @@
 
 import sys
 import yaml
+import copy
 from pprint import pprint
 
 from CybORG.Shared import Scenario
@@ -61,6 +62,7 @@ class EnvironmentController:
         self.action = {}
         self.done = False
         self.observation = {}
+        self.state = None
         self.INFO_DICT['True'] = {"hosts": {}, "network": { "subnets": [] } }
         #print("Populate host INFO_DICT")
         # populate network subnets INFO_DICT
@@ -103,7 +105,7 @@ class EnvironmentController:
                 #hostip = str([ k for k,v in self.hostname_ip_map.items() if v == hostname ][0])
                 hostid = hostname
                 self.INFO_DICT[agent]['hosts'][hostid] = hostinfo
-                print(self.INFO_DICT[agent]['hosts'][hostid])
+                #print(self.INFO_DICT[agent]['hosts'][hostid])
             for host in self.INFO_DICT[agent]['hosts'].keys():
                 self.INFO_DICT[agent]['hosts'][host]['Sessions'] = agent
         #pprint(self.INFO_DICT[agent])
@@ -130,10 +132,13 @@ class EnvironmentController:
             agent_object.reset()
             self.observation[agent_name] = self._filter_obs(self.get_true_state(self.INFO_DICT[agent_name]), agent_name)
             agent_object.set_init_obs(self.observation[agent_name].data, self.init_state)
+            self.state = agent_object.get_state()
+            #print("Env State reset")
+            #print(self.state)
         if agent is None:
             return Results(observation=self.init_state)
         else:
-            return Results(observation=self.observation[agent].data,
+            return Results(observation=self.observation[agent].data, state=self.state, next_state=self.state,
                            action_space=self.agent_interfaces[agent].action_space.get_action_space())
 
     def step(self, agent: str = None, action: Action = None, skip_valid_action_check: bool = False) -> Results:
@@ -154,7 +159,7 @@ class EnvironmentController:
 
         # for each agent:
         next_observation = {}
-        # all agents act on the state
+        # all agents act on the environment
         for agent_name, agent_object in self.agent_interfaces.items():
             # pass observation to agent to get action
 
@@ -167,8 +172,15 @@ class EnvironmentController:
                 agent_action = InvalidAction()
             self.action[agent_name] = agent_action
 
-            # perform action on state
+            # perform action on environment
             next_observation[agent_name] = self._filter_obs(self.execute_action(self.action[agent_name]), agent_name)
+
+            # update agent state
+            state = agent_object.get_state()
+            #print(state)
+            agent_object.update_state(copy.deepcopy(next_observation[agent_name]))
+            next_state = agent_object.get_state()
+            #print(next_state)
 
         # get true observation
         true_observation = self._filter_obs(self.get_true_state(self.INFO_DICT['True'])).data
@@ -191,12 +203,14 @@ class EnvironmentController:
             self.done = done or self.done
             # determine reward for agent
             reward = agent_object.determine_reward(next_observation, true_observation,
-                                                   self.action, self.done)
+                                                   self.action, self.done, state=state, next_state=next_state)
             self.reward[agent_name] = reward + self.action[agent_name].cost
+            """
             if agent_name != agent:
                 # train agent using obs, reward, previous observation, and done
                 agent_object.train(Results(observation=self.observation[agent_name].data, reward=reward,
                                            next_observation=next_observation[agent_name].data, done=self.done))
+            """
             self.observation[agent_name] = next_observation[agent_name]
             agent_object.update(self.observation[agent_name])
 
@@ -219,7 +233,7 @@ class EnvironmentController:
         if agent is None:
             result = Results(observation=true_observation, done=self.done)
         else:
-            result = Results(observation=self.observation[agent].data, done=self.done, reward=round(self.reward[agent], 1),
+            result = Results(observation=self.observation[agent].data, state=state, next_state=next_state, done=self.done, reward=round(self.reward[agent], 1),
                              action_space=self.agent_interfaces[agent].action_space.get_action_space(),
                              action=self.action[agent])
         return result
@@ -248,6 +262,14 @@ class EnvironmentController:
         bool
             whether goal was reached or not
         """
+
+        # goal is to successfully escalate priv to root on Internal2 host
+        obs = agent_obs["Red"].get_dict()["hosts"]
+        if "Internal2" in obs:
+            if "Sessions" in obs["Internal2"]:
+                for sess in obs["Internal2"]["Sessions"]:
+                    if "Username" in sess and sess["Username"] == "root":
+                           return True
         return False
 
     def start(self, steps: int = None, log_file=None):

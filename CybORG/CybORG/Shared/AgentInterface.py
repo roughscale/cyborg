@@ -10,21 +10,24 @@ from CybORG.Shared.BaselineRewardCalculator import BaselineRewardCalculator
 from CybORG.Shared.BlueRewardCalculator import HybridAvailabilityConfidentialityRewardCalculator
 from CybORG.Shared.Observation import Observation
 from CybORG.Shared.RedRewardCalculator import DistruptRewardCalculator, PwnRewardCalculator, \
-    HybridImpactPwnRewardCalculator
+    HybridImpactPwnRewardCalculator, GoalRewardCalculator
 from CybORG.Shared.Results import Results
 from CybORG.Shared.RewardCalculator import RewardCalculator, EmptyRewardCalculator
 from CybORG.Shared.State import State
 
-MAX_HOSTS = 5
-MAX_PROCESSES = 100    # 50
-MAX_CONNECTIONS = 10
-MAX_VULNERABILITIES = 1
-MAX_INTERFACES = 4
-MAX_FILES = 10
-MAX_SESSIONS = 10    # 80
-MAX_USERS = 10
-MAX_GROUPS = 10
-MAX_PATCHES = 10
+# Unused in this Object
+# MAX values are used in the ActionSpace object to determine max action space length
+# and also in the FlatWrapper to determine max observation/state vector length
+#MAX_HOSTS = 5
+#MAX_PROCESSES = 10    # 50
+#MAX_CONNECTIONS = 10
+#MAX_VULNERABILITIES = 1
+#MAX_INTERFACES = 4
+#MAX_FILES = 10
+#MAX_SESSIONS = 10    # 80
+#MAX_USERS = 10
+#MAX_GROUPS = 10
+#MAX_PATCHES = 10
 
 
 class AgentInterface:
@@ -66,15 +69,20 @@ class AgentInterface:
             for wrapper in wrappers:
                 if wrapper != 'None':
                     self.agent = getattr(sys.modules['CybORG.Agents.Wrappers'], wrapper)(agent=self.agent)
+        # this method for Red Agent does nothing
         self.agent.set_initial_values(
             action_space=self.action_space.get_max_action_space(),
             observation=Observation().data
         )
+        # Don't have separate State space.  Use Observation space as FO State Space.
+        # Have result var track PO Observation space
         self.state_space = State()
+        self.state_space.initialise_state(scenario)
 
     def update(self, obs: dict, known=True):
         if isinstance(obs, Observation):
             obs = obs.data
+        # updates the action space parameters
         self.action_space.update(obs, known)
 
     def update_state(self, obs):
@@ -103,13 +111,13 @@ class AgentInterface:
         self.reward_calculator.previous_obs = init_obs
         self.reward_calculator.init_obs = init_obs
 
-    def get_action(self, observation: Observation, action_space: ActionSpace):
+    def get_action(self, observation: Observation, action_space: ActionSpace, egreedy=True):
         """Gets an action from the agent to perform on the environment"""
         if isinstance(observation, Observation):
             observation = observation.data
         if action_space is None:
             action_space = self.action_space
-        self.last_action = self.agent.get_action(observation, action_space)
+        self.last_action = self.agent.get_action(observation, action_space, egreedy)
         return self.last_action
 
     def train(self, result: Results):
@@ -119,7 +127,8 @@ class AgentInterface:
         if isinstance(result.next_observation, Observation):
             result.next_observation = result.next_observation.data
         result.action = self.last_action
-        self.agent.train(result)
+        obs_hash, next_obs_hash, loss, mean_v = self.agent.train(result)
+        return obs_hash, next_obs_hash, loss, mean_v
 
     def end_episode(self):
         self.agent.end_episode()
@@ -138,6 +147,11 @@ class AgentInterface:
         self.reward_calculator.reset()
         self.action_space.reset(self.agent_name)
         self.agent.end_episode()
+        #if self.state_space is not None:
+        #    pprint.pprint(self.state_space.get_state())
+        #    print("max_elements: {}".format(self.state_space.get_max_elements()))
+        self.state_space = State()
+        self.state_space.initialise_state(self.scenario)
 
     def create_reward_calculator(self, reward_calculator: str, agent_name: str, scenario: Scenario) -> RewardCalculator:
         calc = None
@@ -153,12 +167,14 @@ class AgentInterface:
             calc = HybridAvailabilityConfidentialityRewardCalculator(agent_name, scenario)
         elif reward_calculator == 'HybridImpactPwn':
             calc = HybridImpactPwnRewardCalculator(agent_name, scenario)
+        elif reward_calculator == 'Goal':
+            calc = GoalRewardCalculator(agent_name, scenario)
         else:
             raise ValueError(f"Invalid calculator selection: {reward_calculator} for agent {agent_name}")
         return calc
 
-    def determine_reward(self, agent_obs: dict, true_obs: dict, action: Action, done: bool) -> float:
-        return self.reward_calculator.calculate_reward(current_state=true_obs, action=action,
+    def determine_reward(self, agent_obs: dict, true_obs: dict, action: Action, done: bool, state: dict={}, next_state: dict={}) -> float:
+        return self.reward_calculator.calculate_reward(state=state, next_state=next_state, true_state=true_obs, action_dict=action,
                                                        agent_observations=agent_obs, done=done)
 
     def get_observation_space(self):

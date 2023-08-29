@@ -97,6 +97,12 @@ class Host(Entity):
         self.info = info if info is not None else {}
         self.events = {'NetworkConnections': [], 'ProcessCreation': []}
 
+        ## reduce randomness in port and pid allocations
+        # whilst troubleshooting NN
+        # now removed
+        #self.global_pid = 32000
+        #self.global_ephemeral_port = 50000
+
     def get_state(self):
         observation = {"os_type": self.os_type, "os_distribution": self.distribution, "os_version": self.version,
                        "os_patches": self.patches, "os_kernel": self.kernel, "hostname": self.hostname,
@@ -105,8 +111,20 @@ class Host(Entity):
 
     def get_ephemeral_port(self):
         port = randrange(49152, 60000)
-        if port in self.ephemeral_ports:
-            port = randrange(49152, 60000)
+        # reduce variance in ephemeral ports
+        # to troubleshoot DQN
+        # now removed
+        #port = self.global_ephemeral_port
+        #self.global_ephemeral_port += 1
+        #if self.global_ephemeral_port > 50005:
+        #    self.global_ephemeral_port = 50000
+        while port in self.ephemeral_ports:
+            port = randrange(49152,60000)
+        #if port in self.ephemeral_ports:
+        #    port = self.global_ephemeral_port
+        #    self.global_ephemeral_port +=1
+        #    if self.global_ephemeral_port > 50005:
+        #      self.global_ephemeral_port = 50000
         self.ephemeral_ports.append(port)
         return port
 
@@ -118,6 +136,8 @@ class Host(Entity):
             parent_id = None
         if pid is None:
             pid = self.add_process(name=str(session_type), user=username).pid
+        else:
+            pid = self.add_process(name=str(session_type), user=username, pid=pid).pid
         if session_type == 'MetasploitServer':
             new_session = MSFServerSession(host=self.hostname, user=username, ident=ident, agent=agent, process=pid,
                                            timeout=timeout, session_type=session_type, name=name)
@@ -148,9 +168,17 @@ class Host(Entity):
             pids = []
             for process in self.processes:
                 pids.append(process.pid)
-            pid = 0
-            while pid == 0 or pid in pids:
+            # used to reduce variance for troubleshooting NN    
+            #if len(pids) > 5:
+            #    pids = pids[:5]
+            pid = randrange(32768)
+            while pid not in pids:
                 pid = randrange(32768)
+                #pid = self.global_pid
+                #self.global_pid += 1
+                #if self.global_pid > 32005:
+                #    self.global_pid = 32000
+                #print("add_process_pid {}".format(pid))
         if type(open_ports) is dict:
             open_ports = [open_ports]
 

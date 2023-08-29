@@ -12,8 +12,8 @@ class KeyboardAgent(BaseAgent):
         self.step = 1
         self.screen_width = screen_width # Sets width of the printed bars
 
-    def get_action(self, observation, action_space, sessions=None):
-        self._print_observation(observation)
+    def get_action(self, state, observation, action_space, sessions=None):
+        self._print_observation(state)
         self._print_action_success(observation)
 
         valid_commands = self._get_valid_commands(action_space)
@@ -48,6 +48,7 @@ class KeyboardAgent(BaseAgent):
     def _get_valid_commands(self,action_space):
         print('',f' Turn {self.step}: Command Selection '.center(self.screen_width, '*'),'',sep='\n')
         valid_commands = {}
+        #print(action_space['action'])
         for command in action_space['action'].keys():
             parameter_list = inspect.getfullargspec(command).args 
             parameter_dict = {}
@@ -67,6 +68,8 @@ class KeyboardAgent(BaseAgent):
                 valid_commands[command.__name__] = parameter_dict
 
         return valid_commands
+        # return all commands
+        #return action_space['action']
 
     def _choose_from_options(self, name:str, options:list):
         if len(options) == 0:

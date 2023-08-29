@@ -44,8 +44,13 @@ class ScenarioSession:
     def name(self) -> str:
         return self._info.get("name", None)
 
+    # Allow fixed pid assignment to sessions processes for starting sessions
+    @property
+    def pid(self) -> str:
+        return self._info.get("pid", None)
+
     def __str__(self):
-        return f"Session {self.name}, {self.parent} -> {self.username}@{self.hostname}: {self.session_type}"
+        return f"Session {self.name}, {self.parent} -> {self.username}@{self.hostname}: {self.session_type} -> {self.pid}"
 
 
 class ScenarioAgent:

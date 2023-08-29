@@ -50,8 +50,14 @@ class Observation:
             hostid = str(len(self.data['hosts']))
         if hostid not in self.data['hosts']:
             self.data['hosts'][hostid] = {"Processes": []}
-        elif "Processes" not in self.data['hosts'][hostid]:
+        # hostid is in hosts
+        else:
+          if "Processes" not in self.data['hosts'][hostid]:
             self.data['hosts'][hostid]["Processes"] = []
+          else:
+            #print("{} has existing processes".format(hostid))
+            pass
+
 
         new_process = {}
 
@@ -62,11 +68,14 @@ class Observation:
             if pid < 0:
                 raise ValueError
             for old_process in self.data['hosts'][hostid]["Processes"]:
+                # removes existing process with matching PID so it can be replaced
+                # need to do the same with processes without PID (matching localaddr/ports)
                 if "PID" in old_process and old_process["PID"] == pid:
                     new_process = old_process
                     self.data['hosts'][hostid]["Processes"].remove(old_process)
                     break
             new_process["PID"] = pid
+
 
         if parent_pid is None:
             parent_pid = kwargs.get("PPID", None)
@@ -109,6 +118,33 @@ class Observation:
         new_connection = {}
         if "Connections" not in new_process:
             new_process["Connections"] = []
+
+        # need to remove matching existing connections to be replaced by new connection obs
+        if local_port is not None and local_address is not None:
+            match_conn = False
+            for proc_idx, existing_process in enumerate(self.data['hosts'][hostid]['Processes']):
+                if 'Connections' in existing_process:
+                  #print("{} has existing connections".format(hostid))
+                  for conn_idx, existing_conn in enumerate(existing_process['Connections']):
+                    #print("add_process: existing connection")
+                    #print(existing_conn)
+                    if "local_address" in existing_conn and "local_port" in existing_conn:
+                      if existing_conn['local_address'] == local_address and existing_conn['local_port'] == local_port:
+                        #print("matching existing conn")
+                        match_conn = True
+                        break
+                  if match_conn == True:
+                      break
+            if match_conn == True:
+               # remove the existing_conn from the list of connections in the existing_proc
+               #print("removing connection {0} from process {1}".format(existing_conn,existing_process))
+               # remove process in the event of a single connection
+               if len(self.data['hosts'][hostid]['Processes'][proc_idx]['Connections']) == 1:
+                   self.data['hosts'][hostid]['Processes'].pop(proc_idx)
+               else:
+                   self.data['hosts'][hostid]['Processes'][proc_idx]['Connections'].pop(conn_idx)
+               #print(self.data['hosts'][hostid]['Processes'])
+
 
         if local_port is None:
             local_port = kwargs.get("local_port", None)
