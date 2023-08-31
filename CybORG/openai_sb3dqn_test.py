@@ -27,9 +27,9 @@ final_epsilon = 0.02  # explore/exploit factor
 num_episodes=1000 # NOT USED. Total steps is used
 #num_evals=100
 
-total_steps=300000
-double_dqn = False
-dueling_dqn = True
+total_steps=200000
+double=True
+dueling=True
 
 # The getattr(Python Module) returns all Classes within that Module
 #action_module = sys.modules['CybORG.Shared.Actions']
@@ -81,7 +81,7 @@ action_space=env.action_space
 
 # initialise agent learning
 #total_steps = num_episodes * step_limit_reached
-agent.agent.initialise(env,state_space,gamma,alpha,initial_epsilon,final_epsilon,total_steps,num_episodes)
+agent.agent.initialise(env,state_space,gamma,alpha,initial_epsilon,final_epsilon,total_steps,num_episodes,double,dueling)
 callback=agent.agent.learn_callback
 
 done = False

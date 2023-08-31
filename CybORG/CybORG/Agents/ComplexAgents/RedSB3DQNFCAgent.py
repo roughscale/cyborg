@@ -13,6 +13,9 @@ import torch.nn.functional as F
 
 from stable_baselines3 import DQN
 from sb3_contrib.ddqn.doubledqn import DoubleDQN
+from sb3_contrib.dueling_dqn import DuelingDQN
+from sb3_contrib.dueling_dqn.policies import DuelingDQNPolicy
+from sb3_contrib.dueling_dqn.double_dueling_dqn import DoubleDuelingDQN
 from stable_baselines3.dqn.policies import DQNPolicy
 from stable_baselines3.common.torch_layers import FlattenExtractor
 from stable_baselines3.common.utils import get_linear_fn, constant_fn
@@ -37,7 +40,7 @@ class RedSB3DQNFCAgent(BaseAgent):
     def set_initial_values(self, action_space, observation):
         pass
 
-    def initialise(self, env, state_space, gamma, alpha, initial_eps, final_eps, total_steps, num_episodes):
+    def initialise(self, env, state_space, gamma, alpha, initial_eps, final_eps, total_steps, num_episodes, double, dueling):
         """ set up DQN """
         """ lr_schedule needs to be of Schedule type """
         self.env = env
@@ -68,7 +71,8 @@ class RedSB3DQNFCAgent(BaseAgent):
         print("Final Epsilon: {}".format(final_eps))
         print("Exploration Fraction: {}".format(exploration_fraction))
         print("Gamma: {}".format(gamma))
-        print("Double: {}".format(True)) # self.dqn class is DoubleDQN
+        print("Double: {}".format(double))
+        print("Dueling: {}".format(dueling))
         print("Learning Rate (Constant): {}".format(learning_rate))
         print("PER Alpha: {}".format(prioritized_replay_alpha))
         print("PER Beta0: {}".format(prioritized_replay_beta0))
@@ -85,10 +89,21 @@ class RedSB3DQNFCAgent(BaseAgent):
                 "beta": prioritized_replay_beta0
                 }
 
-        print(per_buffer_args)
-        #self.dqn = DQN(
-        self.dqn = DoubleDQN(
-                policy="MlpPolicy",
+        if double and dueling:
+            DQNClass = DoubleDuelingDQN
+            DQNPolicyClass = DuelingDQNPolicy
+        elif double and not dueling:
+            DQNClass = DoubleDQN
+            DQNPolicyClass = DQNPolicy
+        elif not double and dueling:
+            DQNClass = DuelingDQN
+            DQNPolicyClass = DuelingDQNPolicy
+        else:
+            DQNClass = DQN
+            DQNPolicyClass = DQNPolicy
+
+        self.dqn = DQNClass(
+                policy=DQNPolicyClass,
                 env=env,
                 learning_rate=lr_schedule, 
                 buffer_size=buffer_size,
