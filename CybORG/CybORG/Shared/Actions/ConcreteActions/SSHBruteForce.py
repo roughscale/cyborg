@@ -67,7 +67,7 @@ class SSHBruteForce(ExploitAction):
         if vuln_proc is None:
             obs.set_success(False)
             return obs
-        obs.add_process(hostid=str(self.ip_address), local_address=self.ip_address, local_port=22, status="open",
+        obs.add_process(hostid=self.ip_address, local_address=self.ip_address, local_port=22, status="open",
                         process_type='SSH')
 
         # test if there is a bruteforceable user-pass on the system
@@ -119,14 +119,23 @@ class SSHBruteForce(ExploitAction):
                                 "remote_port": 22
                                 }
             from_host.get_process(session.pid).connections.append(remote_port_dict)
-            obs.add_process(hostid=str(originating_ip_address), local_address=originating_ip_address, remote_address=self.ip_address,
+            obs.add_process(hostid=originating_ip_address, local_address=originating_ip_address, remote_address=self.ip_address,
                             local_port=remote_port, remote_port=22)
-            obs.add_process(hostid=str(self.ip_address), local_address=self.ip_address, remote_address=originating_ip_address,
+            obs.add_process(hostid=self.ip_address, local_address=self.ip_address, remote_address=originating_ip_address,
                             local_port=22, remote_port=remote_port, process_type='ssh')
-            obs.add_session_info(hostid=str(self.ip_address), username=user.username, session_id=new_session.ident, session_type="ssh", agent=self.agent)
-            obs.add_user_info(hostid=str(self.ip_address), username=user.username, password=user.password, uid=user.uid)
+            obs.add_session_info(hostid=self.ip_address, username=user.username, session_id=new_session.ident, session_type="ssh", agent=self.agent)
+            obs.add_user_info(hostid=self.ip_address, username=user.username, password=user.password, uid=user.uid)
 
-            obs.add_system_info(hostid=str(self.ip_address), hostname=target_host.hostname, os_type=target_host.os_type)
+            obs.add_system_info(hostid=self.ip_address, hostname=target_host.hostname, os_type=target_host.os_type)
+
+            # for multi-homed hosts, also return the details of the other interfaces
+            # Q whether this should be a separate action.  However this info will be
+            # automatically retrieved in C2 frameworks upon sucessful installation of
+            # C2 agent.
+            target_interface = target_host.get_interface(ip_address=self.ip_address)
+            for interface in target_host.interfaces:
+                  if interface.ip_address != lo and interface.ip_address != target_interface.ip_address:
+                       obs.add_interface_info(hostid=self.ip_address,ip_address=interface.ip_address, subnet=interface.subnet)
 
         else:
             obs.set_success(False)

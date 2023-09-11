@@ -21,12 +21,12 @@ Test_Host:
     Process Type: webserver
     Properties:
       'rfi'
-  System info:
+  SystemInfo:
     Architecture: x64
     OSDistribution: UBUNTU
     OSType: LINUX
     OSVersion: U18_04_3
-  User Info:
+  UserInfo:
     - Groups:
         - GID: 0
           Group Name: root

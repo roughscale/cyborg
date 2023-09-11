@@ -22,6 +22,7 @@ class Portscan(ConcreteAction):
         from_host = state.sessions['Red'][self.session].host
         session = state.sessions['Red'][self.session]
 
+
         if not session.active:
             obs.set_success(False)
             return obs
@@ -29,6 +30,10 @@ class Portscan(ConcreteAction):
             target_host: Host = state.hosts[from_host]
             ports = ['all']
         else:
+            # state.ip_addresses is a dict of type IPv4Adddress keys. 
+            # so self.ip_address needs to be of type IPv4Address
+            # state.subnets seems to a dict of type str keys (why is this?)
+            # hosts.interfaces.subnet is of type IPv4Network. use str representation for dict keys
             target_host: Host = state.hosts[state.ip_addresses[self.ip_address]]
             ports = self.check_routable([state.subnets[i.subnet] for i in state.hosts[from_host].interfaces if i.ip_address != lo], [s for s in state.subnets.values() if self.ip_address in s.cidr])
 

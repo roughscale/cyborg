@@ -296,12 +296,12 @@ Test_Host:
     Path: /sbin
     Process Name: dhclient
     Username: root
-  System info:
+  SystemInfo:
     Architecture: "x64"
     OSDistribution: "KALI"
     OSType: "LINUX"
     OSVersion: "K2019_4"
-  User Info:
+  UserInfo:
   - Groups:
     - GID: 0
       Group Name: root

@@ -29,8 +29,13 @@ class SimulationController(EnvironmentController):
         super().__init__(scenario_filepath, scenario_mod=scenario_mod, agents=agents)
 
     def reset(self, agent=None):
-        self.state.reset()
-        self.hostname_ip_map = {h: ip for ip, h in self.state.ip_addresses.items()}
+        # state reset will regenerate the system with random CIDRs
+        # we should do this to develop generalisation
+        # but currently the agent/action space generation following
+        # reset is broken.  So this is currently disabled
+        # self.state.reset()
+        # allow for multi-homed hosts
+        self.hostname_ip_map = {ip: h for ip, h in self.state.ip_addresses.items()}
         self.subnet_cidr_map = self.state.subnet_name_to_cidr
         return super(SimulationController, self).reset(agent)
 
@@ -38,7 +43,11 @@ class SimulationController(EnvironmentController):
         pass
 
     def execute_action(self, action: Action) -> Observation:
-        return action.sim_execute(self.state)
+        #print("simulator execute action")
+        print(action)
+        action_result = action.sim_execute(self.state)
+        return action_result
+        #return action.sim_execute(self.state)
 
     def restore(self, file: str):
         pass
@@ -72,7 +81,7 @@ class SimulationController(EnvironmentController):
 
     def _create_environment(self):
         self.state = State(self.scenario)
-        self.hostname_ip_map = {h: ip for ip, h in self.state.ip_addresses.items()}
+        self.hostname_ip_map = {ip: h for ip, h in self.state.ip_addresses.items()}
         self.subnet_cidr_map = self.state.subnet_name_to_cidr
 
     def run_schtasks(self):

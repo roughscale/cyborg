@@ -118,6 +118,9 @@ class Host(Entity):
             parent_id = None
         if pid is None:
             pid = self.add_process(name=str(session_type), user=username).pid
+        else:
+            # where pid is specified
+            pid = self.add_process(name=str(session_type), user=username, pid=pid).pid
         if session_type == 'MetasploitServer':
             new_session = MSFServerSession(host=self.hostname, user=username, ident=ident, agent=agent, process=pid,
                                            timeout=timeout, session_type=session_type, name=name)

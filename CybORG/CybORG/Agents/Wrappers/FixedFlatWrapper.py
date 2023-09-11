@@ -15,15 +15,15 @@ class FixedFlatWrapper(BaseWrapper):
     def __init__(self, env: BaseWrapper=None, agent=None):
         super().__init__(env, agent)
         self.MAX_HOSTS = 5
-        self.MAX_PROCESSES = 100
+        self.MAX_PROCESSES = 6 #100
         self.MAX_CONNECTIONS = 2
         self.MAX_VULNERABILITIES = 1
-        self.MAX_INTERFACES = 4
-        self.MAX_FILES = 10
-        self.MAX_SESSIONS = 20
-        self.MAX_USERS = 10
-        self.MAX_GROUPS = 10
-        self.MAX_PATCHES = 10
+        self.MAX_INTERFACES = 2 #4
+        self.MAX_FILES = 0 #10
+        self.MAX_SESSIONS = 5 #20
+        self.MAX_USERS = 0 #10
+        self.MAX_GROUPS = 0 #10
+        self.MAX_PATCHES = 0 #10
         self.hostname = {}
         self.username = {}
         self.group_name = {}
@@ -61,7 +61,7 @@ class FixedFlatWrapper(BaseWrapper):
     #     return action_space
 
     def observation_change(self, obs: dict) -> list:
-        numeric_obs = obs
+        numeric_obs = obs['hosts']
         flat_obs = []
         while len(numeric_obs) < self.MAX_HOSTS:
             hostid = str(random.randint(0, self.MAX_HOSTS+1))
@@ -78,18 +78,18 @@ class FixedFlatWrapper(BaseWrapper):
             elif not isinstance(host, dict):
                 raise ValueError('Host data must be a dict')
             else:
-                if 'System info' in host:
-                    if "Hostname" in host["System info"]:
-                        element = host["System info"]["Hostname"]
+                if 'SystemInfo' in host:
+                    if "Hostname" in host["SystemInfo"]:
+                        element = host["SystemInfo"]["Hostname"]
                         if element not in self.hostname:
                             self.hostname[element] = len(self.hostname)
                         element = self.hostname[element]/self.MAX_HOSTS
                         flat_obs.append(float(element))
                     else:
                         flat_obs.append(-1.0)
-                    if "OSType" in host["System info"]:
-                        if host["System info"]["OSType"] != -1:
-                            element = host["System info"]["OSType"].value/len(OperatingSystemType.__members__)
+                    if "OSType" in host["SystemInfo"]:
+                        if host["SystemInfo"]["OSType"] != -1:
+                            element = host["SystemInfo"]["OSType"].value/len(OperatingSystemType.__members__)
                         else:
                             element = -1
                         
@@ -97,9 +97,9 @@ class FixedFlatWrapper(BaseWrapper):
                     else:
                         flat_obs.append(-1.0)
 
-                    if "OSDistribution" in host["System info"]:
-                        if host["System info"]["OSDistribution"] != -1:
-                            element = host["System info"]["OSDistribution"].value / len(OperatingSystemDistribution.__members__)
+                    if "OSDistribution" in host["SystemInfo"]:
+                        if host["SystemInfo"]["OSDistribution"] != -1:
+                            element = host["SystemInfo"]["OSDistribution"].value / len(OperatingSystemDistribution.__members__)
                         else:
                             element = -1
                         
@@ -107,9 +107,9 @@ class FixedFlatWrapper(BaseWrapper):
                     else:
                         flat_obs.append(-1.0)
 
-                    if "OSVersion" in host["System info"]:
-                        if host["System info"]["OSVersion"] != -1:
-                            element = host["System info"]["OSVersion"].value / len(OperatingSystemVersion.__members__)
+                    if "OSVersion" in host["SystemInfo"]:
+                        if host["SystemInfo"]["OSVersion"] != -1:
+                            element = host["SystemInfo"]["OSVersion"].value / len(OperatingSystemVersion.__members__)
                         else:
                             element = -1
                         
@@ -117,9 +117,9 @@ class FixedFlatWrapper(BaseWrapper):
                     else:
                         flat_obs.append(-1.0)
 
-                    if "OSKernelVersion" in host["System info"]:
-                        if host["System info"]["OSKernelVersion"] != -1:
-                            element = host["System info"]["OSKernelVersion"].value / len(OperatingSystemKernelVersion.__members__)
+                    if "OSKernelVersion" in host["SystemInfo"]:
+                        if host["SystemInfo"]["OSKernelVersion"] != -1:
+                            element = host["SystemInfo"]["OSKernelVersion"].value / len(OperatingSystemKernelVersion.__members__)
                         else:
                             element = -1
                         
@@ -127,9 +127,9 @@ class FixedFlatWrapper(BaseWrapper):
                     else:
                         flat_obs.append(-1.0)
 
-                    if "Architecture" in host["System info"]:
-                        if host["System info"]["Architecture"] != -1:
-                            element = host["System info"]["Architecture"].value / len(Architecture.__members__)
+                    if "Architecture" in host["SystemInfo"]:
+                        if host["SystemInfo"]["Architecture"] != -1:
+                            element = host["SystemInfo"]["Architecture"].value / len(Architecture.__members__)
                         else:
                             element = -1
                         
@@ -137,21 +137,21 @@ class FixedFlatWrapper(BaseWrapper):
                     else:
                         flat_obs.append(-1.0)
 
-                    if 'Local Time' in host["System info"]:
-                        element = (host["System info"]['Local Time'] - datetime(2020, 1, 1)).total_seconds()
+                    if 'Local Time' in host["SystemInfo"]:
+                        element = (host["SystemInfo"]['Local Time'] - datetime(2020, 1, 1)).total_seconds()
                         
                         flat_obs.append(float(element))
                     else:
                         flat_obs.append(-1.0)
 
-                    if "os_patches" not in host["System info"]:
-                        host["System info"]["os_patches"] = []
+                    if "os_patches" not in host["SystemInfo"]:
+                        host["SystemInfo"]["os_patches"] = []
 
-                    while len(host["System info"]["os_patches"]) < self.MAX_PATCHES:
-                        host["System info"]["os_patches"].append(-1.0)
-                    if len(host["System info"]["os_patches"]) > self.MAX_PATCHES:
+                    while len(host["SystemInfo"]["os_patches"]) < self.MAX_PATCHES:
+                        host["SystemInfo"]["os_patches"].append(-1.0)
+                    if len(host["SystemInfo"]["os_patches"]) > self.MAX_PATCHES:
                         raise ValueError("Too many processes in observation for fixed size")
-                    for patch_idx, patch in enumerate(host["System info"]["os_patches"]):
+                    for patch_idx, patch in enumerate(host["SystemInfo"]["os_patches"]):
                         if patch != -1:
                             element = patch.value / len(OperatingSystemPatch.__members__)
                         else:
@@ -427,15 +427,15 @@ class FixedFlatWrapper(BaseWrapper):
                     else:
                         flat_obs.append(-1.0)
 
-                if "Users" not in host:
-                    host["Users"] = []
-                while len(host["Users"]) < self.MAX_USERS:
-                    host["Users"].append({})
-                while len(host["Users"]) > self.MAX_USERS:
-                    host["Users"].pop()
+                if "UserInfo" not in host:
+                    host["UserInfo"] = []
+                while len(host["UserInfo"]) < self.MAX_USERS:
+                    host["UserInfo"].append({})
+                while len(host["UserInfo"]) > self.MAX_USERS:
+                    host["UserInfo"].pop()
                     # raise ValueError("Too many users in observation for fixed size")
 
-                for user_idx, user in enumerate(host['Users']):
+                for user_idx, user in enumerate(host['UserInfo']):
                     if "Username" in user:
                         element = user["Username"]
                         if element not in self.username:
@@ -473,7 +473,9 @@ class FixedFlatWrapper(BaseWrapper):
                         flat_obs.append(-1.0)
 
                     if "UID" in user:
-                        flat_obs.append(float(user["UID"]))
+                        # convert Windows SIDs to usuable integer values
+                        # at the moment, just extract the RID
+                        flat_obs.append(float(str(user["UID"]).split('-')[-1]))
                     else:
                         flat_obs.append(-1.0)
 

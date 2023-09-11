@@ -113,6 +113,7 @@ class ExploreHost(ConcreteAction):
                 or self.target_session not in state.sessions[self.agent]):
             return Observation(success=False)
         target_host = state.hosts[state.sessions[self.agent][self.target_session].host]
-        obs = state.get_true_state(target_host.info)
+        # obs now needs to have a top level hosts key
+        obs = state.get_true_state({"hosts": target_host.info})
         obs.set_success(True)
         return obs

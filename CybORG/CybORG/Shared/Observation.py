@@ -14,7 +14,10 @@ BROADCAST_ADDRESS = IPv4Address('0.0.0.0')
 class Observation:
 
     def __init__(self, success:bool = None):
-        self.data = {"success": CyEnums.TrinaryEnum.UNKNOWN if success == None else CyEnums.TrinaryEnum.parse_bool(success)}
+        # NOTE
+        # Original observation is a list of IP addresses(of hosts).
+        # We have added 2 top level keys to distinguish between hosts and subnet CIDRs
+        self.data = {"network": {}, "hosts": {}, "success": CyEnums.TrinaryEnum.UNKNOWN if success == None else CyEnums.TrinaryEnum.parse_bool(success)}
         self.raw = ''
 
     def get_dict(self):
@@ -47,11 +50,17 @@ class Observation:
                     properties: Optional[List[str]] = None,
                     **kwargs):
         if hostid is None:
-            hostid = str(len(self.data))
-        if hostid not in self.data:
-            self.data[hostid] = {"Processes": []}
-        elif "Processes" not in self.data[hostid]:
-            self.data[hostid]["Processes"] = []
+            hostid = str(len(self.data['hosts']))
+        if hostid not in self.data['hosts']:
+            self.data['hosts'][hostid] = {"Processes": []}
+        # hostid is in hosts
+        else:
+          if "Processes" not in self.data['hosts'][hostid]:
+            self.data['hosts'][hostid]["Processes"] = []
+          else:
+            #print("{} has existing processes".format(hostid))
+            pass
+
 
         new_process = {}
 
@@ -61,12 +70,15 @@ class Observation:
                 pid = int(pid)
             if pid < 0:
                 raise ValueError
-            for old_process in self.data[hostid]["Processes"]:
+            for old_process in self.data['hosts'][hostid]["Processes"]:
+                # removes existing process with matching PID so it can be replaced
+                # need to do the same with processes without PID (matching localaddr/ports)
                 if "PID" in old_process and old_process["PID"] == pid:
                     new_process = old_process
-                    self.data[hostid]["Processes"].remove(old_process)
+                    self.data['hosts'][hostid]["Processes"].remove(old_process)
                     break
             new_process["PID"] = pid
+
 
         if parent_pid is None:
             parent_pid = kwargs.get("PPID", None)
@@ -109,6 +121,33 @@ class Observation:
         new_connection = {}
         if "Connections" not in new_process:
             new_process["Connections"] = []
+
+        # need to remove matching existing connections to be replaced by new connection obs
+        if local_port is not None and local_address is not None:
+            match_conn = False
+            for proc_idx, existing_process in enumerate(self.data['hosts'][hostid]['Processes']):
+                if 'Connections' in existing_process:
+                  #print("{} has existing connections".format(hostid))
+                  for conn_idx, existing_conn in enumerate(existing_process['Connections']):
+                    #print("add_process: existing connection")
+                    #print(existing_conn)
+                    if "local_address" in existing_conn and "local_port" in existing_conn:
+                      if existing_conn['local_address'] == local_address and existing_conn['local_port'] == local_port:
+                        #print("matching existing conn")
+                        match_conn = True
+                        break
+                  if match_conn == True:
+                      break
+            if match_conn == True:
+               # remove the existing_conn from the list of connections in the existing_proc
+               #print("removing connection {0} from process {1}".format(existing_conn,existing_process))
+               # remove process in the event of a single connection
+               if len(self.data['hosts'][hostid]['Processes'][proc_idx]['Connections']) == 1:
+                   self.data['hosts'][hostid]['Processes'].pop(proc_idx)
+               else:
+                   self.data['hosts'][hostid]['Processes'][proc_idx]['Connections'].pop(conn_idx)
+               #print(self.data['hosts'][hostid]['Processes'])
+
 
         if local_port is None:
             local_port = kwargs.get("local_port", None)
@@ -187,10 +226,10 @@ class Observation:
                 vulnerability = CyEnums.Vulnerability.parse_string(vulnerability)
             new_process["Vulnerability"].append(vulnerability)
 
-        self.data[hostid]["Processes"].append(new_process)
+        self.data['hosts'][hostid]["Processes"].append(new_process)
 
-        if self.data[hostid] == {"Processes": [{}]}:
-            self.data.pop(hostid)
+        if self.data['hosts'][hostid] == {"Processes": [{}]}:
+            self.data['hosts'].pop(hostid)
 
     def add_system_info(self,
                         hostid: str = None,
@@ -204,12 +243,12 @@ class Observation:
                         local_time: datetime = None,
                         **kwargs):
         if hostid is None:
-            hostid = str(len(self.data))
-        if hostid not in self.data:
-            self.data[hostid] = {"System info": {}}
-        elif "System info" not in self.data[hostid]:
-            self.data[hostid]["System info"] = {}
-        sys_info = self.data[hostid]["System info"]
+            hostid = str(len(self.data['hosts']))
+        if hostid not in self.data['hosts']:
+            self.data['hosts'][hostid] = {"SystemInfo": {}}
+        elif "SystemInfo" not in self.data['hosts'][hostid]:
+            self.data['hosts'][hostid]["SystemInfo"] = {}
+        sys_info = self.data['hosts'][hostid]["SystemInfo"]
 
         if hostname is None:
             hostname = kwargs.get("Hostname", None)
@@ -250,7 +289,7 @@ class Observation:
             for patch in os_patches:
                 if type(patch) is str:
                     patch = CyEnums.OperatingSystemPatch.parse_string(patch)
-                if "os_patches" in self.data[hostid]["System info"]:
+                if "os_patches" in self.data['hosts'][hostid]["SystemInfo"]:
                     sys_info["os_patches"].append(patch)
                 else:
                     sys_info["os_patches"] = [patch]
@@ -274,22 +313,22 @@ class Observation:
                            subnet: Union[str, IPv4Network] = None,
                            **kwargs):
         if hostid is None:
-            hostid = str(len(self.data))
-        if hostid not in self.data:
-            self.data[hostid] = {"Interface": []}
-        elif "Interface" not in self.data[hostid]:
-            self.data[hostid]["Interface"] = []
+            hostid = str(len(self.data['hosts']))
+        if hostid not in self.data['hosts']:
+            self.data['hosts'][hostid] = {"Interface": []}
+        elif "Interface" not in self.data['hosts'][hostid]:
+            self.data['hosts'][hostid]["Interface"] = []
 
         new_interface = {}
 
         if interface_name is None:
             interface_name = kwargs.get("Interface Name", None)
         if interface_name is not None:
-            for interface in self.data[hostid]["Interface"]:
+            for interface in self.data['hosts'][hostid]["Interface"]:
                 if "Interface Name" in interface:
                     if interface["Interface Name"] == interface_name:
                         new_interface = interface
-                        self.data[hostid]["Interface"].remove(interface)
+                        self.data['hosts'][hostid]["Interface"].remove(interface)
             new_interface["Interface Name"] = interface_name
 
         if ip_address is None:
@@ -298,10 +337,10 @@ class Observation:
             if type(ip_address) is str:
                 ip_address = IPv4Address(ip_address)
             if ip_address == BROADCAST_ADDRESS:
-                if self.data[hostid]["Interface"] == []:
-                    self.data[hostid].pop("Interface")
+                if self.data['hosts'][hostid]["Interface"] == []:
+                    self.data['hosts'][hostid].pop("Interface")
                 return
-            for interface in self.data[hostid]["Interface"]:
+            for interface in self.data['hosts'][hostid]["Interface"]:
                 if "IP Address" not in interface:
                     continue
                 if interface["IP Address"] != ip_address:
@@ -312,7 +351,7 @@ class Observation:
                     for k in ["Interface Name", "Subnet"]:
                         if k in interface and k not in new_interface:
                             new_interface[k] = interface[k]
-                self.data[hostid]["Interface"].remove(interface)
+                self.data['hosts'][hostid]["Interface"].remove(interface)
             new_interface["IP Address"] = ip_address
 
         if subnet is None:
@@ -322,10 +361,11 @@ class Observation:
                 subnet = IPv4Network(subnet)
             new_interface["Subnet"] = subnet
 
-        self.data[hostid]["Interface"].append(new_interface)
+        #print(new_interface)
+        self.data['hosts'][hostid]["Interface"].append(new_interface)
 
-        if self.data[hostid]["Interface"] == [{}]:
-            self.data[hostid].pop("Interface")
+        if self.data['hosts'][hostid]["Interface"] == [{}]:
+            self.data['hosts'][hostid].pop("Interface")
 
     def add_file_info(self,
                       hostid: str = None,
@@ -345,11 +385,11 @@ class Observation:
                       **kwargs):
 
         if hostid is None:
-            hostid = str(len(self.data))
-        if hostid not in self.data:
-            self.data[hostid] = {"Files": []}
-        elif "Files" not in self.data[hostid]:
-            self.data[hostid]["Files"] = []
+            hostid = str(len(self.data['hosts']))
+        if hostid not in self.data['hosts']:
+            self.datas['hosts'][hostid] = {"Files": []}
+        elif "Files" not in self.data['hosts'][hostid]:
+            self.data['hosts'][hostid]["Files"] = []
 
         new_file = {}
         if path is None:
@@ -365,10 +405,10 @@ class Observation:
             new_file["Known File"] = CyEnums.FileType.parse_string(name)
 
         if name is not None and path is not None:
-            for file in self.data[hostid]["Files"]:
+            for file in self.data['hosts'][hostid]["Files"]:
                 if "File Name" in file and "Path" in file:
                     if name == file["File Name"] and path == file["Path"]:
-                        self.data[hostid]["Files"].remove(file)
+                        self.data['hosts'][hostid]["Files"].remove(file)
                         new_file = file
                         break
 
@@ -429,7 +469,7 @@ class Observation:
         if density is not None:
             new_file['Density'] = density
 
-        self.data[hostid]["Files"].append(new_file)
+        self.data['hosts'][hostid]["Files"].append(new_file)
 
     def add_user_info(self,
                       hostid: str = None,
@@ -445,14 +485,14 @@ class Observation:
                       **kwargs):
 
         if hostid is None:
-            hostid = str(len(self.data))
+            hostid = str(len(self.data['hosts']))
 
         # only add user to dict if username or uid is known
         if username is not None or uid is not None:
-            if hostid not in self.data:
-                self.data[hostid] = {"User Info": []}
-            elif "User Info" not in self.data[hostid]:
-                self.data[hostid]["User Info"] = []
+            if hostid not in self.data['hosts']:
+                self.data['hosts'][hostid] = {"UserInfo": []}
+            elif "UserInfo" not in self.data['hosts'][hostid]:
+                self.data['hosts'][hostid]["UserInfo"] = []
 
 
             new_user = {}
@@ -461,10 +501,10 @@ class Observation:
                 username = kwargs.get("Username", None)
             if username is not None:
                 new_user["Username"] = username
-                for user in self.data[hostid]["User Info"]:
+                for user in self.data['hosts'][hostid]["UserInfo"]:
                     if "Username" in user and user["Username"] == username:
                         new_user = user
-                        self.data[hostid]["User Info"].remove(user)
+                        self.data['hosts'][hostid]["UserInfo"].remove(user)
 
             if uid is None:
                 uid = kwargs.get("UID", None)
@@ -527,10 +567,10 @@ class Observation:
             if new_user["Groups"] == []:
                 new_user.pop("Groups")
 
-            self.data[hostid]["User Info"].append(new_user)
+            self.data['hosts'][hostid]["UserInfo"].append(new_user)
 
-        if gid is not None and group_name is not None and hostid in self.data and "User Info" in self.data[hostid]:
-            for user in self.data[hostid]["User Info"]:
+        if gid is not None and group_name is not None and hostid in self.data['hosts'] and "UserInfo" in self.data['hosts'][hostid]:
+            for user in self.data['hosts'][hostid]["UserInfo"]:
                 if "Groups" in user:
                     for group in user["Groups"]:
                         if ("GID" in group and group["GID"] == gid) or ("Group Name" in group and group["Group Name"] == group_name):
@@ -550,11 +590,11 @@ class Observation:
                          session_type: str = None,
                          **kwargs):
         if hostid is None:
-            hostid = str(len(self.data))
-        if hostid not in self.data:
-            self.data[hostid] = {"Sessions": []}
-        elif "Sessions" not in self.data[hostid]:
-            self.data[hostid]["Sessions"] = []
+            hostid = str(len(self.data['hosts']))
+        if hostid not in self.data['hosts']:
+            self.data['hosts'][hostid] = {"Sessions": []}
+        elif "Sessions" not in self.data['hosts'][hostid]:
+            self.data['hosts'][hostid]["Sessions"] = []
 
         new_session = {}
         if username is None:
@@ -592,9 +632,16 @@ class Observation:
         if agent is not None:
             new_session["Agent"] = agent
 
-        if new_session not in self.data[hostid]["Sessions"]:
+        if new_session not in self.data['hosts'][hostid]["Sessions"]:
             # check we aren't adding duplicate
-            self.data[hostid]["Sessions"].append(new_session)
+            self.data['hosts'][hostid]["Sessions"].append(new_session)
+
+    def add_subnet(self, cidr: str):
+        if isinstance(cidr,str):
+            cidr=IPv4Network(cidr)
+        if 'subnet' not in self.data['network']:
+          self.data['network']['subnets'] = []
+        self.data['network']['subnets'].append(cidr)
 
     def combine_obs(self, obs):
         """Combines this Observation with another Observation
@@ -623,8 +670,8 @@ class Observation:
                             self.add_process(hostid=key, **process, **conn)
                     else:
                         self.add_process(hostid=key, **process)
-            if "User Info" in info:
-                for user in info["User Info"]:
+            if "UserInfo" in info:
+                for user in info["UserInfo"]:
                     self.add_user_info(hostid=key, **user)
             if "Files" in info:
                 for file_info in info["Files"]:
@@ -632,8 +679,8 @@ class Observation:
             if "Interface" in info:
                 for interface in info["Interface"]:
                     self.add_interface_info(hostid=key, **interface)
-            if "System info" in info:
-                self.add_system_info(hostid=key, **info["System info"])
+            if "SystemInfo" in info:
+                self.add_system_info(hostid=key, **info["SystemInfo"])
 
     def add_raw_obs(self, raw_obs):
         self.raw = raw_obs
@@ -741,14 +788,29 @@ class Observation:
             If True and ips is not None, will include localhost address
             ('127.0.0.1') in IP addresses to keep (default=True)
         """
+        # we need to remove ips that are not within the allowed subnet ranges
+        filtered_ips = []
+        for ip in ips:
+            if isinstance(ip, str):
+                print(ip)
+                ip = IPv4Address(ip)
+            for cidr in cidrs:
+                if isinstance(cidr,str):
+                    cidr = IPv4Network(cidr)
+                #print("ip: {0}, cidr: {1}".format(ip,cidr))
+                if ip in cidr:
+                    filtered_ips.append(ip)
+
+        #print("filtered_ips: {0}".format(filtered_ips))
         # convert lists to set of str for fast lookup and consistent typing
         if ips is None:
             ip_set = set()
         else:
-            ip_set = set([str(ip) for ip in ips])
+            ip_set = set([str(ip) for ip in filtered_ips])
             if include_localhost:
                 ip_set.add('127.0.0.1')
             ip_set.add('0.0.0.0')
+
 
         if cidrs is None:
             cidr_set = set()
@@ -758,7 +820,7 @@ class Observation:
                 cidr_set.add('127.0.0.0/8')
 
         filter_hosts = []
-        for obs_k, obs_v in self.data.items():
+        for obs_k, obs_v in self.data['hosts'].items():
             if isinstance(obs_v, Observation):
                 obs_v.filter_addresses(ips, cidrs, include_localhost)
             elif not isinstance(obs_v, dict):
@@ -790,6 +852,7 @@ class Observation:
                 del obs_v["Processes"]
 
             filter_interfaces = []
+            # this doesn't filter IP addresses within a non-allowed subnet!
             for i, interface in enumerate(obs_v.get("Interface", [])):
                 if "IP Address" in interface:
                     addr_observed = True
@@ -817,7 +880,7 @@ class Observation:
             #     filter_hosts.append(obs_k)
 
         for host_k in filter_hosts:
-            del self.data[host_k]
+            del self.data['hosts'][host_k]
 
     @property
     def success(self):

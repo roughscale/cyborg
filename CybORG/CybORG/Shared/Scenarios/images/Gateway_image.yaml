@@ -9,12 +9,12 @@ Test_Host:
     Path: /usr/sbin
     Process Name: sshd
     Username: root
-  System info:
+  SystemInfo:
     Architecture: x64
     OSDistribution: UBUNTU
     OSType: LINUX
     OSVersion: U18_04_3
-  User Info:
+  UserInfo:
   - Groups:
     - GID: 0
       Group Name: root

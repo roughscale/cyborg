@@ -38,8 +38,12 @@ class EnumActionWrapper(BaseWrapper):
                     params.append(p)
 
                 if len(action_space[p]) == 1:
-                    for p_dict in param_list:
-                        p_dict[p] = list(action_space[p].keys())[0]
+                    # the problem is how to add the initial p to an empty param list
+                    if len(param_list) == 0: # ie empty list
+                        param_list = [ { p: list(action_space[p].keys())[0] } ]
+                    else:
+                        for p_dict in param_list:
+                            p_dict[p] = list(action_space[p].keys())[0]
                 else:
                     new_param_list = []
                     for p_dict in param_list:

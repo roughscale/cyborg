@@ -53,19 +53,45 @@ class EnvironmentController:
         self.action = {}
         self.done = False
         self.observation = {}
-        self.INFO_DICT['True'] = {}
+        self.INFO_DICT['True'] = {"hosts": {}, "network": { "subnets": [] } }
+        for subnet in self.scenario.subnets:
+            subnet_cidr = self.subnet_cidr_map[subnet]
+            self.INFO_DICT['True']['network']['subnets'].append(str(subnet_cidr))
         for host in self.scenario.hosts:
-            self.INFO_DICT['True'][host] = {'System info': 'All', 'Sessions': 'All', 'Interfaces': 'All', 'User info': 'All',
+            self.INFO_DICT['True']['hosts'][host] = {'SystemInfo': 'All', 'Sessions': 'All', 'Interfaces': 'All', 'UserInfo': 'All',
                                       'Processes': ['All']}
         self.init_state = self._filter_obs(self.get_true_state(self.INFO_DICT['True'])).data
-        for agent in self.scenario.agents:
-            self.INFO_DICT[agent] = self.scenario.get_agent_info(agent).osint.get('Hosts', {})
-            for host in self.INFO_DICT[agent].keys():
-                self.INFO_DICT[agent][host]['Sessions'] = agent
+        # The following is provided by the _get_agent_osint()
+        #for agent in self.scenario.agents:
+        #    self.INFO_DICT[agent] = self.scenario.get_agent_info(agent).osint.get('Hosts', {})
+        #    for host in self.INFO_DICT[agent].keys():
+        #        self.INFO_DICT[agent][host]['Sessions'] = agent
+        # Get OSINT (This should be parameterised in the scenario yaml file!
+        self._get_agent_osint()
+
         # populate initial observations with OSINT
         for agent_name, agent in self.agent_interfaces.items():
             self.observation[agent_name] = self._filter_obs(self.get_true_state(self.INFO_DICT[agent_name]), agent_name)
             agent.set_init_obs(self.observation[agent_name].data, self.init_state)
+
+    def _get_agent_osint(self):
+        for agent in self.scenario.agents:
+            self.INFO_DICT[agent] = {}
+            osint_network = self.scenario.get_agent_info(agent).osint.get('Network',{})
+            if 'Subnets' in osint_network:
+                self.INFO_DICT[agent]['network'] = {}
+                self.INFO_DICT[agent]['network']['subnets'] = [ str(v) for k, v in self.subnet_cidr_map.items() if k in osint_network['Subnets'] ]
+            osint_hosts = self.scenario.get_agent_info(agent).osint.get('Hosts', {})
+            for hostname,hostinfo in osint_hosts.items():
+                self.INFO_DICT[agent]['hosts'] = {}
+                # assuming OSINT only provides 1 address per hostname
+                #hostip = str([ k for k,v in self.hostname_ip_map.items() if v == hostname ][0])
+                hostid = hostname
+                self.INFO_DICT[agent]['hosts'][hostid] = hostinfo
+                #print(self.INFO_DICT[agent]['hosts'][hostid])
+            for host in self.INFO_DICT[agent]['hosts'].keys():
+                self.INFO_DICT[agent]['hosts'][host]['Sessions'] = agent
+        #pprint(self.INFO_DICT[agent])
 
     def reset(self, agent: str = None) -> Results:
         """Resets the environment and get initial agent observation and actions.
@@ -113,6 +139,10 @@ class EnvironmentController:
 
         # for each agent:
         next_observation = {}
+        #print("env step")
+        #print("step action var")
+        #print(type(action)) # of type Action but has custom __str__ method
+        #print(dir(action))
         # all agents act on the state
         for agent_name, agent_object in self.agent_interfaces.items():
             # pass observation to agent to get action
@@ -200,6 +230,13 @@ class EnvironmentController:
         bool
             whether goal was reached or not
         """
+        # goal is to successfully escalate priv to root on Internal2 host
+        obs = agent_obs["Red"].get_dict()["hosts"]
+        if "Internal2" in obs:
+            if "Sessions" in obs["Internal2"]:
+                for sess in obs["Internal2"]["Sessions"]:
+                    if "Username" in sess and sess["Username"] == "root":
+                           return True
         return False
 
     def start(self, steps: int = None, log_file=None):
@@ -366,6 +403,7 @@ class EnvironmentController:
                 agent_info.actions,
                 agent_info.reward_calculator_type,
                 allowed_subnets=agent_info.allowed_subnets,
+                external_hosts=agent_info.external_hosts,
                 wrappers=agent_info.wrappers,
                 scenario=self.scenario
             )
@@ -382,7 +420,7 @@ class EnvironmentController:
             subnets = list(self.subnet_cidr_map.values())
 
         obs.filter_addresses(
-            ips=self.hostname_ip_map.values(),
+            ips=self.hostname_ip_map.keys(),
             cidrs=subnets,
             include_localhost=False
         )
@@ -391,12 +429,16 @@ class EnvironmentController:
     def test_valid_action(self, action: Action, agent: AgentInterface):
         # returns true if the parameters in the action are in and true in the action set else return false
         action_space = agent.action_space.get_action_space()
+        #print(action)
+        #print(action_space)
+        #print(action.get_params())
         # first check that the action class is allowed
         if type(action) not in action_space['action'] or not action_space['action'][type(action)]:
             return False
         # next for each parameter in the action
         for parameter_name, parameter_value in action.get_params().items():
             if parameter_name not in action_space:
+                # what happens if no parameter_name is in action_space, it will return True??
                 continue
             if parameter_value not in action_space[parameter_name] or not action_space[parameter_name][parameter_value]:
                 return False

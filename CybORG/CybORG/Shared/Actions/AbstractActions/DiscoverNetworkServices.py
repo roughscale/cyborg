@@ -14,7 +14,11 @@ class DiscoverNetworkServices(Action):
     """
     def __init__(self, session: int, agent: str, ip_address: IPv4Address):
         super().__init__()
-        self.ip_address = ip_address
+        # EnumAction Wrapper passes params as strings
+        if isinstance(ip_address,str):
+            self.ip_address = IPv4Address(ip_address)
+        else:
+            self.ip_address = ip_address
         self.agent = agent
         self.session = session
 
@@ -24,8 +28,8 @@ class DiscoverNetworkServices(Action):
         # run portscan on the target ip address from the selected session
         sub_action = Portscan(session=self.session, agent=self.agent, ip_address=self.ip_address, target_session=session)
         obs = sub_action.sim_execute(state)
-        if str(self.ip_address) in obs.data:
-            for proc in obs.data[str(self.ip_address)]["Processes"]:
+        if str(self.ip_address) in obs.data["hosts"]:
+            for proc in obs.data["hosts"][str(self.ip_address)]["Processes"]:
                 for conn in proc['Connections']:
                     port = conn["local_port"]
                     state.sessions[self.agent][self.session].addport(self.ip_address, port)
