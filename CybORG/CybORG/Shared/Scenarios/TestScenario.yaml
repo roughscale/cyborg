@@ -1,0 +1,35 @@
+Agents:
+  Red:
+    AllowedSubnets:
+      - External
+    INT:
+      Hosts:
+        External0:
+          Interfaces: All
+    actions:
+    - Sleep
+    - DiscoverRemoteSystems
+    - DiscoverNetworkServices
+    - ExploitRemoteService
+    - PrivilegeEscalate
+    - Impact
+    agent_type: RedRandomAgent
+    reward_calculator_type: HybridImpactPwn
+    starting_sessions: []
+    wrappers: []  
+Hosts:
+  External0:
+    AWS_Info: []
+    image: Internal
+    info:
+      External0:
+        Interfaces: All
+Subnets:
+  External:
+    Hosts:
+    - External0
+    NACLs:
+      all:
+        in: all
+        out: all
+    Size: 1

@@ -72,6 +72,15 @@ class Process(Entity):
         else:
             self.version = None
 
+    # The following is in the original FO implementation.
+    # Is it still required?  Commenting out to test
+    #def remove_connection(self, conn):
+    #    # at the moment this removes connections that match local_address and local_port
+    #    for idx, connection in enumerate(self.connections):
+    #        if connection["local_address"] == conn["local_address"] and connection["local_port"] == conn["local_port"]:
+    #            self.connection.pop(idx)
+    #            break
+
     def get_state(self):
         observations = []
         for connections_dict in self.connections:

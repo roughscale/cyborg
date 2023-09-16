@@ -13,6 +13,7 @@ from CybORG.Shared.RedRewardCalculator import DistruptRewardCalculator, PwnRewar
     HybridImpactPwnRewardCalculator, GoalRewardCalculator
 from CybORG.Shared.Results import Results
 from CybORG.Shared.RewardCalculator import RewardCalculator, EmptyRewardCalculator
+from CybORG.Shared.State import State
 
 # Unused in this Object
 # MAX values are used in the ActionSpace object to determine max action space length
@@ -39,6 +40,7 @@ class AgentInterface:
                  allowed_subnets,
                  external_hosts,
                  scenario,
+                 fullyobs=False,
                  wrappers=None):
         # the following seem to be "internal state" attributes of the agent
         # they should be removed in favour of the Observation space
@@ -75,12 +77,25 @@ class AgentInterface:
             action_space=self.action_space.get_max_action_space(),
             observation=Observation().data
         )
+        self.fully_obs = fully_obs
+        if self.fully_obs:
+            self.state_space = State()
+            self.state_space.initialise_state(scenario)
+        else:
+            self.state_space = None
+
 
     def update(self, obs: dict, known=True):
         if isinstance(obs, Observation):
             obs = obs.data
         # updates the action space parameters
         self.action_space.update(obs, known)
+
+    def update_state(self, obs):
+        self.state_space.update(obs)
+
+    def get_state(self):
+        return self.state_space.get_state()
 
     def set_init_obs(self, init_obs, true_obs):
         if isinstance(init_obs, Observation):
@@ -91,6 +106,12 @@ class AgentInterface:
         self.update(true_obs, False)
         # this sets "specified" attributes to True/known
         self.update(init_obs, True)
+        # update state if fullyobs
+        if self.fully_obs
+          self.update_state(init_obs)
+          self.reward_calculator.previous_state = true_obs
+          self.reward_calculator.init_state = true_obs
+
         self.reward_calculator.previous_obs = init_obs
         self.reward_calculator.init_obs = init_obs
 
@@ -130,6 +151,9 @@ class AgentInterface:
         self.reward_calculator.reset()
         self.action_space.reset(self.agent_name)
         self.agent.end_episode()
+        if self.fully_obs:
+          self.state_space = State()
+          self.state_space.initialise_state(self.scenario)
 
     def create_reward_calculator(self, reward_calculator: str, agent_name: str, scenario: Scenario) -> RewardCalculator:
         calc = None
@@ -154,6 +178,11 @@ class AgentInterface:
     def determine_reward(self, agent_obs: dict, true_obs: dict, action: Action, done: bool) -> float:
         return self.reward_calculator.calculate_reward(current_state=true_obs, action_dict=action,
                                                        agent_observations=agent_obs, done=done)
+
+    # Can we collapse this into the determine reward?
+    # We don't need this.
+    def determine_reward_fullyobs(self, agent_obs: dict, true_obs: dict, action: Action, done: bool, state: dict={}, next_state: dict={}) -> float:
+        return self.reward_calculator.calculate_reward_fullyobs(state=state, next_state=next_state, true_state=true_obs, action_dict=action,
 
     def get_observation_space(self):
         # returns the maximum observation space for the agent given its action set and the amount of parameters in the environment

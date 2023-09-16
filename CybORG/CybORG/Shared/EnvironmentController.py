@@ -30,7 +30,7 @@ class EnvironmentController:
         agent interface object for agents in scenario
     """
 
-    def __init__(self, scenario_path: str, scenario_mod: dict = None, agents: dict = None):
+    def __init__(self, scenario_path: str, scenario_mod: dict = None, agents: dict = None, fully_obs: bool = False):
         """Instantiates the Environment Controller.
         Parameters
         ----------
@@ -41,6 +41,11 @@ class EnvironmentController:
             environment. If None agents will be loaded from description in
             scenario file (default=None)
         """
+        # The following maps seem to have a very limited purpose
+        # hostname_ip_map only seems to be used in the _filter_obs() method
+        # to pass to the Observation.filter_addresses() method
+        # since ip to hostname is unique (hostname to ip is not unique)
+        # the map should be in the format { ip: hostname }
         self.hostname_ip_map = None
         self.subnet_cidr_map = None
         # self.scenario_dict = self._parse_scenario(scenario_path, scenario_mod=scenario_mod)
@@ -53,6 +58,8 @@ class EnvironmentController:
         self.action = {}
         self.done = False
         self.observation = {}
+        self.agent_state = None
+        self.fully_obs = fully_obs
         self.INFO_DICT['True'] = {"hosts": {}, "network": { "subnets": [] } }
         for subnet in self.scenario.subnets:
             subnet_cidr = self.subnet_cidr_map[subnet]
@@ -61,12 +68,6 @@ class EnvironmentController:
             self.INFO_DICT['True']['hosts'][host] = {'SystemInfo': 'All', 'Sessions': 'All', 'Interfaces': 'All', 'UserInfo': 'All',
                                       'Processes': ['All']}
         self.init_state = self._filter_obs(self.get_true_state(self.INFO_DICT['True'])).data
-        # The following is provided by the _get_agent_osint()
-        #for agent in self.scenario.agents:
-        #    self.INFO_DICT[agent] = self.scenario.get_agent_info(agent).osint.get('Hosts', {})
-        #    for host in self.INFO_DICT[agent].keys():
-        #        self.INFO_DICT[agent][host]['Sessions'] = agent
-        # Get OSINT (This should be parameterised in the scenario yaml file!
         self._get_agent_osint()
 
         # populate initial observations with OSINT
@@ -115,10 +116,18 @@ class EnvironmentController:
             agent_object.reset()
             self.observation[agent_name] = self._filter_obs(self.get_true_state(self.INFO_DICT[agent_name]), agent_name)
             agent_object.set_init_obs(self.observation[agent_name].data, self.init_state)
+            if self.fully_obs:
+              self.agentstate = agent_object.get_state()
         if agent is None:
             return Results(observation=self.init_state)
         else:
-            return Results(observation=self.observation[agent].data,
+            if self.fully_obs:
+                # why do we need both state and next_state (is this to short circuit the reward if state doesn't change?)
+                # if so, can we handle that in the reward calculation and then collapse state as observation.
+                return Results(observation=self.observation[agent].data, state=self.agent_state, next_state=self.agent_state,
+                           action_space=self.agent_interfaces[agent].action_space.get_action_space())
+            else:
+                return Results(observation=self.observation[agent].data,
                            action_space=self.agent_interfaces[agent].action_space.get_action_space())
 
     def step(self, agent: str = None, action: Action = None, skip_valid_action_check: bool = False) -> Results:
@@ -159,6 +168,13 @@ class EnvironmentController:
             # perform action on state
             next_observation[agent_name] = self._filter_obs(self.execute_action(self.action[agent_name]), agent_name)
 
+            if self.fully_obs:
+              # update agent state
+              state = agent_object.get_state()
+              #print(state)
+              agent_object.update_state(copy.deepcopy(next_observation[agent_name]))
+              next_state = agent_object.get_state()
+
         # get true observation
         true_observation = self._filter_obs(self.get_true_state(self.INFO_DICT['True'])).data
 
@@ -172,13 +188,23 @@ class EnvironmentController:
             done = self.determine_done(next_observation, true_observation, self.action[agent_name])
             self.done = done or self.done
             # determine reward for agent
-            reward = agent_object.determine_reward(next_observation, true_observation,
+            if self.fully_obs:
+              # see if we can remove this by treating next_observation as next_state!
+              # this differs from original FO implementation as next_state should be able to be used in place
+              # of next_observation in the FO case.
+              reward = agent_object.determine_reward(next_state, true_observation,
+                                                   self.action, self.done)
+            else:
+              reward = agent_object.determine_reward(next_observation, true_observation,
                                                    self.action, self.done)
             self.reward[agent_name] = reward + self.action[agent_name].cost
+            # the following is commented out in the FO case.  Not sure why
+            """
             if agent_name != agent:
                 # train agent using obs, reward, previous observation, and done
                 agent_object.train(Results(observation=self.observation[agent_name].data, reward=reward,
                                            next_observation=next_observation[agent_name].data, done=self.done))
+            """
             self.observation[agent_name] = next_observation[agent_name]
             agent_object.update(self.observation[agent_name])
 
@@ -201,7 +227,12 @@ class EnvironmentController:
         if agent is None:
             result = Results(observation=true_observation, done=self.done)
         else:
-            result = Results(observation=self.observation[agent].data, done=self.done, reward=round(self.reward[agent], 1),
+            if self.fully_obs:
+               result = Results(observation=self.observation[agent].data, state=state, next_state=next_state, done=self.done, reward=round(self.reward[agent], 1),
+                             action_space=self.agent_interfaces[agent].action_space.get_action_space(),
+                             action=self.action[agent])
+            else:
+               result = Results(observation=self.observation[agent].data, done=self.done, reward=round(self.reward[agent], 1),
                              action_space=self.agent_interfaces[agent].action_space.get_action_space(),
                              action=self.action[agent])
         return result

@@ -105,7 +105,7 @@ class Host(Entity):
 
     def get_ephemeral_port(self):
         port = randrange(49152, 60000)
-        if port in self.ephemeral_ports:
+        while port in self.ephemeral_ports:
             port = randrange(49152, 60000)
         self.ephemeral_ports.append(port)
         return port
@@ -151,8 +151,8 @@ class Host(Entity):
             pids = []
             for process in self.processes:
                 pids.append(process.pid)
-            pid = 0
-            while pid == 0 or pid in pids:
+            pid = randrange(32768)
+            while pid not in pids:
                 pid = randrange(32768)
         if type(open_ports) is dict:
             open_ports = [open_ports]
@@ -215,6 +215,10 @@ class Host(Entity):
 
     def get_interface(self, name=None, cidr=None, ip_address=None, subnet_name=None):
         """A method to get an interface with a selected name, subnet, or IP Address"""
+        # this appears in the original FO implementation.  Is this still required?
+        # ie are str ip addresses still being passed?
+        if isinstance(ip_address,str):
+            ip_address = IPv4Address(ip_address)
         for interface in self.interfaces:
             if name is not None:
                 if interface.name == name:
@@ -401,3 +405,15 @@ class Host(Entity):
 
     def __str__(self):
         return f'{self.hostname}'
+
+    # the following is in the FO implementation.  Is this still required??
+    # commented out to test
+    #def get_dict(self):
+    #    tmp = deepcopy(self.__dict__)
+    #    output = { k: v for k,v in tmp.items() }
+    #    i_exp = []
+    #    for iobj in output['interfaces']:
+    #        i_exp.append(iobj.get_state())
+    #    output['interfaces'] = i_exp
+    #    return output
+

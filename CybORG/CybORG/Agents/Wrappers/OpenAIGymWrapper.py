@@ -26,9 +26,23 @@ class OpenAIGymWrapper(Env, BaseWrapper):
         self.action = action
         result = self.env.step(self.agent_name, action)
         result.observation = self.observation_change(result.observation)
+        # the following is in the FO case.  Do we need this?  Can we re-use the result.observation?
+        # commented out.  Also do we need both, if we are just returning the next_state?
+        #result.next_state = self.observation_change(result.next_state)
+        #result.state = self.observation_change(result.state)
         result.action_space = self.action_space_change(result.action_space)
         info = vars(result)
         return np.array(result.observation, dtype=np.float32), result.reward, result.done, info
+        # also have created local observation_change method to wrap the np.array
+        #return result.next_state, result.reward, result.done, info
+
+    # create local method to wrap python list into np.array.  Does this affect the about
+    # result.observation which hasn't used this method?
+    # commented out for the moment
+    #def observation_change(self, observation: list):
+    #    # convert python list into np.array
+    #    return np.array(observation, dtype=np.float32)
+
 
     def reset(self, agent=None):
         result = self.env.reset(self.agent_name)

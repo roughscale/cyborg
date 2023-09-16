@@ -13,11 +13,7 @@ class DiscoverRemoteSystems(Action):
     """
     def __init__(self, session: int, agent: str, subnet: IPv4Network):
         super().__init__()
-        # EnumAction Wrapper passes params as strings
-        if isinstance(subnet,str):
-            self.subnet = IPv4Network(subnet)
-        else: 
-            self.subnet = subnet
+        self.subnet = subnet
         self.agent = agent
         self.session = session
 

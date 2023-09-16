@@ -102,29 +102,35 @@ class State:
         return true_obs
 
     def reset(self):
-        self._initialise_state(self.scenario)
+        # only reset state (don't re-initialise with randomisation)
+        self._initialise_state(self.scenario, reset=True)
         self.step = 0
         self.time = copy.deepcopy(self.original_time)
 
     def _initialise_state(self, scenario: Scenario):
-        self.subnet_name_to_cidr = {}  # contains mapping of subnet names to subnet cidrs
-        self.ip_addresses = {}  # contains mapping of ip addresses to hostnames
+        # reset parameter resets the environment without changing the network state configuration
+        # ie the network state will retain existing configuration (ip and subnet addressing)
+        # otherwise, the network state will be created with address randomisation
+        # We should remove this once we have convering algorithms
+        if not reset:
+          self.subnet_name_to_cidr = {}  # contains mapping of subnet names to subnet cidrs
+          self.ip_addresses = {}  # contains mapping of ip addresses to hostnames
 
-        self.hosts = {}  # contains mapping of hostnames to host objects
-        self.sessions = {}  # contains mapping of agent names to mapping of session id to session objects
-        self.subnets = {}  # contains mapping of subnet cidrs to subnet objects. dict keys of type IPv4Network
+          self.hosts = {}  # contains mapping of hostnames to host objects
+          self.sessions = {}  # contains mapping of agent names to mapping of session id to session objects
+          self.subnets = {}  # contains mapping of subnet cidrs to subnet objects. dict keys of type IPv4Network
 
-        self.sessions_count = {}  # contains a mapping of agent name to number of sessions
-        self.hostname_to_interface = {}
+          self.sessions_count = {}  # contains a mapping of agent name to number of sessions
+          self.hostname_to_interface = {}
 
-        count = 0
-        # randomly generate subnets cidrs for all subnets in scenario and IP addresses for all hosts in those subnets and create Subnet objects
-        # using fixed size subnets (VLSM maybe viable alternative if required)
-        maximum_subnet_size = max([scenario.get_subnet_size(i) for i in scenario.subnets])
-        subnets_cidrs = sample(
+          count = 0
+          # randomly generate subnets cidrs for all subnets in scenario and IP addresses for all hosts in those subnets and create Subnet objects
+          # using fixed size subnets (VLSM maybe viable alternative if required)
+          maximum_subnet_size = max([scenario.get_subnet_size(i) for i in scenario.subnets])
+          subnets_cidrs = sample(
             list(IPv4Network("10.0.0.0/16").subnets(new_prefix=32 - max(int(log2(maximum_subnet_size + 5)), 4))),
             len(scenario.subnets))
-        for subnet_name in scenario.subnets:
+          for subnet_name in scenario.subnets:
             subnet_cidr = choice(list(subnets_cidrs[count].subnets(
                 new_prefix=32 - max(int(log2(scenario.get_subnet_size(subnet_name) + 5)), 4))))
             count += 1

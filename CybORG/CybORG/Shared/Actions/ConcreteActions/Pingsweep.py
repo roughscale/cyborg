@@ -58,7 +58,9 @@ class Pingsweep(ConcreteAction):
             target_hosts = []
             for host in state.subnets[self.subnet].ip_addresses:
                 obs.set_success(True)
-                target_hosts.append(state.ip_addresses[host])
-                obs.add_interface_info(hostid=str(host), ip_address=host, subnet=self.subnet)
+                # multi homed hosts have more than 1 ip address
+                hostid = state.ip_addresses[host]
+                target_hosts.append(hostid)
+                obs.add_interface_info(hostid=hostid, ip_address=host, subnet=self.subnet)
 
         return obs
