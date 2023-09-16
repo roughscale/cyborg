@@ -55,7 +55,7 @@ class Portscan(ConcreteAction):
                     # internal so avoids nacls
                     # multi homed hosts have more than 1 ip address
                     hostid = state.ip_addresses[self.ip_address]
-                    obs.add_process(hostid=hostid), local_port=conn["local_port"], local_address=self.ip_address)
+                    obs.add_process(hostid=hostid, local_port=conn["local_port"], local_address=self.ip_address)
                     target_host.events['NetworkConnections'].append({'local_address': self.ip_address,
                                                                      'local_port': conn["local_port"],
                                                                      'remote_address': originating_ip_address,

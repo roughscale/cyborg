@@ -123,7 +123,7 @@ class SSHBruteForce(ExploitAction):
                                 "remote_port": 22
                                 }
             from_host.get_process(session.pid).connections.append(remote_port_dict)
-            obs.add_process(hostid=origin_hostido, local_address=originating_ip_address, remote_address=self.ip_address,
+            obs.add_process(hostid=origin_hostid, local_address=originating_ip_address, remote_address=self.ip_address,
                             local_port=remote_port, remote_port=22)
             obs.add_process(hostid=hostid, local_address=self.ip_address, remote_address=originating_ip_address,
                             local_port=22, remote_port=remote_port, process_type='ssh')

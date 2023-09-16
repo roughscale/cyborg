@@ -40,7 +40,7 @@ class AgentInterface:
                  allowed_subnets,
                  external_hosts,
                  scenario,
-                 fullyobs=False,
+                 fully_obs=False,
                  wrappers=None):
         # the following seem to be "internal state" attributes of the agent
         # they should be removed in favour of the Observation space
@@ -109,9 +109,11 @@ class AgentInterface:
         # update state if fullyobs
         if self.fully_obs
           self.update_state(init_obs)
-          self.reward_calculator.previous_state = true_obs
-          self.reward_calculator.init_state = true_obs
-
+          # not sure why these following 2 are required for reward_calculator
+          # this has been removed in the reward calculator class
+          # remove it not required
+          #self.reward_calculator.previous_state = true_obs
+          #self.reward_calculator.init_state = true_obs
         self.reward_calculator.previous_obs = init_obs
         self.reward_calculator.init_obs = init_obs
 
@@ -179,10 +181,10 @@ class AgentInterface:
         return self.reward_calculator.calculate_reward(current_state=true_obs, action_dict=action,
                                                        agent_observations=agent_obs, done=done)
 
-    # Can we collapse this into the determine reward?
-    # We don't need this.
-    def determine_reward_fullyobs(self, agent_obs: dict, true_obs: dict, action: Action, done: bool, state: dict={}, next_state: dict={}) -> float:
-        return self.reward_calculator.calculate_reward_fullyobs(state=state, next_state=next_state, true_state=true_obs, action_dict=action,
+    # The following is in the original FO implementation.  Don't think it is requried any more.
+    # Commented out to test
+    #def determine_reward_fullyobs(self, agent_obs: dict, true_obs: dict, action: Action, done: bool, state: dict={}, next_state: dict={}) -> float:
+    #    return self.reward_calculator.calculate_reward_fullyobs(state=state, next_state=next_state, true_state=true_obs, action_dict=action,
 
     def get_observation_space(self):
         # returns the maximum observation space for the agent given its action set and the amount of parameters in the environment

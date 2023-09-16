@@ -6,9 +6,7 @@ from CybORG.Shared.Actions.Action import Action
 class RewardCalculator:
     def __init__(self, agent_name: str):
         self.agent_name = agent_name
-        self.init_state = None
         self.init_obs = None
-        self.previous_state = None
         self.previous_obs = None
         self.flat = False
 

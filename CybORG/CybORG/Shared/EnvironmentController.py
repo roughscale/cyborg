@@ -3,6 +3,7 @@
 
 import sys
 import yaml
+import copy
 
 from CybORG.Shared import Scenario
 from CybORG.Shared.Actions.Action import Sleep, InvalidAction
