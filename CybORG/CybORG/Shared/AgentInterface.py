@@ -107,7 +107,7 @@ class AgentInterface:
         # this sets "specified" attributes to True/known
         self.update(init_obs, True)
         # update state if fullyobs
-        if self.fully_obs
+        if self.fully_obs:
           self.update_state(init_obs)
           # not sure why these following 2 are required for reward_calculator
           # this has been removed in the reward calculator class
