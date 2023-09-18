@@ -107,7 +107,7 @@ class State:
         self.step = 0
         self.time = copy.deepcopy(self.original_time)
 
-    def _initialise_state(self, scenario: Scenario):
+    def _initialise_state(self, scenario: Scenario, reset=False):
         # reset parameter resets the environment without changing the network state configuration
         # ie the network state will retain existing configuration (ip and subnet addressing)
         # otherwise, the network state will be created with address randomisation

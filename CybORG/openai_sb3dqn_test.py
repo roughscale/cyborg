@@ -44,7 +44,7 @@ path = str(inspect.getfile(CybORG))
 path = path[:-10] + "/Shared/Scenarios/TestSessionSB3Scenario.yaml"
 #print(path)
 
-cyborg = CybORG(path,'sim')
+cyborg = CybORG(path,'sim',fully_obs=True)
 
 # print env controller network state
 environment=cyborg.environment_controller.state

@@ -3,11 +3,13 @@ from pprint import pprint
 import copy
 import hashlib
 
+import CybORG.Shared.Enums as CyEnums
+
 class State(Observation):
 
     """ This manages the State space of the Agent which is a running history of all observations """
-    def __init__(self):
-        self.data = {"network": {}, "hosts": {}}
+    def __init__(self, success: bool = None):
+        self.data = {"network": {}, "hosts": {}, "success": CyEnums.TrinaryEnum.UNKNOWN if success == None else CyEnums.TrinaryEnum.parse_bool(success)}
         self.raw = ''
 
         # keep a running total of the number of each State elements (to identify MAX requirements)
@@ -128,6 +130,9 @@ class State(Observation):
         if 'subnets' in obs['network']:
             for subnet in obs['network']['subnets']:
                 self.add_subnet(subnet)
+
+        if 'success' in obs:
+            self.set_success(obs["success"])
         #self.calculate_max_elements()
         #print("updated State")
         #pprint(self.data)

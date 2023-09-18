@@ -52,6 +52,7 @@ class EnvironmentController:
         # self.scenario_dict = self._parse_scenario(scenario_path, scenario_mod=scenario_mod)
         scenario_dict = self._parse_scenario(scenario_path)
         self.scenario = Scenario(scenario_dict)
+        self.fully_obs = fully_obs
         self._create_environment()
         self.agent_interfaces = self._create_agents(agents)
         self.reward = {}
@@ -59,8 +60,6 @@ class EnvironmentController:
         self.action = {}
         self.done = False
         self.observation = {}
-        self.agent_state = None
-        self.fully_obs = fully_obs
         self.INFO_DICT['True'] = {"hosts": {}, "network": { "subnets": [] } }
         for subnet in self.scenario.subnets:
             subnet_cidr = self.subnet_cidr_map[subnet]
@@ -118,14 +117,17 @@ class EnvironmentController:
             self.observation[agent_name] = self._filter_obs(self.get_true_state(self.INFO_DICT[agent_name]), agent_name)
             agent_object.set_init_obs(self.observation[agent_name].data, self.init_state)
             if self.fully_obs:
-              self.agentstate = agent_object.get_state()
+              # at the moment we don't store state as object attribute due to name clash with State objects
+              state = {}
+              state[agent_name] = agent_object.get_state()
         if agent is None:
             return Results(observation=self.init_state)
         else:
             if self.fully_obs:
                 # why do we need both state and next_state (is this to short circuit the reward if state doesn't change?)
                 # if so, can we handle that in the reward calculation and then collapse state as observation.
-                return Results(observation=self.observation[agent].data, state=self.agent_state, next_state=self.agent_state,
+                # only use state.  should also see if we can collapse into observation
+                return Results(observation=self.observation[agent].data, state=state,
                            action_space=self.agent_interfaces[agent].action_space.get_action_space())
             else:
                 return Results(observation=self.observation[agent].data,
@@ -149,6 +151,7 @@ class EnvironmentController:
 
         # for each agent:
         next_observation = {}
+        next_state = {}
         #print("env step")
         #print("step action var")
         #print(type(action)) # of type Action but has custom __str__ method
@@ -166,15 +169,11 @@ class EnvironmentController:
                 agent_action = InvalidAction()
             self.action[agent_name] = agent_action
 
-            # perform action on state
+            # perform action on (environment) state and get an observation
             next_observation[agent_name] = self._filter_obs(self.execute_action(self.action[agent_name]), agent_name)
-
             if self.fully_obs:
-              # update agent state
-              state = agent_object.get_state()
-              #print(state)
               agent_object.update_state(copy.deepcopy(next_observation[agent_name]))
-              next_state = agent_object.get_state()
+              next_state[agent_name] = agent_object.get_state()
 
         # get true observation
         true_observation = self._filter_obs(self.get_true_state(self.INFO_DICT['True'])).data
@@ -229,7 +228,12 @@ class EnvironmentController:
             result = Results(observation=true_observation, done=self.done)
         else:
             if self.fully_obs:
-               result = Results(observation=self.observation[agent].data, state=state, next_state=next_state, done=self.done, reward=round(self.reward[agent], 1),
+               # the original FO impl passed state and next_state.  See if we can get away with just state (and more importantly, see if we
+               # can return this as observation.
+               # note that state is actually next_state (just as observation is actually next_observation)
+               # self.observation[agent] is an Observation (contains .data attribute).  how is this generated, when next_observation[agent_name] is only a dict
+               # next_state[agent] is only a dict
+               result = Results(observation=self.observation[agent].data, state=next_state[agent], done=self.done, reward=round(self.reward[agent], 1),
                              action_space=self.agent_interfaces[agent].action_space.get_action_space(),
                              action=self.action[agent])
             else:
@@ -437,7 +441,8 @@ class EnvironmentController:
                 allowed_subnets=agent_info.allowed_subnets,
                 external_hosts=agent_info.external_hosts,
                 wrappers=agent_info.wrappers,
-                scenario=self.scenario
+                scenario=self.scenario,
+                fully_obs=self.fully_obs
             )
         return agents
 

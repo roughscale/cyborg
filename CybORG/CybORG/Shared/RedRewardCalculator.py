@@ -9,6 +9,7 @@ from CybORG.Shared.Actions.AbstractActions.PrivilegeEscalate import PrivilegeEsc
 
 from CybORG.Shared.Enums import OperatingSystemType, TrinaryEnum
 from CybORG.Shared.RewardCalculator import RewardCalculator
+from CybORG.Shared.Observation import Observation
 from CybORG.Simulator.Session import RedAbstractSession
 from pprint import pprint
 
@@ -49,8 +50,12 @@ class GoalRewardCalculator(RewardCalculator):
     # don't set any 0 reward. this can train the agent to repeatedly prefer these actions over others
     def calculate_reward(self, current_state: dict, action_dict: dict, agent_observations: dict, done: bool):
         action = action_dict[self.agent_name]
-        #print(action)
-        action_success = agent_observations[self.agent_name].success
+        #print("calculate reward")
+        #print(agent_observations)
+        if isinstance(agent_observations[self.agent_name],Observation):
+          action_success = agent_observations[self.agent_name].success # is an Observation/State object
+        else:
+            action_success = agent_observations[self.agent_name]["success"] # is a dict
         #print(action_success)
         if done:
             reward = 100.0

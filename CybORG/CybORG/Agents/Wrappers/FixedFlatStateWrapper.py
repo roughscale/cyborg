@@ -46,7 +46,6 @@ class FixedFlatStateWrapper(BaseWrapper):
         #print("ff result.observation")
         #print(result.observation)
         # following converts dict into list
-        result.next_state = self.observation_change(result.next_state)
         result.state = self.observation_change(result.state)
         result.observation = self.observation_change(result.observation)
         #print("ff result.observation")

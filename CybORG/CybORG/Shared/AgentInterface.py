@@ -62,11 +62,7 @@ class AgentInterface:
             self.reward_calculator_type, agent_name, scenario
         )
         self.agent_name = agent_name
-        #print("agent interface")
-        #print(self.actions) # this is a list of Strings
         self.action_space = ActionSpace(self.actions, agent_name, allowed_subnets, external_hosts)
-        # action space references class objects
-        #print(self.action_space)
         self.agent = agent_class()
         if wrappers is not None:
             for wrapper in wrappers:

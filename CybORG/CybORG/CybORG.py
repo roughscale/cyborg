@@ -38,7 +38,8 @@ class CybORG (CybORGLogger):
                  scenario_file: str,
                  environment: str = "sim",
                  env_config=None,
-                 agents: dict = None):
+                 agents: dict = None,
+                 fully_obs: bool = False):
         """Instantiates the CybORG class.
 
         Parameters
@@ -54,9 +55,13 @@ class CybORG (CybORGLogger):
         agents : dict, optional
             Map from agent name to agent interface for all agents to be used internally.
             If None agents will be loaded from description in scenario file (default=None).
+        fully_obs : bool, optional
+            Flag to set whether observed environment is fully or partially observable.
+            (default=False)
         """
         self.env = environment
         self.scenario_file = scenario_file
+        self.fully_obs = fully_obs
         self._log_info(f"Using scenario file {scenario_file}")
         self.environment_controller = self._create_env_controller(
             env_config, agents
@@ -71,7 +76,7 @@ class CybORG (CybORGLogger):
         ----------
         """
         if self.env == 'sim':
-            return SimulationController(self.scenario_file, agents=agents)
+            return SimulationController(self.scenario_file, agents=agents, fully_obs=self.fully_obs)
         if self.env == 'aws':
 
             if env_config:
