@@ -215,15 +215,15 @@ class FixedFlatWrapper(BaseWrapper):
                     else:
                         flat_obs.append(-1.0)
 
-                    if "Known Process" in process:
-                        if process["Known Process"] != -1:
-                            element = process["Known Process"].value / len(ProcessName.__members__)
-                        else:
-                            element = -1.0
-                        
-                        flat_obs.append(float(element))
-                    else:
-                        flat_obs.append(-1.0)
+                    #if "Known Process" in process:
+                    #    if process["Known Process"] != -1:
+                    #        element = process["Known Process"].value / len(ProcessName.__members__)
+                    #    else:
+                    #        element = -1.0
+                    #    
+                    #    flat_obs.append(float(element))
+                    #else:
+                    #    flat_obs.append(-1.0)
 
                     if "Known Path" in process:
                         if process["Known Path"] != -1:

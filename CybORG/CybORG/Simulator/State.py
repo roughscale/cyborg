@@ -13,6 +13,7 @@ from CybORG.Simulator.Host import Host
 from CybORG.Simulator.Process import Process
 from CybORG.Simulator.Session import Session
 from CybORG.Simulator.Subnet import Subnet
+from CybORG.Simulator.TrueState import TrueState
 
 
 class State:
@@ -40,8 +41,8 @@ class State:
 
         self.external_hosts = [ "Attacker0" ] # list of hostnames that are external of the system
 
-    def get_true_state(self, info: dict) -> Observation:
-        true_obs = Observation()
+    def get_true_state(self, info: dict) -> TrueState:
+        true_obs = TrueState()
         if info is None:
             raise ValueError('None is not a valid argument for the get true state function in the State class')
         elif info == {}:
@@ -99,11 +100,14 @@ class State:
                             for service_name in info['hosts'][hostname]['Services']:
                                 if service_name in host.services:
                                     true_obs.add_process(hostid=hostname, service_name=service_name, pid=host.services[service_name]['process'])
+        # how do we add dynamic information (ie processes to be discovered, ephemeral ports, etc)
         return true_obs
 
     def reset(self):
         # only reset state (don't re-initialise with randomisation)
-        self._initialise_state(self.scenario, reset=True)
+        only_reset_state=True
+        print("State reset: CIDR randomness disabled {}".format(only_reset_state))
+        self._initialise_state(self.scenario, reset=only_reset_state)
         self.step = 0
         self.time = copy.deepcopy(self.original_time)
 
@@ -197,21 +201,39 @@ class State:
             for host in self.hosts.values():
                 host.create_backup()
 
-    def add_session(self, host: str, user: str, agent: str, parent: int, process=None, session_type: str = "shell",
-            timeout: int = 0, is_escalate_sandbox: bool = False) -> Session:
+    # mandated process being supplied to function
+    def add_session(self, host: str, user: str, agent: str, parent: int, process: int, session_type: str = "shell",
+            timeout: int = 0, is_escalate_sandbox: bool = False, active: bool = True) -> Session:
         """Adds a session of a selected type to a dict as a selected user"""
         # Add idempotency (Don't create a session if the same already exists)
-        # session similarity will depend (at the moment) upon user, host and session_type
         # this gets the list of sessions from the simulated environment (total sessions within env)
         existing_sessions = self.sessions
+        print("add_session: existing sessions")
         for idx, sess in existing_sessions[agent].items():
-            if user == sess.username and SessionType.parse_string(session_type) == sess.session_type and host == sess.host:
-              return sess
+            # session similarity will depend (at the moment) upon user, host, session_type, active
+            print(host,user,SessionType.parse_string(session_type),active)
+            print(sess.host,sess.username,sess.session_type,sess.active)
+            #print(type(SessionType.parse_string(session_type)))
+            #print(type(sess.session_type))
+            if user == sess.username and SessionType.parse_string(session_type) == sess.session_type and host == sess.host and active == sess.active:
+               # if we mandate process (pid) being added at session creation we could limit the similarity to pid matching!
+               # don't match according to pid, especially if pids are common across hosts
+               #if process == sess.pid:
+               print("re-using matching host,user,type session")
+               return sess
 
-        ident = self.sessions_count[agent]
+        # need to reuse inactive session idents
+        ident=None
+        for i in range(self.sessions_count[agent]):
+            if i not in self.sessions[agent].keys():
+                ident = i
+        
+        if ident is None:
+           ident = self.sessions_count[agent]
+           self.sessions_count[agent] += 1
+           
         if parent in self.sessions[agent]:
             parent = self.sessions[agent][parent]
-        self.sessions_count[agent] += 1
         new_session = self.hosts[host].add_session(username=user, ident=ident, timeout=timeout, pid=process,
                                                    session_type=session_type, agent=agent, parent=parent,
                                                    is_escalate_sandbox=is_escalate_sandbox)
@@ -254,6 +276,16 @@ class State:
                     return agent, session
         return None, None
 
+    def get_sessions_by_host(self, agent, hostname):
+        # returns a list of Session objects for the specified host
+        if agent not in self.sessions:
+            return None
+        host_sessions = []
+        for session in self.sessions[agent]:
+            if self.sessions[agent][session].host == hostname:
+                host_sessions.append(self.sessions[agent][session])
+        return host_sessions
+
     def reboot_host(self, hostname):
         host = self.hosts[hostname]
         for agent, sessions in host.sessions.items():
@@ -273,7 +305,7 @@ class State:
             process["user"] = host.get_user(process.get("Username"))
             host.processes.append(
                 Process(pid=process.get('PID'), parent_pid=process.get('PPID'), username=process.get('user'),
-                        process_name=process.get('Process Name'), path=process.get('Path'),
+                        process_name=process.get('ProcessName'), path=process.get('Path'),
                         open_ports=process.get('Connections')))
 
         for servicename, service in host.services.items():

@@ -6,16 +6,18 @@ from ipaddress import IPv4Address, IPv4Network
 
 from CybORG.Shared.Enums import SessionType
 
-MAX_SUBNETS = 5
-MAX_ADDRESSES = 10
-MAX_SESSIONS = 8
-MAX_USERNAMES = 5
-MAX_PASSWORDS = 5
-MAX_PROCESSES = 10
-MAX_PORTS = 10
-MAX_GROUPS = 5
-MAX_FILES = 10
-MAX_PATHS = 10
+# These are the maximum for the Action Space parameter vector
+MAX_SUBNETS = 3
+MAX_ADDRESSES = 6
+MAX_SESSIONS = 10
+MAX_USERNAMES = 8
+MAX_PASSWORDS = 8
+MAX_PROCESSES = 10 # We will use ProcessName instead of PID
+MAX_PORTS = 11 # 6 static and 5 ephermal ports
+# Following not used in this Class
+#MAX_GROUPS = 5
+#MAX_FILES = 10
+#MAX_PATHS = 10
 
 
 class ActionSpace:
@@ -120,11 +122,32 @@ class ActionSpace:
                 )
         return size
 
-    def update(self, observation: dict, known: bool = True):
+    def update(self, observation: dict, known: bool = True, init: bool = False):
+        # use init=True to set up the initial action space, as updates will depend upon
+        # the initialised action_space
         if observation is None:
             return
         for key, info in observation['hosts'].items():
             if not isinstance(info, dict):
+                continue
+            if key in self.external_hosts:
+                # only add Attacker session action space parameters
+                if "Sessions" in info:
+                  for session in info["Sessions"]:
+                    if "ID" in session and session['Agent'] in self.agent:
+                        if "Type" in session and (session["Type"] == SessionType.MSF_SERVER or session["Type"] == SessionType.RED_ABSTRACT_SESSION):
+                            if session['Active']:
+                               self.server_session[session["ID"]] = known
+                            else:
+                                self.server_session[session["ID"]] = False # remove inactive sessions from action parameter space
+                        else:
+                            #print("update client session {0} {1}".format(session["ID"],session["Active"]))
+                            # assume if not a server session then its a client session
+                            if session['Active']:
+                               self.client_session[session["ID"]] = known
+                            else:
+                               self.client_session[session["ID"]] = False
+
                 continue
             if "SystemInfo" in info:
                 if "Hostname" in info["SystemInfo"]:
@@ -146,21 +169,37 @@ class ActionSpace:
 
             if "Processes" in info:
                 for process in info["Processes"]:
-                    if "PID" in process:
-                        self.process[process["PID"]] = known
+                    # only update for process entries already in the action parameter space
+                    if "ProcessName" in process and (process["ProcessName"] in self.process or init):
+                        self.process[process["ProcessName"]] = known
+                    # why do we only add port information for connections??
+                    # why is a port scan a connection?
+                    # we should be added ports as a result of a port scan
+                    # so that subsequent attempts to exploit these port services
+                    # will be successful
+                    # it is really upon the exploitation of these services
+                    # that a connection is made!
+                    # is it because this is the only key which contains port information
+                    # NOTE: continue with this logic.  perhaps we should set the port status
+                    # to "open" for scans, and "connected" for successful exploits
+                    # I assume we don't handle the remote/local address here because it is 
+                    # handled in the interface key.
                     if "Connections" in process:
                         for connection in process["Connections"]:
-                            if "local_port" in connection:
+                            if "local_port" in connection and (connection["local_port"] in self.port or init):
                                 self.port[connection["local_port"]] = known
-                            if "remote_port" in connection:
+                            if "remote_port" in connection and (connection["remote_port"] in self.port or init):
                                 self.port[connection["remote_port"]] = known
 
             if "UserInfo" in info:
                 for user in info["UserInfo"]:
-                    if "Username" in user:
+                    if "Username" in user and (user["Username"] in self.username or init):
                         self.username[user["Username"]] = known
                     if "Password" in user:
-                        self.password[user["Password"]] = known
+                        if user["Password"] not in self.password and not init:
+                            print("password {0} not in action parameter space".format(user["Password"]))
+                        else:
+                            self.password[user["Password"]] = known
 
             if "Sessions" in info:
                 for session in info["Sessions"]:

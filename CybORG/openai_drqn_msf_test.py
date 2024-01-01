@@ -27,9 +27,10 @@ final_epsilon = 0.02  # explore/exploit factor
 num_episodes=1000 # NOT USED. Total steps is used
 #num_evals=100
 
-total_steps=200000
-double=False
-dueling=True
+# given larger action space.
+total_steps=500000
+double=True
+dueling=False
 
 # The getattr(Python Module) returns all Classes within that Module
 #action_module = sys.modules['CybORG.Shared.Actions']
@@ -41,10 +42,10 @@ path = str(inspect.getfile(CybORG))
 # seems that Scenarios MUST have agents declared ??
 # seems that the actions listed in an Agent spec are actually Agent classes??
 # this is going to cause some difficulties in generalising actions!
-path = path[:-10] + "/Shared/Scenarios/TestSessionSB3Scenario.yaml"
+path = path[:-10] + "/Shared/Scenarios/TestMSFSessionDRQNScenario.yaml"
 #print(path)
 
-cyborg = CybORG(path,'sim',fully_obs=True)
+cyborg = CybORG(path,'sim',fully_obs=False)
 
 # print env controller network/environment state (ie not agent state!)
 environment=cyborg.environment_controller.state
@@ -63,7 +64,7 @@ action_obj=env.env.env
 #print(action_obj.possible_actions) # produces a list of the Action class objects of the enumerated space
 
 # print openaigym action and observation spaces
-#print(env.action_space) # Discrete
+print(env.action_space) # Discrete
 #print(env.observation_space) # Box
 
 #print("Initial Observation following Environment Reset")
@@ -71,9 +72,9 @@ action_obj=env.env.env
 #print(type(obs))
 #print()
 #print(env.environment_controller)
-unwrapped_state=agent.get_state()
+#unwrapped_state=agent.get_state()
 #print(unwrapped_state)
-state_list=env.env.observation_change(copy.deepcopy(unwrapped_state))
+#state_list=env.env.observation_change(copy.deepcopy(unwrapped_state))
 # for openai operations, state needs to be ndarray not python list
 #state=np.array(state_list, dtype=np.float32)
 state_space=env.observation_space
@@ -81,7 +82,7 @@ action_space=env.action_space
 
 # initialise agent learning
 #total_steps = num_episodes * step_limit_reached
-agent.agent.initialise(env,state_space,gamma,alpha,initial_epsilon,final_epsilon,total_steps,num_episodes,double,dueling)
+agent.agent.initialise(env,gamma,initial_epsilon,final_epsilon,total_steps,double,dueling)
 callback=agent.agent.learn_callback
 
 done = False

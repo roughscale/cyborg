@@ -7,8 +7,8 @@ from CybORG.Simulator.State import State
 
 # Call localtime from a meterpreter session - gives the current local time of the dict
 class LocalTime(MeterpreterAction):
-    def __init__(self, session: int, agent: str):
-        super().__init__(session=session, agent=agent)
+    def __init__(self, session: int, agent: str, target_session: int):
+        super().__init__(session=session, agent=agent, target_session=target_session)
 
     def sim_execute(self, state: State):
         obs = Observation()

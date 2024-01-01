@@ -81,11 +81,14 @@ class AgentInterface:
             self.state_space = None
 
 
-    def update(self, obs: dict, known=True):
+    def update(self, obs: dict, known=True, init=False):
         if isinstance(obs, Observation):
             obs = obs.data
         # updates the action space parameters
-        self.action_space.update(obs, known)
+        #print("update action space")
+        #print("obs: {}".format(obs))
+        self.action_space.update(obs, known, init)
+        #print(self.action_space.get_action_space())
 
     def update_state(self, obs):
         self.state_space.update(obs)
@@ -99,8 +102,13 @@ class AgentInterface:
         if isinstance(true_obs, Observation):
             true_obs = true_obs.data
         # this sets "all" attributes of the agent's internal state to False/unknown
-        self.update(true_obs, False)
+        # also sets init to True to initialise the action space
+        #print("agent set_true_obs")
+        #print(true_obs)
+        self.update(true_obs, False, True)
         # this sets "specified" attributes to True/known
+        #print("agent set_init_obs")
+        #print(init_obs)
         self.update(init_obs, True)
         # update state if fullyobs
         if self.fully_obs:
@@ -122,6 +130,7 @@ class AgentInterface:
         self.last_action = self.agent.get_action(observation, action_space, egreedy)
         return self.last_action
 
+    # this is currently disabled.  No need to integration FO State.
     def train(self, result: Results):
         """Trains an agent with the new tuple from the environment"""
         if isinstance(result.observation, Observation):
@@ -198,3 +207,6 @@ class AgentInterface:
             output.append(f"{attr}={v_str}")
         return "\n".join(output)
 
+    def get_max_elements(self):
+        self.state_space.calculate_max_elements()
+        return self.state_space.get_max_elements()

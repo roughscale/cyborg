@@ -16,6 +16,8 @@ class OpenAIGymWrapper(Env, BaseWrapper):
         else:
             assert isinstance(self.get_action_space(self.agent_name), int)
             self.action_space = spaces.Discrete(self.get_action_space(self.agent_name))
+        # can we do the following without doing an env.reset??  can we do this on an observation_space
+        print("openai wrapper self.env {}".format(type(self.env)))
         box_len = len(self.observation_change(self.env.reset(self.agent_name).observation))
         self.observation_space = spaces.Box(-1.0, 3.0, shape=(box_len,), dtype=np.float32)
         self.reward_range = (float('-inf'), float('inf'))
@@ -25,16 +27,20 @@ class OpenAIGymWrapper(Env, BaseWrapper):
     def step(self, action: Union[int, List[int]] = None) -> (object, float, bool, dict):
         self.action = action
         result = self.env.step(self.agent_name, action)
+        # In the FO case, result returns both observation and state, and we need to 
+        # return the state rather than the observation.  Ideally we could 
+        # remove any need for fully_obs flag in this object if we just return state 
+        # as the observation!
         result.observation = self.observation_change(result.observation)
-        # the following is in the FO case.  Do we need this?  Can we re-use the result.observation?
-        # commented out.  Also do we need both, if we are just returning the next_state?
-        #result.next_state = self.observation_change(result.next_state)
+        # we have returned the state as the observation in the FixedFlatStateWrapper
         #result.state = self.observation_change(result.state)
         result.action_space = self.action_space_change(result.action_space)
         info = vars(result)
-        return np.array(result.observation, dtype=np.float32), result.reward, result.done, info
         # also have created local observation_change method to wrap the np.array
-        #return result.next_state, result.reward, result.done, info
+        # state has to be returned in the FO case
+        # hard enabled for now!
+        #return np.array(result.observation, dtype=np.float32), result.reward, result.done, info
+        return np.array(result.observation, dtype=np.float32), result.reward, result.done, info
 
     # create local method to wrap python list into np.array.  Does this affect the about
     # result.observation which hasn't used this method?

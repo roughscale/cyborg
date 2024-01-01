@@ -50,8 +50,10 @@ class Observation:
                     properties: Optional[List[str]] = None,
                     **kwargs):
         if hostid is None:
+            #print("host id is None")
             hostid = str(len(self.data['hosts']))
         if hostid not in self.data['hosts']:
+            #print("if hostid not in obs.hosts")
             self.data['hosts'][hostid] = {"Processes": []}
         # hostid is in hosts
         else:
@@ -70,13 +72,16 @@ class Observation:
                 pid = int(pid)
             if pid < 0:
                 raise ValueError
-            for old_process in self.data['hosts'][hostid]["Processes"]:
-                # removes existing process with matching PID so it can be replaced
-                # need to do the same with processes without PID (matching localaddr/ports)
-                if "PID" in old_process and old_process["PID"] == pid:
-                    new_process = old_process
-                    self.data['hosts'][hostid]["Processes"].remove(old_process)
-                    break
+            #for old_process in self.data['hosts'][hostid]["Processes"]:
+            #    # this shouldn't be dealt with in the Observation.
+            #    # removes existing process with matching PID so it can be replaced
+            #    # need to do the same with processes without PID (matching localaddr/ports)
+            #    if "PID" in old_process and old_process["PID"] == pid:
+            #        print("adding a process with matching PID")
+            #        print(old_process)
+            #        #new_process = old_process
+            #        self.data['hosts'][hostid]["Processes"].remove(old_process)
+            #        break
             new_process["PID"] = pid
 
 
@@ -88,12 +93,18 @@ class Observation:
             new_process["PPID"] = parent_pid
 
         if process_name is None:
-            process_name = kwargs.get("Process Name", None)
+            process_name = kwargs.get("ProcessName", None)
         if process_name is not None:
-            new_process["Process Name"] = process_name
+            new_process["ProcessName"] = process_name
             if isinstance(process_name, str):
                 process_name = CyEnums.ProcessName.parse_string(process_name)
-            new_process["Known Process"] = process_name
+            # what is the purpose of "Known Process".  Doesn't seem to have any effect
+            # removing from here (and from FixedFlat wrappers)
+            #new_process["Known Process"] = process_name
+        else:
+            pass
+            # can occur with connection-based processes
+            # print("process without name")
 
         if program_name is None:
             program_name = kwargs.get("Program Name", None)
@@ -101,16 +112,28 @@ class Observation:
             if type(program_name) is str:
                 program_name = CyEnums.FileType.parse_string(program_name)
             new_process["Program Name"] = program_name
+        else: 
+            pass
+            # can occur with connection-based processes
+            # print("process without program_name")
 
         if service_name is None:
             service_name = kwargs.get("Service Name", None)
         if service_name is not None:
             new_process["Service Name"] = service_name
+        else:
+            pass
+            # can occur with connection-based processes
+            # print("process without service_name")
 
         if username is None:
             username = kwargs.get("Username", None)
         if username is not None:
             new_process["Username"] = username
+        else:
+            pass
+            # can occur with connection-based processes
+            # print("process without username")
 
         if path is None:
             path = kwargs.get("Path", None)
@@ -121,33 +144,6 @@ class Observation:
         new_connection = {}
         if "Connections" not in new_process:
             new_process["Connections"] = []
-
-        # need to remove matching existing connections to be replaced by new connection obs
-        if local_port is not None and local_address is not None:
-            match_conn = False
-            for proc_idx, existing_process in enumerate(self.data['hosts'][hostid]['Processes']):
-                if 'Connections' in existing_process:
-                  #print("{} has existing connections".format(hostid))
-                  for conn_idx, existing_conn in enumerate(existing_process['Connections']):
-                    #print("add_process: existing connection")
-                    #print(existing_conn)
-                    if "local_address" in existing_conn and "local_port" in existing_conn:
-                      if existing_conn['local_address'] == local_address and existing_conn['local_port'] == local_port:
-                        #print("matching existing conn")
-                        match_conn = True
-                        break
-                  if match_conn == True:
-                      break
-            if match_conn == True:
-               # remove the existing_conn from the list of connections in the existing_proc
-               #print("removing connection {0} from process {1}".format(existing_conn,existing_process))
-               # remove process in the event of a single connection
-               if len(self.data['hosts'][hostid]['Processes'][proc_idx]['Connections']) == 1:
-                   self.data['hosts'][hostid]['Processes'].pop(proc_idx)
-               else:
-                   self.data['hosts'][hostid]['Processes'][proc_idx]['Connections'].pop(conn_idx)
-               #print(self.data['hosts'][hostid]['Processes'])
-
 
         if local_port is None:
             local_port = kwargs.get("local_port", None)
@@ -199,18 +195,22 @@ class Observation:
             new_process.pop("Connections")
 
         if process_type is None:
-            process_type = kwargs.get("Process Type", None)
+            process_type = kwargs.get("ProcessType", None)
         if process_type is not None:
             if type(process_type) is str:
                 process_type = CyEnums.ProcessType.parse_string(process_type)
-            new_process["Process Type"] = process_type
+            new_process["ProcessType"] = process_type
+        else:
+            pass
+            # this can occur with connection-type processe
+            #print("process without process_type")
 
         if process_version is None:
-            process_version = kwargs.get("Process Version", None)
+            process_version = kwargs.get("ProcessVersion", None)
         if process_version is not None:
             if type(process_version) is str:
                 process_version = CyEnums.ProcessVersion.parse_string(process_version)
-            new_process["Process Version"] = process_version
+            new_process["ProcessVersion"] = process_version
 
         if properties is None:
             properties = kwargs.get("Properties", None)
@@ -226,7 +226,29 @@ class Observation:
                 vulnerability = CyEnums.Vulnerability.parse_string(vulnerability)
             new_process["Vulnerability"].append(vulnerability)
 
-        self.data['hosts'][hostid]["Processes"].append(new_process)
+        # The following should be handled in the Action space, or the State space, not in the Observation!
+        # check if process already matches existing PID (this will occur if add_process
+        # is called consecutively to add more than 1 connection for the same process
+        # this will occur for MSF_SERVER processes on the Attacker host.  Not sure if
+        # it will occur in other situations
+        proc_merged = False
+        for p_idx, proc in enumerate(self.data["hosts"][hostid]["Processes"]):
+            # merge on matching PIDs (exclude matching None PIDs)
+            if "PID" in proc and "PID" in new_process and proc["PID"] == new_process["PID"] and proc["PID"] is not None:
+                # merge new_process with existing
+                # need to deep merge connections
+                if "Connection" in proc and "Connections" in new_process:
+                    # for now just to a straight list extension
+                    # print("merging matching PID connections")
+                    # we update the new proc with the existing connections
+                    # as this will overwrite the existing connection in later dict update
+                    new_process["Connections"].extend(proc["Connections"])
+                    # print(new_process)
+                self.data["hosts"][hostid]["Processes"][p_idx].update(new_process)
+                proc_merged = True
+
+        if not proc_merged:
+            self.data['hosts'][hostid]["Processes"].append(new_process)
 
         if self.data['hosts'][hostid] == {"Processes": [{}]}:
             self.data['hosts'].pop(hostid)
@@ -588,6 +610,7 @@ class Observation:
                          timeout: int = None,
                          pid: int = None,
                          session_type: str = None,
+                         active: bool = True,
                          **kwargs):
         if hostid is None:
             hostid = str(len(self.data['hosts']))
@@ -601,6 +624,11 @@ class Observation:
             username = kwargs.get("Username", None)
         if username is not None:
             new_session["Username"] = username
+        else:
+            # need to add null/unknown username 
+            print("session has no username")
+            print(hostid, username, session_id, pid, session_type, kwargs)
+            raise ValueError("session has no username")
 
         if session_id is None:
             session_id = kwargs.get("ID", None)
@@ -612,18 +640,33 @@ class Observation:
         if timeout is not None:
             new_session["Timeout"] = timeout
 
-        if pid is None:
-            pid = kwargs.get("PID", None)
-        if pid is not None:
-            new_session["PID"] = pid
-            self.add_process(hostid=hostid, pid=pid, username=username)
-
         if session_type is None:
             session_type = kwargs.get("Type", None)
         if session_type is not None:
             if type(session_type) is str:
                 session_type = CyEnums.SessionType.parse_string(session_type)
             new_session["Type"] = session_type
+
+        if pid is None:
+            pid = kwargs.get("PID", None)
+        if pid is not None:
+            new_session["PID"] = pid
+            # again, this shoul be handled in the State/Action not the observation
+            # if process already exists in this observation, need to update existing process obs
+            #matched_proc = False
+            #if "Processes" in self.data["hosts"][hostid]:
+            #  for p_idx,proc in enumerate(self.data["hosts"][hostid]["Processes"]):
+            #    if "PID" in proc and proc["PID"] == pid:
+            #        self.data["hosts"][hostid]["Processes"][p_idx].update({ "Username": username, "Type": session_type})
+            #        matched_proc = True
+
+            #if not matched_proc:
+            #    # session should have an existing connection and a sessioned connection should have an identifiable PID
+            #    #print("unable to find PID for session connection")
+            #    self.add_process(hostid=hostid, pid=pid, username=username, type=session_type)
+        else:
+            # do we randomly assign a PID to the session. No, as sessions should have an existing connection with an identified PID
+            print("no pid passed to the session_info")
 
         if agent is None:
             agent = kwargs.get("Agent", None)
@@ -632,8 +675,13 @@ class Observation:
         if agent is not None:
             new_session["Agent"] = agent
 
+        # new session parameter.  Will default to active
+        if active is None:
+            active = kwargs.get("Active", "True")
+        if active is not None:
+            new_session["Active"] = active
+
         if new_session not in self.data['hosts'][hostid]["Sessions"]:
-            # check we aren't adding duplicate
             self.data['hosts'][hostid]["Sessions"].append(new_session)
 
     def add_subnet(self, cidr: str):
@@ -642,7 +690,9 @@ class Observation:
         if 'subnet' not in self.data['network']:
           self.data['network']['subnets'] = []
         self.data['network']['subnets'].append(cidr)
-
+    
+    # This function is only used in the Analyse, Exploit and Blue team case
+    # doesn't apply in Red team using MSF
     def combine_obs(self, obs):
         """Combines this Observation with another Observation
 
@@ -789,10 +839,13 @@ class Observation:
             ('127.0.0.1') in IP addresses to keep (default=True)
         """
         # we need to remove ips that are not within the allowed subnet ranges
+        #print("filter_addresses params")
+        #print(ips)
+        #print(cidrs)
         filtered_ips = []
         for ip in ips:
             if isinstance(ip, str):
-                print(ip)
+                #print(ip)
                 ip = IPv4Address(ip)
             for cidr in cidrs:
                 if isinstance(cidr,str):
@@ -801,47 +854,69 @@ class Observation:
                 if ip in cidr:
                     filtered_ips.append(ip)
 
-        #print("filtered_ips: {0}".format(filtered_ips))
-        # convert lists to set of str for fast lookup and consistent typing
+        # filtered ips are the ips that are allowed
         if ips is None:
             ip_set = set()
         else:
-            ip_set = set([str(ip) for ip in filtered_ips])
+            ip_set = set([ip for ip in filtered_ips])
             if include_localhost:
-                ip_set.add('127.0.0.1')
-            ip_set.add('0.0.0.0')
+                ip_set.add(IPv4Address('127.0.0.1'))
+            ip_set.add(IPv4Address('0.0.0.0'))
 
 
         if cidrs is None:
             cidr_set = set()
         else:
-            cidr_set = set([str(c) for c in cidrs])
+            cidr_set = set([c for c in cidrs])
             if include_localhost:
-                cidr_set.add('127.0.0.0/8')
+                cidr_set.add(IPv4Network('127.0.0.0/8'))
 
+        # filter_hosts are hosts that need to be removed
         filter_hosts = []
         for obs_k, obs_v in self.data['hosts'].items():
+            # remove most of attacker host details from observation.
+            # the agent should be external to the system under observation
+            if obs_k == "Attacker0":
+                if "Processes" in obs_v:
+                  del obs_v["Processes"] 
+                  #filter_hosts.append(obs_k)
+
             if isinstance(obs_v, Observation):
                 obs_v.filter_addresses(ips, cidrs, include_localhost)
             elif not isinstance(obs_v, dict):
                 continue
 
-            # v is observation of a host
+            # k is the host
+            # v is observation of the host
             addr_observed = False
             valid_addr_observed = False
 
+            # filter_procs are process that need to be removed
             filter_procs = []
             for i, proc in enumerate(obs_v.get("Processes", [])):
                 if "Connections" not in proc:
                     continue
                 for conn in proc["Connections"]:
+                    #print(conn)
                     for proc_k in ["local_address", "remote_address"]:
                         if proc_k in conn:
+                            #print(proc_k)
                             addr_observed = True
-                            if str(conn[proc_k]) in ip_set:
+                            #print(ip_set)
+                            if conn[proc_k] in ip_set:
+                                #print("conn[proc_k] in ip_set")
                                 valid_addr_observed = True
+                            # so if conn is not in ip_set, it is filtered
                             elif i not in filter_procs:
+                                #print("conn[proc_k] not in ip_set")
+                                #print(conn[proc_k])
+                                #print(ip_set)
                                 filter_procs.append(i)
+
+            #if len(filter_procs) > 0:
+            #    for f in filter_procs:
+            #      #print("processes to be filtered")
+            #      print(obs_v["Processes"][f])
 
             # Must remove indices in reverse order, else risk incorrect proc
             # being removed
@@ -856,13 +931,13 @@ class Observation:
             for i, interface in enumerate(obs_v.get("Interface", [])):
                 if "IP Address" in interface:
                     addr_observed = True
-                    if str(interface["IP Address"]) in ip_set:
+                    if interface["IP Address"] in ip_set:
                         valid_addr_observed = True
                     else:
                         filter_interfaces.append(i)
                 if "Subnet" in interface:
                     addr_observed = True
-                    if str(interface["Subnet"]) in cidr_set:
+                    if interface["Subnet"] in cidr_set:
                         valid_addr_observed = True
                     elif i not in filter_interfaces:
                         filter_interfaces.append(i)

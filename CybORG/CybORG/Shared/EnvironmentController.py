@@ -12,6 +12,8 @@ from CybORG.Shared.Results import Results
 from CybORG.Shared.Observation import Observation
 from CybORG.Shared.Actions import Action, FindFlag, Monitor
 from CybORG.Shared.AgentInterface import AgentInterface
+from CybORG.Simulator.TrueState import TrueState
+
 import CybORG.Agents
 
 
@@ -112,14 +114,24 @@ class EnvironmentController:
         self.steps = 0
         self.done = False
         self.init_state = self._filter_obs(self.get_true_state(self.INFO_DICT['True'])).data
+        #print("agent init_state")
+        #print(self.init_state)
         for agent_name, agent_object in self.agent_interfaces.items():
             agent_object.reset()
+            # get Agent OSINT
+            self._get_agent_osint()
             self.observation[agent_name] = self._filter_obs(self.get_true_state(self.INFO_DICT[agent_name]), agent_name)
             agent_object.set_init_obs(self.observation[agent_name].data, self.init_state)
+            #print("agent object obs")
+            #print(agent_object)
             if self.fully_obs:
               # at the moment we don't store state as object attribute due to name clash with State objects
               state = {}
               state[agent_name] = agent_object.get_state()
+              #print("agent object state")
+              #print(state[agent_name])
+
+
         if agent is None:
             return Results(observation=self.init_state)
         else:
@@ -155,7 +167,7 @@ class EnvironmentController:
         #print("env step")
         #print("step action var")
         #print(type(action)) # of type Action but has custom __str__ method
-        #print(dir(action))
+        #print(action)
         # all agents act on the state
         for agent_name, agent_object in self.agent_interfaces.items():
             # pass observation to agent to get action
@@ -171,11 +183,22 @@ class EnvironmentController:
 
             # perform action on (environment) state and get an observation
             next_observation[agent_name] = self._filter_obs(self.execute_action(self.action[agent_name]), agent_name)
+            #print("next observation processes")
+            #print(next_observation[agent_name])
+            if "hosts" in next_observation[agent_name].data:
+                for h in next_observation[agent_name].data["hosts"]:
+                    if "Processes" in h:
+                        print(h["Processes"])
+
             if self.fully_obs:
               agent_object.update_state(copy.deepcopy(next_observation[agent_name]))
               next_state[agent_name] = agent_object.get_state()
+              #print(agent_object.get_max_elements())
+              #print("next state:")
+              #print(next_state[agent_name])
 
         # get true observation
+        #print("get true observation")
         true_observation = self._filter_obs(self.get_true_state(self.INFO_DICT['True'])).data
 
         # Blue update step.
@@ -206,6 +229,7 @@ class EnvironmentController:
                                            next_observation=next_observation[agent_name].data, done=self.done))
             """
             self.observation[agent_name] = next_observation[agent_name]
+            # this updates the agent parameter space to set parameters as known from the observation
             agent_object.update(self.observation[agent_name])
 
             # if self.verbose and type(self.action[agent_name]) != Sleep and self.observation[agent_name].dict['success'] == True:
@@ -233,7 +257,9 @@ class EnvironmentController:
                # note that state is actually next_state (just as observation is actually next_observation)
                # self.observation[agent] is an Observation (contains .data attribute).  how is this generated, when next_observation[agent_name] is only a dict
                # next_state[agent] is only a dict
-               result = Results(observation=self.observation[agent].data, state=next_state[agent], done=self.done, reward=round(self.reward[agent], 1),
+               # see if we can substitute state for observation
+               #result = Results(observation=self.observation[agent].data, state=next_state[agent], done=self.done, reward=round(self.reward[agent], 1),
+               result = Results(observation=next_state[agent], done=self.done, reward=round(self.reward[agent], 1),
                              action_space=self.agent_interfaces[agent].action_space.get_action_space(),
                              action=self.action[agent])
             else:
@@ -268,6 +294,8 @@ class EnvironmentController:
         """
         # goal is to successfully escalate priv to root on Internal2 host
         obs = agent_obs["Red"].get_dict()["hosts"]
+        #print("determine done obs")
+        #print(obs)
         if "Internal2" in obs:
             if "Sessions" in obs["Internal2"]:
                 for sess in obs["Internal2"]["Sessions"]:
@@ -318,7 +346,8 @@ class EnvironmentController:
             )
         return done
 
-    def get_true_state(self, info: dict) -> Observation:
+    # Is this needed for the Emulated case??
+    def get_true_state(self, info: dict) -> TrueState:
         """Get current True state
 
         Returns
@@ -453,6 +482,10 @@ class EnvironmentController:
         """Filter obs to contain only hosts/subnets in scenario network """
         if agent_name is not None:
             subnets = [self.subnet_cidr_map[s] for s in self.scenario.get_agent_info(agent_name).allowed_subnets]
+            # need to add external_subnets as well. so that observations relating to external subnets are not filtered
+            #print("filter obs external_subnets")
+            #print(self.scenario.get_agent_info(agent_name).external_subnets)
+            subnets.extend([self.subnet_cidr_map[s] for s in self.scenario.get_agent_info(agent_name).external_subnets])
         else:
             subnets = list(self.subnet_cidr_map.values())
 
@@ -466,7 +499,7 @@ class EnvironmentController:
     def test_valid_action(self, action: Action, agent: AgentInterface):
         # returns true if the parameters in the action are in and true in the action set else return false
         action_space = agent.action_space.get_action_space()
-        #print(action)
+        print(action)
         #print(action_space)
         #print(action.get_params())
         # first check that the action class is allowed
@@ -474,10 +507,16 @@ class EnvironmentController:
             return False
         # next for each parameter in the action
         for parameter_name, parameter_value in action.get_params().items():
+            #print(parameter_name,parameter_value)
             if parameter_name not in action_space:
                 # what happens if no parameter_name is in action_space, it will return True??
+                print("parameter name {} not in action_space".format(parameter_name))
                 continue
-            if parameter_value not in action_space[parameter_name] or not action_space[parameter_name][parameter_value]:
+            if parameter_value not in action_space[parameter_name]:
+                print("parameter value {} not in parameter name {}".format(parameter_value, parameter_name))
+                return False
+            if not action_space[parameter_name][parameter_value]:
+                print("parameter {}/{} not known".format(parameter_name,parameter_value))
                 return False
         return True
 

@@ -40,15 +40,15 @@ class RedSB3DQNFCAgent(BaseAgent):
     def set_initial_values(self, action_space, observation):
         pass
 
-    def initialise(self, env, state_space, gamma, alpha, initial_eps, final_eps, total_steps, num_episodes, double, dueling):
+    def initialise(self, env, gamma, initial_eps, final_eps, total_steps, double, dueling):
         """ set up DQN """
         """ lr_schedule needs to be of Schedule type """
         self.env = env
 
-        input_size=state_space.shape[0]
-        #net_arch=[input_size]
+        input_size=env.observation_space.shape[0]
+        net_arch=[input_size]
         #net_arch=[1024,256,64]
-        net_arch=[input_size,input_size]
+        #net_arch=[input_size,int(input_size/2)]
 
         learning_rate=float(0.0001)
         # LR is provided as a schedule
@@ -56,13 +56,15 @@ class RedSB3DQNFCAgent(BaseAgent):
 
         buffer_size = int(total_steps/5)
         exploration_fraction=float(0.9)
-        learning_starts = int(total_steps/1000)
+        # increase learning starts for MSF type env
+        learning_starts = int(total_steps/100)
         target_network_update_freq = int(total_steps/5000)
 
         prioritized_replay_alpha=float(0.9)
         prioritized_replay_beta0=float(0.4)
         prioritized_replay_beta_iters=int(total_steps/50)
 
+        print("Policy Class: {}".format(self.__class__.__name__))
         print("Hyperparameters:")
         print("Total Steps {}".format(total_steps))
         print("Input Size {}".format(input_size))
@@ -132,10 +134,10 @@ class RedSB3DQNFCAgent(BaseAgent):
         # specific to policy
         self.num_actions = self.env.action_space.n
         #print(self.num_actions)
-        obs_dim = state_space.shape
+        #obs_dim = state_space.shape
         #print(obs_dim)
         #hidden_sizes = [64,64] # schwartz default. why this?
-        hidden_sizes = [256] # schwartz reported arch
+        #hidden_sizes = [256] # schwartz reported arch
         # should perhaps re-use schwartz' architecture of one 256 layer.
         # how many "features" does the state space contain??
         # 

@@ -24,7 +24,6 @@ class EnumActionWrapper(BaseWrapper):
             f"Wrapper required a dictionary action space. " \
             f"Please check that the wrappers below the ReduceActionSpaceWrapper return the action space as a dict "
         possible_actions = []
-        temp = {}
         params = ['action']
         # for action in action_space['action']:
         for i, action in enumerate(action_space['action']):
@@ -33,7 +32,6 @@ class EnumActionWrapper(BaseWrapper):
             param_dict = {}
             param_list = [{}]
             for p in self.action_signature[action]:
-                temp[p] = []
                 if p not in params:
                     params.append(p)
 

@@ -71,8 +71,22 @@ class SSHBruteForce(ExploitAction):
         # multi homed hosts have more than 1 ip address
         hostid = state.ip_addresses[self.ip_address]
         origin_hostid = state.ip_addresses[originating_ip_address]
-        obs.add_process(hostid=hostid, local_address=self.ip_address, local_port=22, status="open",
-                        process_type='SSH')
+
+        # To reduce complexity of managing temporary sessions/processes as a result of failed attempts
+        # only add processes/connections to successful attempts
+        # This is what occurs in the MSF exploit actions.
+
+        # adds ssh process to the target host in observation
+        # this is also added below in the successful case
+        # commenting out to reduce complexity and to avoid dangling failed processes that are not
+        # cleaned up
+        #obs.add_process(hostid=hostid, local_address=self.ip_address, local_port=22, status="open",
+        #                process_type='SSH')
+
+        # does it update the state of target host in the Simulator State?
+        # given that the process may fail due to lack of bruteforceable user-pass
+        # should we not add this process unless that user-pass exists
+        # otherwise we need to remove the process because the ssh connection fails?
 
         # test if there is a bruteforceable user-pass on the system
         user = None
@@ -81,12 +95,19 @@ class SSHBruteForce(ExploitAction):
                 user = u
                 break
 
-        for i in range(length_of_wordlist):
-            target_host.events['NetworkConnections'].append({'remote_address': originating_ip_address,
-                                                             'remote_port': from_host.get_ephemeral_port(),
-                                                             'local_address': self.ip_address,
-                                                             'local_port': 22
-                                                             })
+        # why do we update the target host state here?
+        # also why do we create wordlist_len(10) network connections??
+        # is this to simulate a bruteforce attempt (ie one connection per user-pass attempt)?
+        # how are attempt failures managed in the Simulated case? ie connections removed?
+        # This network connection is also added below in the successful case
+        # Commenting out to reduce the complexity and to avoid dangling failed connections that 
+        # are not cleaned up
+        #for i in range(length_of_wordlist):
+        #    target_host.events['NetworkConnections'].append({'remote_address': originating_ip_address,
+        #                                                     'remote_port': from_host.get_ephemeral_port(),
+        #                                                     'local_address': self.ip_address,
+        #                                                     'local_port': 22
+        #                                                     })
 
         if user is not None and not (vuln_proc.decoy_type & DecoyType.EXPLOIT):
             obs.set_success(True)
@@ -110,6 +131,7 @@ class SSHBruteForce(ExploitAction):
                               "remote_port": remote_port,
                               "local_address": self.ip_address}
             new_proc.connections.append(new_connection)
+            # why do we add another network connection in addition the 10 connections added above??
             target_host.events['NetworkConnections'].append({'remote_address': originating_ip_address,
                                                              'remote_port': remote_port,
                                                              'local_address': self.ip_address,
@@ -125,6 +147,8 @@ class SSHBruteForce(ExploitAction):
             from_host.get_process(session.pid).connections.append(remote_port_dict)
             obs.add_process(hostid=origin_hostid, local_address=originating_ip_address, remote_address=self.ip_address,
                             local_port=remote_port, remote_port=22)
+            # how is this different from the process added above?  Does this just update the existing connection (ie change from
+            # open status to connected status?
             obs.add_process(hostid=hostid, local_address=self.ip_address, remote_address=originating_ip_address,
                             local_port=22, remote_port=remote_port, process_type='ssh')
             obs.add_session_info(hostid=hostid, username=user.username, session_id=new_session.ident, session_type="ssh", agent=self.agent)

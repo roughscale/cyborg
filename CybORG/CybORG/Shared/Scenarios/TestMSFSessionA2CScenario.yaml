@@ -15,21 +15,44 @@ Agents:
             Hostname: Attacker0
     external_hosts:
       - Attacker0
+    external_subnets:
+      - Attacker
     actions:
     - Sleep
-    - DiscoverRemoteSystems
-    - DiscoverNetworkServices
-    - ExploitRemoteService
-    - PrivilegeEscalate
-    - Impact
-    agent_type: RedSB3DQNFCAgent
+    #- SambaUsermapScript
+    - SSHLoginExploit
+    #- TomcatExploit
+    #- MSFEternalBlue
+    - MS17_010_PSExec
+    #- TomcatCredentialScanner
+    - MSFPortscan
+    - MSFPingsweep
+    - MSFV4L2KernelExploit # linux based priv esc.  Need to implement MSF for emulated case
+    - MSFJuicyPotato # windows based priv esc. Need to implement MSF in emulated case.
+    #- ServicePersistenceWindows
+    ##- UpgradeToMeterpreter
+    #    - GetUid
+    #- GetPid
+    #- GetShell
+    #- LocalTime
+    #- MeterpreterPS
+    #- SysInfo
+    #- MeterpreterReboot
+    ##- MeterpreterIPConfig
+    ##- MSFAutoroute
+    agent_type: RedA2CAgent
     reward_calculator_type: Goal
     starting_sessions:
     - username: root
       hostname: Attacker0
-      type: RedAbstractSession # this needs to be a known server session type
+      type: MetasploitServer # this needs to be a known server session type
       name: MSFServer
       pid: 32000
+    - username: root
+      hostname: Attacker0
+      type: MSF_SHELL
+      name: MSFShell
+      pid: 1500
     wrappers: []  
 Hosts:
   Attacker0:

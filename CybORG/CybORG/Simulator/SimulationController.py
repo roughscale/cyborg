@@ -15,6 +15,7 @@ from CybORG.Shared.EnvironmentController import EnvironmentController
 from CybORG.Shared.Observation import Observation
 from CybORG.Shared.Results import Results
 from CybORG.Simulator.State import State
+from CybORG.Simulator.TrueState import TrueState
 
 
 class SimulationController(EnvironmentController):
@@ -29,11 +30,10 @@ class SimulationController(EnvironmentController):
         super().__init__(scenario_filepath, scenario_mod=scenario_mod, agents=agents, fully_obs=fully_obs)
 
     def reset(self, agent=None):
-        # state reset will regenerate the system with random CIDRs
-        # we should do this to develop generalisation
-        # but currently the agent/action space generation following
-        # reset is broken.  So this is currently disabled
-        # self.state.reset()
+        print("SimulationController reset")
+        self.state.reset()
+        #print(self.state.hosts)
+        #print(self.state.subnets)
         # allow for multi-homed hosts
         self.hostname_ip_map = {ip: h for ip, h in self.state.ip_addresses.items()}
         self.subnet_cidr_map = self.state.subnet_name_to_cidr
@@ -55,7 +55,7 @@ class SimulationController(EnvironmentController):
     def save(self, file: str):
         pass
 
-    def get_true_state(self, info: dict) -> Observation:
+    def get_true_state(self, info: dict) -> TrueState:
         output = self.state.get_true_state(info)
         return output
 

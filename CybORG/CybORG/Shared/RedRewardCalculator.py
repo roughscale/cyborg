@@ -6,6 +6,10 @@ from CybORG.Shared.Actions.AbstractActions.DiscoverNetworkServices import Discov
 from CybORG.Shared.Actions.AbstractActions.ExploitRemoteService import ExploitRemoteService
 from CybORG.Shared.Actions.AbstractActions.DiscoverRemoteSystems import DiscoverRemoteSystems
 from CybORG.Shared.Actions.AbstractActions.PrivilegeEscalate import PrivilegeEscalate
+from CybORG.Shared.Actions.MSFActionsFolder.MSFScannerFolder.MSFPingsweep import MSFPingsweep
+from CybORG.Shared.Actions.MSFActionsFolder.MSFScannerFolder.MSFPortscan import MSFPortscan
+from CybORG.Shared.Actions.MSFActionsFolder.RemoteCodeExecutionFolder.SSHLoginExploit import SSHLoginExploit
+from CybORG.Shared.Actions.MSFActionsFolder.RemoteCodeExecutionFolder.MS17_010_PSExec import MS17_010_PSExec
 
 from CybORG.Shared.Enums import OperatingSystemType, TrinaryEnum
 from CybORG.Shared.RewardCalculator import RewardCalculator
@@ -60,19 +64,23 @@ class GoalRewardCalculator(RewardCalculator):
         if done:
             reward = 100.0
         elif action_success == TrinaryEnum.TRUE:
-            if isinstance(action,DiscoverNetworkServices):
+            if isinstance(action,DiscoverNetworkServices) or isinstance(action,MSFPortscan):
                 if action.ip_address not in self.discovered_hosts:
                     self.discovered_hosts.append(action.ip_address)
                     reward = 1.0
                 else:
                     reward = -1.0
-            elif isinstance(action,ExploitRemoteService):
+            elif isinstance(action,ExploitRemoteService) or \
+                 isinstance(action,MS17_010_PSExec) or \
+                 isinstance(action,SSHLoginExploit):
                 if action.ip_address not in self.compromised_hosts:
+                    #print("adding compromised host")
                     self.compromised_hosts.append(action.ip_address)
                     reward = 1.0
                 else:
+                    #print("host already compromised")
                     reward = -1.0
-            elif isinstance(action,DiscoverRemoteSystems):
+            elif isinstance(action,DiscoverRemoteSystems) or isinstance(action,MSFPingsweep):
                 if action.subnet not in self.discovered_subnets:
                     self.discovered_subnets.append(action.subnet)
                     reward = 1.0

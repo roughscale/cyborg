@@ -9,47 +9,79 @@ from CybORG.Simulator.State import State
 
 # msf module is post/multi/gather/ping_sweep
 class MSFPingsweep(MSFScanner):
-    def __init__(self, subnet: IPv4Network, session: int, agent: str, target_session: int):
+    #def __init__(self, subnet: IPv4Network, session: int, agent: str, target_session: int):
+    def __init__(self, subnet: IPv4Network, session: int, agent: str):
+        # target_sessions are used for Metasploit sessions.
+        # This action is being treated as an InvalidAction because there isn't any existing
+        # target session at the time of the Action being executed.
+        # do we need to provide an existing Metasploit session, or can we create one
+        # The target session type also needs to be of METERPRETER or MSF_SHELL
+        # do we perhaps create this as part of the initial environment creation
+        # ie MSFSessionHandler creates an initial session??
         super().__init__(session, agent)
         self.subnet = subnet
-        self.target_session = target_session
-        self.lo = IPv4Address("127.0.0.1")
+        # remove target_session as Action parameter.
+        #self.target_session = target_session
+        #self.lo = IPv4Address("127.0.0.1")
 
-    def sim_execute(self, state: State):
+    def sim_execute(self, state: State, session_handler = None):
         obs = Observation()
         if self.session not in state.sessions[self.agent]:
+            #print("session not in state sessions")
             obs.set_success(False)
             return obs
         from_host = state.sessions['Red'][self.session].host
         session = state.sessions['Red'][self.session]
 
         if session.session_type != SessionType.MSF_SERVER or not session.active:
+            #print("session not MSF_SERVER type")
             obs.set_success(False)
             return obs
 
-        if self.target_session in state.sessions['Red']:
-            target_session = state.sessions['Red'][self.target_session]
-        else:
-            obs.set_success(False)
-            return obs
+        # Why does PingSweep need a target session?
+        # in the emulated case, target_session is passed as the SESSION option
+        # to Metasploit.
+        # target_sesssion is no longer an Action parameter. 
+        # We look up the session handler for the required target_session.
+        # in the AbstractActions/Pingsweep action, the MSF server session is 
+        # passed as the target_session (indicating that the pingsweep is being
+        # executed on the Attacker host and that all subnets in the target
+        # environment can be scanned from the Attacker host.
+        # maintain this assumption for now
 
-        if not (target_session.session_type == SessionType.METERPRETER or target_session.session_type == SessionType.MSF_SHELL) or not target_session.active:
-            obs.set_success(False)
-            return obs
+        #if self.target_session in state.sessions['Red']:
+        #    target_session = state.sessions['Red'][self.target_session]
+        #else:
+        #    #print("target session not in state sessions")
+        #    obs.set_success(False)
+        #    return obs
 
-        target_session, from_interface = self.get_local_source_interface(local_session=target_session,
-                                                                         remote_address=self.subnet.network_address,
-                                                                         state=state)
+        #if not (target_session.session_type == SessionType.METERPRETER or target_session.session_type == SessionType.MSF_SHELL) or not target_session.active:
+        #    #print("target session not correct type")
+        #    obs.set_success(False)
+        #    return obs
 
-        if from_interface is None:
-            obs.set_success(False)
-            return obs
+        
+        # is there a better way to determine reachability of the subnet than this function.  
+        # have a look at the ConcreteActions/Pingsweep code
+        #target_session, from_interface = self.get_local_source_interface(local_session=target_session,
+        #                                                                 remote_address=self.subnet.network_address,
+        #                                                                 state=state)
+
+        # TODO: implement the check_routable function to determine if the port is reachable
+
+        #if from_interface is None:
+        #    #print("from_interface is None")
+        #    obs.set_success(False)
+        #    return obs
         target_hosts = []
         for host in state.subnets[self.subnet].ip_addresses:
             obs.set_success(True)
-            target_hosts.append(host)
-            obs.add_interface_info(hostid=str(host), ip_address=host, subnet=self.subnet)
-
+            # Taken from the ConcreteActions/Pingsweep code update
+            # multi homed hosts have more than 1 ip address
+            hostid = state.ip_addresses[host]
+            target_hosts.append(hostid)
+            obs.add_interface_info(hostid=hostid, ip_address=host, subnet=self.subnet)
         return obs
 
     def emu_execute(self, session_handler) -> Observation:
@@ -77,4 +109,4 @@ class MSFPingsweep(MSFScanner):
         return obs
 
     def __str__(self):
-        return super(MSFPingsweep, self).__str__() + f", Subnet: {self.subnet}, Client Session: {self.target_session}"
+        return super(MSFPingsweep, self).__str__() + f", Subnet: {self.subnet}"

@@ -77,7 +77,7 @@ class Host(Entity):
             for process in processes:
                 self.processes.append(
                     Process(pid=process.get('PID'), parent_pid=process.get('PPID'), username=process.get("Username"),
-                            process_name=process.get('Process Name'), path=process.get('Path'),
+                            process_name=process.get('ProcessName'), path=process.get('Path'),
                             open_ports=process.get('Connections'), properties=process.get('Properties'),
                             process_type=process.get('Process Type')))
         self.original_processes = deepcopy(self.processes)
@@ -97,6 +97,9 @@ class Host(Entity):
         self.info = info if info is not None else {}
         self.events = {'NetworkConnections': [], 'ProcessCreation': []}
 
+        self.global_ephemeral_port = 50000
+        self.global_pid = 32000
+
     def get_state(self):
         observation = {"os_type": self.os_type, "os_distribution": self.distribution, "os_version": self.version,
                        "os_patches": self.patches, "os_kernel": self.kernel, "hostname": self.hostname,
@@ -104,9 +107,21 @@ class Host(Entity):
         return observation
 
     def get_ephemeral_port(self):
-        port = randrange(49152, 60000)
-        while port in self.ephemeral_ports:
-            port = randrange(49152, 60000)
+        # limit range to reduce action parameter space explosion
+        #port = randrange(49152, 60000)
+        #count_port = 0
+        #while port in self.ephemeral_ports:
+        #    port = randrange(50000,50010)
+        #    #port = randrange(49152, 60000)
+        #    count_port += 1
+        #    # avoid port exhaustion in cases of divergence
+        #    if count_port > 10848:
+        #        print("port exhaustion on host")
+        #        sys.exit(1)
+        port = self.global_ephemeral_port
+        self.global_ephemeral_port += 1
+        if self.global_ephemeral_port > 50004:
+            self.global_ephemeral_port = 50000
         self.ephemeral_ports.append(port)
         return port
 
@@ -151,9 +166,22 @@ class Host(Entity):
             pids = []
             for process in self.processes:
                 pids.append(process.pid)
-            pid = randrange(32768)
-            while pid not in pids:
-                pid = randrange(32768)
+            #pid = randrange(32768)
+            #count_pid = 0
+            #print(pid)
+            #print(pids)
+            #while pid in pids:
+            #    pid = randrange(32768)
+            #    print(pid)
+            #    count_pid += 1
+            #    # avoid pid exhaustion loop
+            #    if count_pid > 32768:
+            #        print("pid exhaustion on host")
+            #        sys.exit(1)
+            pid = self.global_pid
+            self.global_pid += 1
+            if self.global_pid > 32004:
+                self.global_pid = 32000
         if type(open_ports) is dict:
             open_ports = [open_ports]
 

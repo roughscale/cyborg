@@ -27,8 +27,8 @@ class Session(Entity):
         self.is_escalate_sandbox = is_escalate_sandbox
 
     def get_state(self):
-        return {"username": self.username, "session_id": self.ident, "timeout": self.timeout,
-                "pid": self.pid, "session_type": self.session_type, "agent": self.agent}
+        return {"username": self.username, "session_id": self.ident, "host": self.host,
+                "pid": self.pid, "session_type": self.session_type, "agent": self.agent, "active": self.active}
 
     def set_orphan(self):
         self.active = False
@@ -36,6 +36,22 @@ class Session(Entity):
 
     def dead_child(self, child_id: int):
         self.children.pop(child_id)
+
+
+class SimulatedSessionHandler():
+    # a session handler for a simulated environment that tracks client/target session information.  It simulates the 
+    # session handler for the Metasploit Framework session handler.  The session handler tracks sessions
+    # as an implementation detail of an Action execution.
+    def __init__(self, agent):
+        self.sessions = {} # a mapping of session IDs for each agent and the client/target of each session.
+        self.session[agent] = {}
+
+    def add_session(self, agent, session: Session):
+        self.session[agent][session.ident] = session
+
+    def get_session_by_host(self, agent, hostname: str):
+        host_sessions = [ s for s in self.sessions[agent] if s.hostname == hostname ]
+        return host_sessions
 
 
 class RedAbstractSession(Session):

@@ -11,6 +11,10 @@ from .ComplexAgents.RedTabQAgent import RedTabQAgent
 #from .ComplexAgents.RedDQNFCAgent import RedDQNFCAgent
 #from .ComplexAgents.RedSB2DQNFCAgent import RedSB2DQNFCAgent
 from .ComplexAgents.RedSB3DQNFCAgent import RedSB3DQNFCAgent
+from .ComplexAgents.RedPPOAgent import RedPPOAgent
+from .ComplexAgents.RedTRPOAgent import RedTRPOAgent
+from .ComplexAgents.RedA2CAgent import RedA2CAgent
+from .ComplexAgents.RedRecurrentPPOAgent import RedRecurrentPPOAgent
 from .SimpleAgents.TestAgent import TestAgent
 from .SimpleAgents.HeuristicRed import HeuristicRed
 from .SimpleAgents.DebuggingAgent import DebuggingAgent

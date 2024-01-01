@@ -298,6 +298,10 @@ class ProcessType(enum.Enum):
     RDP = enum.auto()
     REVERSE_SESSION_HANDLER = enum.auto()
     REVERSE_SESSION = enum.auto()
+    METERPRETER = enum.auto()
+    MSF_SHELL = enum.auto()
+    MSF_SERVER = enum.auto()
+
 
     @classmethod
     def parse_string(cls, service_string):
@@ -322,6 +326,12 @@ class ProcessType(enum.Enum):
             return cls.WEBSERVER
         elif service_string == "https":
             return cls.WEBSERVER
+        elif service_string == "msf_shell":
+            return cls.MSF_SHELL
+        elif service_string == "msf_server":
+            return cls.MSF_SERVER
+        elif service_string == "meterpreter":
+            return cls.METERPRETER
         else:
             return cls.UNKNOWN
 

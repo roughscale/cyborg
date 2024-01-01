@@ -106,6 +106,10 @@ class ScenarioAgent:
         return self._info.get("external_hosts", [])
 
     @property
+    def external_subnets(self) -> List[str]:
+        return self._info.get("external_subnets",[])
+
+    @property
     def adversary(self) -> str:
         return self._info.get('adversary')
 
