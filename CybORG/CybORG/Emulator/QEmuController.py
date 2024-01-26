@@ -12,11 +12,13 @@ from CybORG.Shared.Actions.Action import Action
 from CybORG.Shared.Enums import FileType, TrinaryEnum
 from CybORG.Shared.Observation import Observation
 from CybORG.Shared.Results import Results
+from CybORG.Simulator.State import State
 
 
 class QEmuController(EnvironmentController):
 
    def __init__(self, scenario_filepath: str = None, scenario_mod: dict = None, agents: dict = None, verbose=True, fully_obs=False):
+        self.state = None
         self.session_handler = MSFSessionHandler()
         super().__init__(scenario_filepath, scenario_mod=scenario_mod, agents=agents, fully_obs=fully_obs)
 
@@ -70,5 +72,13 @@ class QEmuController(EnvironmentController):
                 "External": "10.46.64.0/24",
                 "Internal": "10.58.85.0/24"
                 }
+        # for the moment we need to create a State object for action parameter space generation
+        # this will need to be replaced by a function that can ingest this information from the
+        # emulated environment itself.
+        self.state = State(self.scenario)
+
+   def get_true_state(self, info: dict) -> TrueState:
+        output = self.state.get_true_state(info)
+        return output
 
 

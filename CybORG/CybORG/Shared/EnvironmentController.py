@@ -69,7 +69,17 @@ class EnvironmentController:
         for host in self.scenario.hosts:
             self.INFO_DICT['True']['hosts'][host] = {'SystemInfo': 'All', 'Sessions': 'All', 'Interfaces': 'All', 'UserInfo': 'All',
                                       'Processes': ['All']}
-        self.init_state = self._filter_obs(self.get_true_state(self.INFO_DICT['True'])).data
+
+        # This uses the INFO_DICT as a filter to generate the complete State of the Target Environment.
+        true_state = self.get_true_state(self.INFO_DICT['True'])
+        print("Get True State of INFO_DICT['True']")
+        print(true_state)
+        #print("Filtered Obs of Get True State")
+        true_state_filtered_obs = self._filter_obs(true_state)
+        #print(true_state_filtered_obs)
+        #self.init_state = self._filter_obs(self.get_true_state(self.INFO_DICT['True'])).data
+        self.init_state = true_state_filtered_obs.data
+        # the following generates the initial information of the Target Environment of each agent into INFO_DICT[agent]
         self._get_agent_osint()
 
         # populate initial observations with OSINT

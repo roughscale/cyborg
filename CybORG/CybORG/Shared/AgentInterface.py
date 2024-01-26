@@ -102,13 +102,12 @@ class AgentInterface:
         if isinstance(true_obs, Observation):
             true_obs = true_obs.data
         # this sets "all" attributes of the agent's internal state to False/unknown
-        # also sets init to True to initialise the action space
-        #print("agent set_true_obs")
-        #print(true_obs)
+        print("agent set_true_obs")
+        print(true_obs)
         self.update(true_obs, False, True)
         # this sets "specified" attributes to True/known
-        #print("agent set_init_obs")
-        #print(init_obs)
+        print("agent set_init_obs")
+        print(init_obs)
         self.update(init_obs, True)
         # update state if fullyobs
         if self.fully_obs:
