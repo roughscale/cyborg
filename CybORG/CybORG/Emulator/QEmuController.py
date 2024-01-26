@@ -1,19 +1,27 @@
-# This is the EmulationController class
+# This is the EmulationController class for QEmu/Libvirt emulation
+# at the moment, this relies upon an externally provisioned environment on Qemu/Libvirt system
+#
 # upstream supports the AWSClientController, although hasn't publicly released the implementation
+#
 # We will implement a platform-agnostic controller as the Red team doesn't require any platform-specific
 # functionality, and can interact with any specific platform implementation (client, virtual, bare-metal)
 
 from CybORG.Shared.EnvironmentController import EnvironmentController
 from CybORG.Emulator.Session import MSFSessionHandler
+from CybORG.Shared.Actions.Action import Action
+from CybORG.Shared.Enums import FileType, TrinaryEnum
+from CybORG.Shared.Observation import Observation
+from CybORG.Shared.Results import Results
 
-class EmulationController(EnvironmentContoller):
+
+class QEmuController(EnvironmentController):
 
    def __init__(self, scenario_filepath: str = None, scenario_mod: dict = None, agents: dict = None, verbose=True, fully_obs=False):
         self.session_handler = MSFSessionHandler()
         super().__init__(scenario_filepath, scenario_mod=scenario_mod, agents=agents, fully_obs=fully_obs)
 
    def reset(self, agent=None):
-        print("EmulationController reset")
+        print("QEmulationController reset")
         # call _create_environment??
         self._create_environment()
         #self.hostname_ip_map = {ip: h for ip, h in self.state.ip_addresses.items()}
@@ -48,4 +56,19 @@ class EmulationController(EnvironmentContoller):
         # perhaps hardcode this for now to match the deployed environment
         #self.hostname_ip_map = {ip: h for ip, h in self.state.ip_addresses.items()}
         #self.subnet_cidr_map = self.state.subnet_name_to_cidr
+        self.hostname_ip_map = { 
+                "10.37.37.100": "Attacker0",
+                "10.46.64.100": "Attacker0",
+                "10.58.85.100": "Attacker0",
+                "10.46.64.101": "External0",
+                "10.58.85.101": "Internal0",
+                "10.37.37.100": "Internal1",
+                "10.37.37.100": "Internal2"
+                }
+        self.subnet_cidr_map = {
+                "Attacker": "10.37.37.0/24",
+                "External": "10.46.64.0/24",
+                "Internal": "10.58.85.0/24"
+                }
+
 

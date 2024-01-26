@@ -6,6 +6,7 @@ from CybORG.Shared import Observation, Results, CybORGLogger
 from CybORG.Shared.EnvironmentController import EnvironmentController
 
 from CybORG.Simulator.SimulationController import SimulationController
+from CybORG.Emulator.QEmuController import QEmuController
 
 
 class CybORG (CybORGLogger):
@@ -32,7 +33,7 @@ class CybORG (CybORGLogger):
         Map from agent name to agent interface for all agents to be used internally.
         If None agents will be loaded from description in scenario file (default=None).
     """
-    supported_envs = ['sim', 'aws']
+    supported_envs = ['sim', 'qemu', 'aws']
 
     def __init__(self,
                  scenario_file: str,
@@ -77,6 +78,8 @@ class CybORG (CybORGLogger):
         """
         if self.env == 'sim':
             return SimulationController(self.scenario_file, agents=agents, fully_obs=self.fully_obs)
+        if self.env == 'qemu':
+            return QEmuController(self.scenario_file, agents=agents, fully_obs=self.fully_obs)
         if self.env == 'aws':
 
             if env_config:
