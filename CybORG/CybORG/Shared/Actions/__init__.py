@@ -5,7 +5,7 @@ from .MSFActionsFolder import \
     TomcatCredentialScanner, TomcatExploit, PSExec, SSHLoginExploit, GetPid, \
     GetShell, GetUid, MeterpreterPS, MeterpreterReboot, SysInfo, MSFAutoroute, \
     MSFEternalBlue, MSFPortscan, MSFPingsweep, MS17_010_PSExec, MeterpreterIPConfig, \
-    ServicePersistenceWindows, MSFV4L2KernelExploit, MSFJuicyPotato
+    ServicePersistenceWindows, MSFV4L2KernelExploit, MSFJuicyPotato, MSFNestedUserNamespaceLimit
 from .ShellActionsFolder import \
     AddUserLinux, AddUserWindows, DeleteFileWindows, \
     RemoveUserFromGroupWindows, DisableUserWindows, PingSweep, \

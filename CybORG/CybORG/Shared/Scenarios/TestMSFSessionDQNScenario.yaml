@@ -27,7 +27,8 @@ Agents:
     #- TomcatCredentialScanner
     - MSFPortscan
     - MSFPingsweep
-    - MSFV4L2KernelExploit # linux based priv esc.  Need to implement MSF for emulated case
+    #- MSFV4L2KernelExploit # linux based priv esc.  Need to implement MSF for emulated case
+    - MSFNestedUserNamespaceLimit # linux based priv esc.  Need to implement MSF for emulated case
     - MSFJuicyPotato # windows based priv esc. Need to implement MSF in emulated case.
     #- ServicePersistenceWindows
     ##- UpgradeToMeterpreter

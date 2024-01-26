@@ -4,4 +4,4 @@ from .MSFPersistenceFolder import ServicePersistenceWindows
 from .UpgradeToMeterpreter import UpgradeToMeterpreter
 from .MeterpreterActionsFolder import GetUid, GetPid, GetShell, LocalTime, MeterpreterPS, SysInfo, MeterpreterReboot, MeterpreterIPConfig
 from .MSFAutoroute import MSFAutoroute
-from .MSFPrivilegeEscalationFolder import MSFV4L2KernelExploit, MSFJuicyPotato
+from .MSFPrivilegeEscalationFolder import MSFV4L2KernelExploit, MSFJuicyPotato, MSFNestedUserNamespaceLimit

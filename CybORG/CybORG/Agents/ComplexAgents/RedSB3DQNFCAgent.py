@@ -144,6 +144,12 @@ class RedSB3DQNFCAgent(BaseAgent):
 
         self.learn_callback = LearnCallback(self.dqn)
 
+    def load(self,classtype,file):
+        if classtype == "DuelingDQN":
+            DQNClass = DuelingDQN
+        self.dqn = DQNClass.load(file)
+        return self
+
 class LearnCallback(BaseCallback):
 
     def __init__(self, model):
