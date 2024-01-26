@@ -6,6 +6,9 @@
 # We will implement a platform-agnostic controller as the Red team doesn't require any platform-specific
 # functionality, and can interact with any specific platform implementation (client, virtual, bare-metal)
 
+import inspect
+import yaml
+from CybORG import CybORG
 from CybORG.Shared.EnvironmentController import EnvironmentController
 from CybORG.Emulator.Session import MSFSessionHandler
 from CybORG.Shared.Actions.Action import Action
