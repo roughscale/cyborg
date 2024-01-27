@@ -44,8 +44,15 @@ cyborg = CybORG(path,'qemu',fully_obs=True)
 #print()
 # the following returns the AgentInterface
 agent=cyborg.environment_controller.agent_interfaces["Red"]
-#unwrapped_action_space=agent.action_space.get_action_space()
-wrapped_env = FixedFlatStateWrapper(EnumActionWrapper(cyborg))
+unwrapped_action_space=agent.action_space.get_action_space()
+print("unwrapped action space")
+print(unwrapped_action_space)
+enum_env = EnumActionWrapper(cyborg)
+print("enum wrapped env")
+print(enum_env)
+#wrapped_env = FixedFlatStateWrapper(EnumActionWrapper(cyborg))
+wrapped_env = FixedFlatStateWrapper(enum_env)
+print(wrapped_env)
 #env = OpenAIGymWrapper(env=wrapped_env, agent_name="Red")
 # wraps env in DummyVecEnv VecEnv environment
 # no need for wrapped OpenAiGymWrapper for KB agent

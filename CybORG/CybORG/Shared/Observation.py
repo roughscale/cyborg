@@ -687,7 +687,7 @@ class Observation:
     def add_subnet(self, cidr: str):
         if isinstance(cidr,str):
             cidr=IPv4Network(cidr)
-        if 'subnet' not in self.data['network']:
+        if 'subnets' not in self.data['network']:
           self.data['network']['subnets'] = []
         self.data['network']['subnets'].append(cidr)
     
@@ -871,6 +871,11 @@ class Observation:
             if include_localhost:
                 cidr_set.add(IPv4Network('127.0.0.0/8'))
 
+        # print filter sets, ie those that are allowed
+        #print("filter addresses print filter sets. those that are allowed")
+        #print(ip_set)
+        #print(cidr_set)
+
         # filter_hosts are hosts that need to be removed
         filter_hosts = []
         for obs_k, obs_v in self.data['hosts'].items():
@@ -927,11 +932,14 @@ class Observation:
                 del obs_v["Processes"]
 
             filter_interfaces = []
+            #print("filter interfaces")
             # this doesn't filter IP addresses within a non-allowed subnet!
             for i, interface in enumerate(obs_v.get("Interface", [])):
+                #print(interface)
                 if "IP Address" in interface:
                     addr_observed = True
                     if interface["IP Address"] in ip_set:
+                        #print("ip address in ip_set")
                         valid_addr_observed = True
                     else:
                         filter_interfaces.append(i)

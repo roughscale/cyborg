@@ -92,5 +92,5 @@ class MSFSessionHandler():
         return console_id
 
 
-    def _log_debug():
-        pass
+    def _log_debug(self, output):
+        print(output)

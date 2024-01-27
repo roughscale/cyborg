@@ -54,6 +54,7 @@ Agents:
       type: MSF_SHELL
       name: MSFShell
       pid: 1500
+      ident: 0
     wrappers: []  
 Hosts:
   Attacker0:

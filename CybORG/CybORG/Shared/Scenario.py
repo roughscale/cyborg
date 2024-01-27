@@ -49,6 +49,11 @@ class ScenarioSession:
     def pid(self) -> str:
         return self._info.get("pid", None)
 
+    # Allow Scenario to declare session id (WORKAROUND for client session)
+    @property
+    def ident(self) -> str:
+        return self._info.get("ident", None)
+
     def __str__(self):
         return f"Session {self.name}, {self.parent} -> {self.username}@{self.hostname}: {self.session_type} -> {self.pid}"
 

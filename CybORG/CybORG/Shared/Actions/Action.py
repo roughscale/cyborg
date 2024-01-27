@@ -35,7 +35,7 @@ class InvalidAction(Action):
     def sim_execute(self, state):
         return Observation(success=False)
 
-    def emu_execute(self) -> Observation:
+    def emu_execute(self, session_handler) -> Observation:
         return Observation(success=False)
 
     @property

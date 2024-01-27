@@ -13,14 +13,14 @@ from CybORG.Simulator.Host import Host
 from CybORG.Simulator.Process import Process
 from CybORG.Simulator.Session import Session
 from CybORG.Simulator.Subnet import Subnet
-from CybORG.Simulator.TrueState import TrueState
 
 
-class State:
-    """Simulates the Network State.
 
-    This class contains all the data for the simulated network, including ips, subnets, hosts and sessions.
-    The methods mostly modify the network state, but tend to delegate most of the work to the Host class.
+class ParameterState:
+    """
+
+    This class contains the data for the network, including ips, subnets, hosts and sessions which is used 
+    to generate the Agent's action parameter space
     """
     def __init__(self, scenario):
         self.scenario = scenario
@@ -28,33 +28,33 @@ class State:
         self.ip_addresses = None  # contains mapping of ip addresses to hostnames
 
         self.hosts = None  # contains mapping of hostnames to host objects
-
-        # this is a dict of lists.  agent names are dict keys, session_ids are the list values
-        # how does reusing session_id across server/client sessions impact??
         self.sessions = None  # contains mapping of agent names to mapping of session id to session objects
         self.subnets = None  # contains mapping of subnet cidrs to subnet objects
 
         self.sessions_count = {}  # contains a mapping of agent name to number of sessions
         self.hostname_to_interface = {} # contains a mapping of hostname interfaces to ip addresses
 
-        self._initialise_state(scenario)
-        self.step = 0
-        self.original_time = datetime(2020, 1, 1, 0, 0)
-        self.time = copy.deepcopy(self.original_time)
+        self._initialise_parameter_state(scenario)
 
         self.external_hosts = [ "Attacker0" ] # list of hostnames that are external of the system
 
-    def get_true_state(self, info: dict) -> TrueState:
-        true_obs = TrueState()
+    def get_true_state(self, info: dict) -> Observation:
+        true_obs = Observation()
         if info is None:
             raise ValueError('None is not a valid argument for the get true state function in the State class')
         elif info == {}:
             raise ValueError('Empty info is not a valid argument for the get true state function in the State class')
         else:
             if 'network' in info and 'subnets' in info['network']:
+                #print("true state network")
+                #print(info['network'])
+                #print(self.subnets.items())
                 for name, cidr in self.subnets.items():
+                    #print(name,cidr,str(cidr))
                     # cidr of type Subnet. need to use str representation
                     if str(cidr) in info['network']['subnets']:
+                        #print("str(cidr) in info network subnets")
+                        #print(str(cidr))
                         true_obs.add_subnet(cidr=str(cidr))
             for hostname, host in self.hosts.items():
                 if hostname in info['hosts']:
@@ -75,16 +75,22 @@ class State:
                             raise NotImplementedError(f"{info[hostname]['Interfaces']} cannot be collected from state")
                     if 'Sessions' in info['hosts'][hostname]: # need to set up starting session on external/learning agent host
                         if info['hosts'][hostname]['Sessions'] == 'All':
+                            print("get_true_state sessions")
+                            print(host.sessions.items())
                             for agent_name, sessions in host.sessions.items():
+                                # sessions is currently a list of idents which a correlated to list indexes
+                                # it needs to be a list of session objects.
+                                # as there are 2 lists (one in Host and one in State)
+                                print(sessions) # this should be a list of 
                                 for session in sessions:
                                     true_obs.add_session_info(hostid=hostname,
-                                                              **self.sessions[agent_name][session].get_state())
+                                                              **session.get_state())
                         else:
                             agent_name = info['hosts'][hostname]['Sessions']
                             if agent_name in host.sessions:
                                 for session in host.sessions[agent_name]:
                                     true_obs.add_session_info(hostid=hostname,
-                                                              **self.sessions[agent_name][session].get_state())
+                                                              **session.get_state())
                     if 'Files' in info['hosts'][hostname] and hostname not in self.external_hosts:
                         for file in host.files:
                             true_obs.add_file_info(hostid=hostname, **file.get_state())
@@ -110,59 +116,91 @@ class State:
         # only reset state (don't re-initialise with randomisation)
         only_reset_state=True
         print("State reset: CIDR randomness disabled {}".format(only_reset_state))
-        self._initialise_state(self.scenario, reset=only_reset_state)
+        self._initialise_parameter_state(self.scenario, reset=only_reset_state)
         self.step = 0
         self.time = copy.deepcopy(self.original_time)
 
-    def _initialise_state(self, scenario: Scenario, reset=False):
+    def _initialise_parameter_state(self, scenario: Scenario, reset=False):
         # reset parameter resets the environment without changing the network state configuration
         # ie the network state will retain existing configuration (ip and subnet addressing)
         # otherwise, the network state will be created with address randomisation
         # We should remove this once we have convering algorithms
+        #
+        # NOTE: In the emulated case, the randomness is derived externally from the creation of 
+        # the emulated environment.
+        # 
+        # For now hardcode the subnet/ip addressing
+        print(scenario.starting_sessions)
         if not reset:
           self.subnet_name_to_cidr = {}  # contains mapping of subnet names to subnet cidrs
           self.ip_addresses = {}  # contains mapping of ip addresses to hostnames
 
           self.hosts = {}  # contains mapping of hostnames to host objects
+          # dict of int.  dict key is the agent name.  session object list index is the value
           self.sessions = {}  # contains mapping of agent names to mapping of session id to session objects
           self.subnets = {}  # contains mapping of subnet cidrs to subnet objects. dict keys of type IPv4Network
 
-          self.sessions_count = {}  # contains a mapping of agent name to number of sessions
+          # dict of int. dict key is the agent name. current max session ident number is the value
+          self.sessions_count = {}  # contains a mapping of agent name to current session ident number
           self.hostname_to_interface = {}
 
-          count = 0
           # randomly generate subnets cidrs for all subnets in scenario and IP addresses for all hosts in those subnets and create Subnet objects
           # using fixed size subnets (VLSM maybe viable alternative if required)
-          maximum_subnet_size = max([scenario.get_subnet_size(i) for i in scenario.subnets])
-          subnets_cidrs = sample(
-            list(IPv4Network("10.0.0.0/16").subnets(new_prefix=32 - max(int(log2(maximum_subnet_size + 5)), 4))),
-            len(scenario.subnets))
-          print("_initialise state subnet/ip generation")
+          #maximum_subnet_size = max([scenario.get_subnet_size(i) for i in scenario.subnets])
+          #subnets_cidrs = sample(
+          #  list(IPv4Network("10.0.0.0/16").subnets(new_prefix=32 - max(int(log2(maximum_subnet_size + 5)), 4))),
+          #  len(scenario.subnets))
+          #
+          subnet_list = {
+                  "Attacker": IPv4Network("10.13.37.0/24"),
+                  "External": IPv4Network("10.46.64.0/24"),
+                  "Internal": IPv4Network("10.58.85.0/24")
+                  }
+          host_list = {
+                  "Attacker": {
+                     "Attacker0": IPv4Address("10.13.37.100")
+                   },
+                  "External": {
+                     "External0": IPv4Address("10.46.64.101")
+                  },
+                  "Internal": {
+                     "External0": IPv4Address("10.58.58.100"),
+                     "Internal0": IPv4Address("10.58.58.101"),
+                     "Internal1": IPv4Address("10.58.58.102"),
+                     "Internal2": IPv4Address("10.58.58.103")
+                  }
+
+          }
+          print("initialise subnet/ip configuration")
           for subnet_name in scenario.subnets:
-            print(subnet_name)
-            subnet_cidr = choice(list(subnets_cidrs[count].subnets(
-                new_prefix=32 - max(int(log2(scenario.get_subnet_size(subnet_name) + 5)), 4))))
-            count += 1
-            print(subnet_cidr)
+            # subnet_cidr = choice(list(subnets_cidrs[count].subnets(
+            #    new_prefix=32 - max(int(log2(scenario.get_subnet_size(subnet_name) + 5)), 4))))
+            #count += 1
+            subnet_cidr = subnet_list[subnet_name]
             self.subnet_name_to_cidr[subnet_name] = subnet_cidr
-            ip_address_selection = sample(list(subnet_cidr.hosts()), len(scenario.get_subnet_hosts(subnet_name)))
-            allocated = 0
+
+            #ip_address_selection = sample(list(subnet_cidr.hosts()), len(scenario.get_subnet_hosts(subnet_name)))
+            #allocated = 0
             for hostname in scenario.get_subnet_hosts(subnet_name):
-                print(hostname)
-                self.ip_addresses[ip_address_selection[allocated]] = hostname
-                interface = {"ip_address": ip_address_selection[allocated], "subnet": subnet_cidr}
+                hostname_ip_address = host_list[subnet_name][hostname]
+                self.ip_addresses[hostname_ip_address] = hostname
+                #self.ip_addresses[ip_address_selection[allocated]] = hostname
+                interface = {"ip_address": hostname_ip_address, "subnet": subnet_cidr}
                 if hostname in self.hostname_to_interface:
                     self.hostname_to_interface[hostname].append(interface)
                 else:
                     self.hostname_to_interface[hostname] = [interface]
-                allocated += 1
+                #allocated += 1
             # subnet_cidr is of type IPv4Network.  Do we need to use string representation for dict keys?
             #print("_initialise state")
             #print(subnet_cidr)
             #print(type(subnet_cidr))
-            self.subnets[subnet_cidr] = Subnet(cidr=subnet_cidr, ip_addresses=ip_address_selection,
+            self.subnets[subnet_cidr] = Subnet(cidr=subnet_cidr, ip_addresses=host_list[subnet_name],
                                                nacls=scenario.get_subnet_nacls(subnet_name), name=subnet_name)
 
+        #print(self.hostname_to_interface)
+        #print(self.subnet_name_to_cidr)
+        #print(self.subnets)
         # create host objects for all host names in the scenario
         for hostname in scenario.hosts:
             host_info = scenario.get_host(hostname)
@@ -175,20 +213,35 @@ class State:
             self.sessions[agent] = {}
             self.sessions_count[agent] = 0
             # instantiate parentless sessions first
+            # 
+            # Hosts with server sessions can also have a related client/target session
+            # Need to allow same session_id to be used for server_sessions and target_sessions
+            # in the agent parameter space
+            # 
+            # Allow scenario to declare session_id in this case
+            # need to decouple session index in the self.sessions[agent] from session_id!
+            # 
             for starting_session in agent_info.starting_sessions:
                 if starting_session.parent is None:
+                    print("parentless starting session")
+                    if starting_session.ident is not None:
+                        session_ident = starting_session.ident
+                    else:
+                        session_ident = self.sessions_count[agent]
+                        self.sessions_count[agent] += 1
                     self.sessions[agent][len(self.sessions[agent])] = self.hosts[starting_session.hostname].add_session(
                         username=starting_session.username,
                         agent=agent,
                         parent=None,
                         pid=starting_session.pid,
                         session_type=starting_session.session_type,
-                        ident=self.sessions_count[agent],
+                        ident=session_ident,
                         name=starting_session.name,
                         artifacts=starting_session.event_artifacts)
-                    self.sessions_count[agent] += 1
+            print(self.sessions[agent])
             for starting_session in agent_info.starting_sessions:
                 if starting_session.parent is not None:
+                    print("parent starting session")
                     if starting_session.parent in [i.name for i in self.sessions[agent].values()]:
                         parent = self.sessions[agent][
                             {i.name: id for id, i in self.sessions[agent].items()}[starting_session.parent]]
@@ -232,6 +285,7 @@ class State:
         # need to reuse inactive session idents
         ident=None
         for i in range(self.sessions_count[agent]):
+            # need to decouple sessions index from session_id
             if i not in self.sessions[agent].keys():
                 ident = i
         
@@ -244,6 +298,7 @@ class State:
         new_session = self.hosts[host].add_session(username=user, ident=ident, timeout=timeout, pid=process,
                                                    session_type=session_type, agent=agent, parent=parent,
                                                    is_escalate_sandbox=is_escalate_sandbox)
+        # need to decouple sessions index from session ident
         self.sessions[agent][ident] = new_session
         return new_session
 

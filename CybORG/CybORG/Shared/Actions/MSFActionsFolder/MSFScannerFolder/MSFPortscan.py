@@ -120,7 +120,7 @@ class MSFPortscan(MSFScanner):
         output = session_handler.execute_module(mtype='auxiliary', mname='scanner/portscan/tcp',
                                                 opts={'RHOSTS': str(self.ip_address),
                                                       'PORTS': '21,22,80,111,135,139,443,445,8000,8009,8010,8020,8027,8080'})
-        # session_handler._log_debug(output)
+        session_handler._log_debug(output)
         result.add_raw_obs(output)
         try:
             for values in output.split('\n'):

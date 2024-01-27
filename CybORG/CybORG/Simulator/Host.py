@@ -65,7 +65,13 @@ class Host(Entity):
                 self.files.append(File(**file))
         self.original_files = deepcopy(self.files)
 
+        # this is a dict of lists (agents are keys, session_dict are list values)
+        # how does re-using session_ids across server and client sessions impact??
+        # what uses this attribute?  nothing particular in this class.  is this
+        # accessed directly from other classes??
         self.sessions = {}
+
+        # supplied dict value upon Host object instantiation
         if sessions is not None:
             for agent_name, session in sessions.items():
                 self.add_session(agent=agent_name, **session)
@@ -127,6 +133,8 @@ class Host(Entity):
 
     def add_session(self, username, ident, agent, parent, timeout=0, pid=None, session_type="Shell", name=None, artifacts=None,
             is_escalate_sandbox:bool=False):
+        print("host add session ident")
+        print(ident)
         if parent is not None:
             parent_id = parent.ident
         else:
@@ -149,6 +157,7 @@ class Host(Entity):
             new_session = Session(host=self.hostname, agent=agent, username=username, ident=ident, pid=pid,
                                   timeout=timeout, parent=parent_id, session_type=session_type, name=name, is_escalate_sandbox=is_escalate_sandbox)
 
+        print(new_session)
         if parent is not None:
             parent.children[new_session.ident] = new_session
         # TODO revisit the base ssh issue
@@ -156,7 +165,8 @@ class Host(Entity):
         #     raise ValueError(f"New Session of type {new_session.session_type.name} requires parent but none has been set")
         if agent not in self.sessions:
             self.sessions[agent] = []
-        self.sessions[agent].append(new_session.ident)
+        #self.sessions[agent].append(new_session.ident)
+        self.sessions[agent].append(new_session)
         return new_session
 
     def add_process(self, name: str, user: str, pid: int = None, ppid: int = None, path: str = None,

@@ -100,7 +100,7 @@ class MSFPingsweep(MSFScanner):
             obs.set_success(False)
             return obs
         if self.target_session == 0:
-          output = session_handler.execute_module(mtype="passthrough", mname="fping -gaq {}".format(str(self.subnet)))
+          output = session_handler.execute_module(mtype="passthrough", mname="fping -gaq {}".format(str(self.subnet)), opts={})
           obs.add_raw_obs(output)
           '''
           10.46.64.1
@@ -110,7 +110,7 @@ class MSFPingsweep(MSFScanner):
           if output == []:
              obs.set_success(False)
              return obs
-          for line in result.split("\n"):
+          for line in output.split("\n"):
                 # if line includes subnet gw address (defined as .1 here)
                 # won't apply in cloud network settings
                 if line == "" or line.split(".")[3] == "1":
@@ -119,7 +119,7 @@ class MSFPingsweep(MSFScanner):
                 #session_handler._log_debug(f"New IP Address found: {ip_address}")
                 obs.add_interface_info(hostid=str(ip_address), ip_address=ip_address, subnet=self.subnet)
           obs.set_success(True)
-          #session_handler._log_debug(output)
+          session_handler._log_debug(output)
         else:
           output = session_handler.execute_module(mtype='post', mname='multi/gather/ping_sweep',  opts={'RHOSTS': str(self.subnet), 'SESSION': self.target_session})
           obs.add_raw_obs(output)
@@ -136,7 +136,7 @@ class MSFPingsweep(MSFScanner):
                 ip_address = line.split(' ')[1].replace('\t', '')
                 #session_handler._log_debug(f"New IP Address found: {ip_address}")
                 obs.add_interface_info(hostid=str(ip_address), ip_address=ip_address, subnet=self.subnet)
-          #session_handler._log_debug(output)
+          session_handler._log_debug(output)
         return obs
 
     def __str__(self):

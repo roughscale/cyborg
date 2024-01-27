@@ -71,11 +71,14 @@ class EnvironmentController:
                                       'Processes': ['All']}
 
         # This uses the INFO_DICT as a filter to generate the complete State of the Target Environment.
+        # print("INFO_DICT['True']")
+        #print(self.INFO_DICT['True'])
         true_state = self.get_true_state(self.INFO_DICT['True'])
-        print("Get True State of INFO_DICT['True']")
-        print(true_state)
-        #print("Filtered Obs of Get True State")
+        #print("Get True State of INFO_DICT['True']")
+        #print(true_state)
+        # this is stripping the interface information from the true state!
         true_state_filtered_obs = self._filter_obs(true_state)
+        #print("Filtered Obs of Get True State")
         #print(true_state_filtered_obs)
         #self.init_state = self._filter_obs(self.get_true_state(self.INFO_DICT['True'])).data
         self.init_state = true_state_filtered_obs.data
@@ -499,6 +502,8 @@ class EnvironmentController:
         else:
             subnets = list(self.subnet_cidr_map.values())
 
+        # this is generating the proper list of subnets
+        # cidrs needs to be in IPV4Network format!
         obs.filter_addresses(
             ips=self.hostname_ip_map.keys(),
             cidrs=subnets,
