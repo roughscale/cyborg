@@ -153,8 +153,10 @@ class State(Observation):
             print(host_sessions)
             print("new session")
             print(session_info)
-            # match on pid. Occurs in privilege escalation (or with process number reuse due to pid rotation))
-            pid_match = [ i for i,s in enumerate(host_sessions) if s["PID"] == session_info.get("PID") ]
+            # match on pid provided pid is not 0. Occurs with process number reuse due to pid rotation))
+            # Could occur in some cases of privesc of the same session (NOTE: Not currently supported)
+            # don't match on both processes having unknown PIDs (PID 0)
+            pid_match = [ i for i,s in enumerate(host_sessions) if (s["PID"] !=0 and s["PID"]== session_info.get("PID")) ]
             if len(pid_match) > 0:
                 print("matching pid")
                 print(pid_match)

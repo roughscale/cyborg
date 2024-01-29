@@ -84,10 +84,10 @@ class KeyboardAgent(BaseAgent):
     def _choose_from_options(self, name:str, options:list):
         if len(options) == 0:
             raise ValueError(f'Selecting {name} failed because there are no valid options')
-        elif len(options) == 1:
-            choice = options[0]
-            print(f'Automatically choosing {choice} as it is the only option.')
-            return choice
+        #elif len(options) == 1:
+        #    choice = options[0]
+        #    print(f'Automatically choosing {choice} as it is the only option.')
+        #    return choice
 
         for i in range(len(options)):
             print(i, options[i])

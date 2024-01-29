@@ -139,16 +139,16 @@ class State:
             len(scenario.subnets))
           print("_initialise state subnet/ip generation")
           for subnet_name in scenario.subnets:
-            print(subnet_name)
+            #print(subnet_name)
             subnet_cidr = choice(list(subnets_cidrs[count].subnets(
                 new_prefix=32 - max(int(log2(scenario.get_subnet_size(subnet_name) + 5)), 4))))
             count += 1
-            print(subnet_cidr)
+            #print(subnet_cidr)
             self.subnet_name_to_cidr[subnet_name] = subnet_cidr
             ip_address_selection = sample(list(subnet_cidr.hosts()), len(scenario.get_subnet_hosts(subnet_name)))
             allocated = 0
             for hostname in scenario.get_subnet_hosts(subnet_name):
-                print(hostname)
+                #print(hostname)
                 self.ip_addresses[ip_address_selection[allocated]] = hostname
                 interface = {"ip_address": ip_address_selection[allocated], "subnet": subnet_cidr}
                 if hostname in self.hostname_to_interface:
@@ -207,6 +207,17 @@ class State:
 
             for host in self.hosts.values():
                 host.create_backup()
+
+    # session handler methods
+    def get_sessions_by_remote_ip(self, remote_ip: str, agent: str):
+        hostname = self.ip_addresses[remote_ip]
+        #print("hostname")
+        #print(hostname)
+        #print("all sessions in state")
+        #for sn in self.sessions[agent].values():
+        #    print(sn.get_state())
+        sessions = [s for s in self.sessions[agent].values() if s.host == hostname]
+        return sessions
 
     # mandated process being supplied to function
     def add_session(self, host: str, user: str, agent: str, parent: int, process: int, session_type: str = "shell",

@@ -90,11 +90,11 @@ class QEmuController(EnvironmentController):
         #self.subnet_cidr_map = self.state.subnet_name_to_cidr
         self.hostname_ip_map = { 
                 "10.13.37.100": "Attacker0",
-                "10.46.64.101": "External0",
-                "10.58.85.100": "External0",
-                "10.58.85.101": "Internal0",
-                "10.58.85.102": "Internal1",
-                "10.58.85.103": "Internal2"
+                "10.46.64.100": "External0",
+                "10.58.85.10": "External0",
+                "10.58.85.100": "Internal0",
+                "10.58.85.101": "Internal1",
+                "10.58.85.102": "Internal2"
         }
         #"10.46.64.100": "Attacker0",
         #"10.58.85.100": "Attacker0",

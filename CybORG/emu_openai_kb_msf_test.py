@@ -12,6 +12,13 @@ import sys
 import time
 import copy
 import os
+import psutil
+import subprocess
+
+# until we learn how to reset the msfrpcd state (ie console and session ids)
+# start msfrcpd
+# this is a subprocess is attached to this process so will terminate when this process terminates
+msfrcpd = subprocess.call(["/opt/metasploit-framework/bin/msfrpcd","-P","password"],close_fds=True)
 
 # set vars
 # initialise Q learning parameters
@@ -64,7 +71,6 @@ print(agent.action_space) # Discrete
 # initialise agent learning
 #agent.agent.initialise(env,gamma,initial_epsilon,final_epsilon,total_steps,double,dueling)
 #callback=agent.agent.learn_callback
-
 start=time.time()
 #print("Episodes start: {}".format(time.ctime(start)))
 #print()

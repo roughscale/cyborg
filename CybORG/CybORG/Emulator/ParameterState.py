@@ -75,13 +75,13 @@ class ParameterState:
                             raise NotImplementedError(f"{info[hostname]['Interfaces']} cannot be collected from state")
                     if 'Sessions' in info['hosts'][hostname]: # need to set up starting session on external/learning agent host
                         if info['hosts'][hostname]['Sessions'] == 'All':
-                            print("get_true_state sessions")
-                            print(host.sessions.items())
+                            #print("get_true_state sessions")
+                            #print(host.sessions.items())
                             for agent_name, sessions in host.sessions.items():
                                 # sessions is currently a list of idents which a correlated to list indexes
                                 # it needs to be a list of session objects.
                                 # as there are 2 lists (one in Host and one in State)
-                                print(sessions) # this should be a list of 
+                                #print(sessions) 
                                 for session in sessions:
                                     true_obs.add_session_info(hostid=hostname,
                                                               **session.get_state())
@@ -161,13 +161,13 @@ class ParameterState:
                      "Attacker0": IPv4Address("10.13.37.100")
                    },
                   "External": {
-                     "External0": IPv4Address("10.46.64.101")
+                     "External0": IPv4Address("10.46.64.100")
                   },
                   "Internal": {
-                     "External0": IPv4Address("10.58.58.100"),
-                     "Internal0": IPv4Address("10.58.58.101"),
-                     "Internal1": IPv4Address("10.58.58.102"),
-                     "Internal2": IPv4Address("10.58.58.103")
+                     "External0": IPv4Address("10.58.85.100"),
+                     "Internal0": IPv4Address("10.58.88.101"),
+                     "Internal1": IPv4Address("10.58.85.102"),
+                     "Internal2": IPv4Address("10.58.85.103")
                   }
 
           }

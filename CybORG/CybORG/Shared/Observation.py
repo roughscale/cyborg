@@ -648,7 +648,8 @@ class Observation:
             new_session["Type"] = session_type
 
         if pid is None:
-            pid = kwargs.get("PID", None)
+            # pid 0 represents unknown PID
+            pid = kwargs.get("PID", 0)
         if pid is not None:
             new_session["PID"] = pid
             # again, this shoul be handled in the State/Action not the observation
@@ -666,6 +667,7 @@ class Observation:
             #    self.add_process(hostid=hostid, pid=pid, username=username, type=session_type)
         else:
             # do we randomly assign a PID to the session. No, as sessions should have an existing connection with an identified PID
+            # we should no longer get here as we now assign unknown PID to 0
             print("no pid passed to the session_info")
 
         if agent is None:

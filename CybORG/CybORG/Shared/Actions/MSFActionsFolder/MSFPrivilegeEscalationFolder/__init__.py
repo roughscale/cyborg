@@ -1,3 +1,3 @@
 from .MSFV4L2KernelExploit import MSFV4L2KernelExploit
-from .MSFNestedUserNamespaceLimit import MSFNestedUserNamespaceLimit
+from .MSFSubUidShell import MSFSubUidShell
 from .MSFJuicyPotato import MSFJuicyPotato

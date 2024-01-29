@@ -9,24 +9,9 @@ from CybORG.Simulator.State import State
 
 # msf module is post/multi/gather/ping_sweep
 class MSFPingsweep(MSFScanner):
-    #def __init__(self, subnet: IPv4Network, session: int, agent: str):
-    def __init__(self, subnet: IPv4Network, session: int, agent: str, target_session: int):
-        # target_sessions are used for Metasploit sessions.
-        # the initial implementation of this action uses a post-exploitation action 
-        # within Metasploit (which requires an existing session)
-        # however the Action within this Environment can also be used as an initial
-        # reconnaissance of the environment (which is a pre-exploitation action and
-        # doesn't have an existing session
-        # 
-        # an updated implementation has added a passthrough fping metasploit command
-        # to backport this into the existing class definition, we use session 0 
-        # to represent this client/target "shell" session on the attacker machine to perform this
-        # pre-exploit pingsweep.
-        #
-        # metasploit sessions start of index 1
+    def __init__(self, subnet: IPv4Network, session: int, agent: str):
         super().__init__(session, agent)
         self.subnet = subnet
-        self.target_session = target_session
         #self.lo = IPv4Address("127.0.0.1")
 
     def sim_execute(self, state: State, session_handler = None):
@@ -43,25 +28,25 @@ class MSFPingsweep(MSFScanner):
             obs.set_success(False)
             return obs
 
-        # to Metasploit.
-        # We look up the session handler for the required target_session.
-        # in the AbstractActions/Pingsweep action, the MSF server session is 
-        # passed as the target_session (indicating that the pingsweep is being
-        # executed on the Attacker host and that all subnets in the target
-        # environment can be scanned from the Attacker host.
-        # maintain this assumption for now
+        # get sessions from state 
+        # sessions = state.get_sessions_by_remote_ip(self.ip_address, agent="Red)
+        # if len(sessions) == 0:
+        #  obs.set_success(False)
+        #   return obs
+        # else:
+        #  target_session = sessions[0]
 
-        if self.target_session in state.sessions['Red']:
-            target_session = state.sessions['Red'][self.target_session]
-        else:
-            #print("target session not in state sessions")
-            obs.set_success(False)
-            return obs
+        #if self.target_session in state.sessions['Red']:
+        #    target_session = state.sessions['Red'][self.target_session]
+        #else:
+        #    #print("target session not in state sessions")
+        #    obs.set_success(False)
+        #    return obs
 
-        if not (target_session.session_type == SessionType.METERPRETER or target_session.session_type == SessionType.MSF_SHELL) or not target_session.active:
-            #print("target session not correct type")
-            obs.set_success(False)
-            return obs
+        #if not (target_session.session_type == SessionType.METERPRETER or target_session.session_type == SessionType.MSF_SHELL) or not target_session.active:
+        #    #print("target session not correct type")
+        #    obs.set_success(False)
+        #    return obs
 
         
         # why are we obtaining a target_session object from this method??
@@ -99,7 +84,9 @@ class MSFPingsweep(MSFScanner):
         if type(session_handler) is not MSFSessionHandler:
             obs.set_success(False)
             return obs
-        if self.target_session == 0:
+        target_sessions = session_handler.get_session_by_remote_cidr(self.subnet)
+        if len(target_sessions) ==0:
+          # pre-exploit
           output = session_handler.execute_module(mtype="passthrough", mname="fping -gaq {}".format(str(self.subnet)), opts={})
           obs.add_raw_obs(output)
           '''
@@ -121,7 +108,10 @@ class MSFPingsweep(MSFScanner):
           obs.set_success(True)
           session_handler._log_debug(output)
         else:
-          output = session_handler.execute_module(mtype='post', mname='multi/gather/ping_sweep',  opts={'RHOSTS': str(self.subnet), 'SESSION': self.target_session})
+          # select first session (TODO: perhaps random?)
+          target_session = target_sessions[0]
+          print(target_session)
+          output = session_handler.execute_module(mtype='post', mname='multi/gather/ping_sweep',  opts={'RHOSTS': str(self.subnet), 'SESSION': target_session})
           obs.add_raw_obs(output)
           '''[*] Performing ping sweep for IP range 10.0.2.0/23
              [+] 	10.0.2.1 host found
