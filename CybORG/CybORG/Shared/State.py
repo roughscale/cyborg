@@ -366,22 +366,24 @@ class State(Observation):
                for e_idx,e in enumerate(existing_conn):
                   for n_idx, n in enumerate(new_conn):
                      # match the keys
-                     if n["local_port"] == e["local_port"] and \
-                        n["local_address"] == e["local_address"]:
-                          if e.get("remote_address") is None:
-                             print("found matching bare connection")
-                             print(e)
-                             match_conn.append(e_idx)
-                          elif n.get("remote_address") is None:
-                             # drop bare connection in favor of existing conn
-                             print("drop new bare conn in favour of existing conn")
-                             print(n)
-                             new_conn.pop(n_idx)                   
-                             print(process)
-                          elif e["remote_address"] == n["remote_address"]:
-                             print("supersede existing remote connection")
-                             print(e)
-                             match_conn.append(e_idx)
+                     if ["local_address"] == e["local_address"]:
+                       # local_port may not be in the Connection
+                       if ("local_port" in n and "local_port" in e and n["local_port"] != e["local_port"]):
+                              continue
+                       if e.get("remote_address") is None:
+                              print("found matching bare connection")
+                              print(e)
+                              match_conn.append(e_idx)
+                       elif n.get("remote_address") is None:
+                              # drop bare connection in favor of existing conn
+                               print("drop new bare conn in favour of existing conn")
+                               print(n)
+                               new_conn.pop(n_idx)                   
+                               print(process)
+                       elif e["remote_address"] == n["remote_address"]:
+                               print("supersede existing remote connection")
+                               print(e)
+                               match_conn.append(e_idx)
 
                if len(match_conn) > 0:
                    print("removing matching bare connections")

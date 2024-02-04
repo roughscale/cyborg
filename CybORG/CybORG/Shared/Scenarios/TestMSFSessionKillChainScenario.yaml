@@ -40,7 +40,7 @@ Agents:
     #- MeterpreterPS
     #- SysInfo
     #- MeterpreterReboot
-    agent_type: KeyboardAgent
+    agent_type: RedKillChainAgent
     reward_calculator_type: Goal
     starting_sessions:
     - username: root

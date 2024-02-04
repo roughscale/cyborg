@@ -44,9 +44,8 @@ class MeterpreterIPConfig(MeterpreterAction):
             obs.set_success(False)
             return obs
         else:
-          target_session = target_sessions[0]
-          print(target_session)
-          output = session_handler.execute_shell_action(action='ipconfig', session=str(target_session)).replace('\r','')
+          session = list(target_sessions.keys())[0]
+          output = session_handler.execute_shell_action(action='ipconfig', session=session)
           obs.add_raw_obs(output)
 
           """Expected output:

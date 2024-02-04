@@ -86,7 +86,7 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
             obs.set_success(False)
             return obs
         else:
-          target_session = target_sessions[0]
+          target_session = list(target_sessions.keys())[0]
           output = session_handler.execute_module(mtype='exploit', 
                                          mname='linux/local/nested_namespace_idmap_limit_priv_esc',
                                          opts = { "SESSION": target_session },

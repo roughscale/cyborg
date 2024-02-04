@@ -161,13 +161,14 @@ class ParameterState:
                      "Attacker0": IPv4Address("10.13.37.100")
                    },
                   "External": {
+                     "Attacker0": IPv4Address("10.46.64.10"),
                      "External0": IPv4Address("10.46.64.100")
                   },
                   "Internal": {
-                     "External0": IPv4Address("10.58.85.100"),
-                     "Internal0": IPv4Address("10.58.88.101"),
-                     "Internal1": IPv4Address("10.58.85.102"),
-                     "Internal2": IPv4Address("10.58.85.103")
+                     "External0": IPv4Address("10.58.85.10"),
+                     "Internal0": IPv4Address("10.58.85.100"),
+                     "Internal1": IPv4Address("10.58.85.101"),
+                     "Internal2": IPv4Address("10.58.85.102")
                   }
 
           }

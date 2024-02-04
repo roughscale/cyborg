@@ -8,25 +8,29 @@ from CybORG.Simulator.State import State
 
 
 class MSFAutoroute(MSFAction):
-    def __init__(self, target_session, agent, session):
+    def __init__(self, agent, session, ip_address):
         super().__init__(session, agent)
-        self.meterpreter_session = target_session
+        self.ip_address = ip_address
 
     def sim_execute(self, state: State):
         obs = Observation()
         if self.session not in state.sessions[self.agent] or self.meterpreter_session not in state.sessions[self.agent]:
             obs.set_success(False)
             return obs
+        # NEED TO FIX
         interfaces = []
-        meterpreter_session = state.sessions[self.agent][self.meterpreter_session]
+        meterpreter_session = state.sessions[self.agent][self.ip_address]
         msf_session = state.sessions[self.agent][self.session]
         if meterpreter_session in msf_session.children.values() and meterpreter_session.session_type == SessionType.METERPRETER and msf_session.session_type == SessionType.MSF_SERVER:
             obs.set_success(True)
             for interface in state.hosts[meterpreter_session.host].interfaces:
                 if str(interface.ip_address) != '127.0.0.1':
                     interfaces.append(interface)
-                    obs.add_interface_info(hostid=str(self.meterpreter_session), subnet=interface.subnet)
-            msf_session.routes[self.meterpreter_session] = interfaces
+                    obs.add_interface_info(hostid=str(self.ip_address), subnet=interface.subnet)
+            # routes function in Simulator MSF Session object??
+            # we should perhas implement a Simulator SessionHandler (can perhaps have a 
+            # simulated MSFSession handling, as well as a direct State object lookup)
+            msf_session.routes[self.ip_address] = interfaces
         else:
             obs.set_success(False)
         return obs
@@ -37,8 +41,17 @@ class MSFAutoroute(MSFAction):
         if type(session_handler) is not MSFSessionHandler:
             obs.set_success(False)
             return obs
+
+        sessions = session_handler.get_session_by_remote_ip(str(self.ip_address), session_type="meterpreter")
+        print(sessions)
+        if len(sessions) == 0:
+            print("no meterpreter session for host {}".format(str(self.ip_address)))
+            obs.set_success(False)
+            return obs
+
+        session = list(sessions.keys())[0]
         output = session_handler.execute_module(mtype='post', mname='multi/manage/autoroute',
-                                         opts={'SESSION': self.meterpreter_session})
+                                         opts={'SESSION': session})
         obs.add_raw_obs(output)
         """Example:
         [!] SESSION may not be compatible with this module.
@@ -52,9 +65,9 @@ class MSFAutoroute(MSFAction):
             if '[+] Route added' in line:
                 obs.set_success(True)
                 subnet = line.split(' ')[5]
-                obs.add_interface_info(hostid=str(self.meterpreter_session), subnet=IPv4Network(subnet))
+                obs.add_interface_info(hostid=str(self.ip_address), subnet=IPv4Network(subnet))
 
         return obs
 
     def __str__(self):
-        return super(MSFAutoroute, self).__str__() + f", Meterpreter Session: {self.meterpreter_session}"
+        return super(MSFAutoroute, self).__str__() + f", Meterpreter Session: {self.ip_address}"

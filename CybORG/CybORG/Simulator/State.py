@@ -78,13 +78,13 @@ class State:
                             for agent_name, sessions in host.sessions.items():
                                 for session in sessions:
                                     true_obs.add_session_info(hostid=hostname,
-                                                              **self.sessions[agent_name][session].get_state())
+                                                              **session.get_state())
                         else:
                             agent_name = info['hosts'][hostname]['Sessions']
                             if agent_name in host.sessions:
                                 for session in host.sessions[agent_name]:
                                     true_obs.add_session_info(hostid=hostname,
-                                                              **self.sessions[agent_name][session].get_state())
+                                                              **session.get_state())
                     if 'Files' in info['hosts'][hostname] and hostname not in self.external_hosts:
                         for file in host.files:
                             true_obs.add_file_info(hostid=hostname, **file.get_state())

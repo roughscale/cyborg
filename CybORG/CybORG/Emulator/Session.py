@@ -28,29 +28,33 @@ class MSFSessionHandler():
 
     def get_session_by_remote_ip(self, remote_ip: str, session_type = None):
         sessions = self.get_sessions()
-        remote_sessions = [ k for k,v in sessions.items() if v["target_host"] == remote_ip ]
+        # first check if there is a session with target_host that matches the remote_ip
+        remote_sessions = { k:v for k,v in sessions.items() if v["target_host"] == remote_ip }
         #print(remote_sessions)
+        # otherwise, check if there is a route in a session that can be used
+        if len(remote_sessions) == 0:
+            remote_sessions = { k:v for k,v in sessions.items() for r in v["routes"].split(",") if r != '' and IPv4Address(remote_ip) in IPv4Network(r)}
         if session_type is not None:
-            avail_sessions = remote_sessions
             type_sessions = [ k for k,v in sessions.items() if v["type"] == session_type ]
-            #print(type_sessions)
-            remote_sessions = [ s for s in avail_sessions for t in type_sessions if s == t ]
-            #print(remote_sessions)
+            print(type_sessions)
+            remote_sessions = { k:v for k,v in remote_sessions.items() for t in type_sessions if k == t }
         return remote_sessions
 
     def get_session_by_remote_cidr(self, remote_cidr: str, session_type = None):
         sessions = self.get_sessions()
-        remote_sessions = [ k for k,v in sessions.items() if IPv4Address(v["target_host"]) in IPv4Network(remote_cidr) ]
+        print(sessions)
+        # first, check if session target_host is within the cidr
+        remote_sessions = { k:v for k,v in sessions.items() if IPv4Network(v["target_host"]) in IPv4Network(remote_cidr) }
+        print(remote_sessions)
+        # otherwise, check if there is a route in a session that can be used
+        if len(remote_sessions) == 0:
+            remote_sessions = { k:v for k,v in sessions.items() for r in v["routes"].split(",") if r != '' and IPv4Network(remote_cidr) == IPv4Network(r)}
+            print(remote_sessions)
         if session_type is not None:
             type_sessions = [ k for k,v in sessions.items() if v["type"] == session_type ]
-            remote_sessions = [ s for s in remote_sessions for t in type_sessions if s == t ]
-        #    if len(remote_sessions) > 1:
-        #        priv_sessions = [ s for s in remote_sessions if s.username in [ "root", "SYSTEM"]
-        #        if len(priv_sessions) > 0:
-        #          remote_sessions = priv_sessions[0]
-        #        else:
-        #          remote_sessions = remote_sessions[0]
-        #  at the moment we return all matching sessions
+            print(type_sessions)
+            remote_sessions = { k:v for k,v in remote_sessions.items() for t in type_sessions if k == t }
+            print(remote_sessions)
         return remote_sessions
 
     def get_session_user(self, session_id):
@@ -80,19 +84,7 @@ class MSFSessionHandler():
       return output
 
     def execute_shell_action(self, action, session):
-        # session is already checked and determined by the action class
-        # no need to check for valid session by ip_address
-        #if "RHOST" not in opts:
-        #    return "no RHOST provided"
-        #else:
-        #    target_host = opts["RHOST"]
-        #target_sessions = self.get_session_by_remote_ip(target_host, "meterpreter")
-        #if len(target_sessions) == 0:
-        #    return "no valid sessions for {}".format(target_host)
-        #else:
-        #     session_id = target_sessions[0]
-        session_id = session
-        shell = self.msfclient.sessions.session(session_id)
+        shell = self.msfclient.sessions.session(session)
         shell.write(action)
         output=shell.read()
         return output
@@ -105,6 +97,9 @@ class MSFSessionHandler():
         if mtype == "passthrough":
           # mname is the passthrough command
           run_cmd = "{}\n".format(mname)
+        # execute_shell_action is called directly
+        #elif mtype == "session_cmd":
+        #    return self.execute_shell_action(mname, opts)
         else:
           use_cmd = "use {0}/{1}\n".format(mtype,mname)
           #print(use_cmd)
@@ -136,20 +131,13 @@ class MSFSessionHandler():
             print(ret["data"])
             buffer.append(ret["data"])
             if "Meterpreter session" in ret["data"]:
-              # get uid of session and ipconfig of host
-              # these should be separated into separate actions
-              # but for now, we do it here to match the simulated case
-              #uid_cmd = "getuid\n"
-              #self.msfclient.call('console.write',[self.console_id,uid_cmd])
-              #ret = self.msfclient.call('console.read',[self.console_id])
-              #buffer.append(ret["data"])
-              #ip_cmd = "ipconfig\n"
-              #self.msfclient.call('console.write',[self.console_id,ip_cmd])
-              #ret = self.msfclient.call('console.read',[self.console_id])
-              #buffer.apend(ret["data"])
-              # background the session
-              bg_cmd = "bg\n"
-              self.msfclient.call('console.write',[self.console_id,bg_cmd])
+              # deal with sessions closing prematurely
+              # TODO: do proper regex matching
+              if "closed" in ret["data"]:
+                  ret["busy"] = False
+              else:
+                bg_cmd = "bg\n"
+                self.msfclient.call('console.write',[self.console_id,bg_cmd])
           busy=ret["busy"]
 
         #print(buffer)

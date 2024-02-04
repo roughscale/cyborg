@@ -109,7 +109,7 @@ class MSFPingsweep(MSFScanner):
           session_handler._log_debug(output)
         else:
           # select first session (TODO: perhaps random?)
-          target_session = target_sessions[0]
+          target_session = list(target_sessions.keys())[0]
           print(target_session)
           output = session_handler.execute_module(mtype='post', mname='multi/gather/ping_sweep',  opts={'RHOSTS': str(self.subnet), 'SESSION': target_session})
           obs.add_raw_obs(output)
