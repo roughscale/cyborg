@@ -115,6 +115,7 @@ class UpgradeToMeterpreter(MSFAction):
                 opts={'SESSION': session_id, 'LHOST': "10.46.64.10", "verbose": "true"})
         obs.add_raw_obs(output)
         obs.set_success(False)
+        session = None
         for line in output.split('\n'):
             if '[*] Meterpreter session' in line:
                 obs.set_success(True)
@@ -122,14 +123,15 @@ class UpgradeToMeterpreter(MSFAction):
                 # print(list(enumerate(split)))
                 session = int(split[3])
                 remote_address, remote_port = split[5][1:].split(':')
+                # no need to identify local_address. this should be the self.ip_address
+                # local_address could be the NAT gateway
                 local_address, local_port = split[7][:-1].split(':')
                 # date = datetime.fromisoformat(split[10] + ' ' + split[11])
-                obs.add_session_info(hostid=str(self.session_to_upgrade), session_id=session, agent=self.agent,
-                                     session_type='meterpreter')
-                obs.add_process(hostid=str(self.session_to_upgrade), local_port=local_port, remote_port=remote_port,
+                obs.add_process(hostid=str(self.ip_address), local_port=local_port, remote_port=remote_port,
                                 local_address=local_address, remote_address=remote_address)
                 obs.add_process(hostid=str(remote_address), remote_port=local_port, local_port=remote_port,
                                 remote_address=local_address, local_address=remote_address)
+
                 # print(f'session: {session}')
                 # print(f'local_port: {local_port}')
                 # print(f'local_address: {local_address}')
@@ -144,6 +146,18 @@ class UpgradeToMeterpreter(MSFAction):
         [*] Meterpreter session 2 opened (10.0.20.245:4433 -> 10.0.2.164:38182) at 2020-08-03 06:10:00 +0000
         [*] Command stager progress: 100.00% (773/773 bytes)
         [*] Post module execution completed'''
+        if session == None:
+            obs = Observation()
+            return obs
+        # get user id of session
+        print("get user from session")
+        user = session_handler.get_session_user(session)
+        print(user)
+        if user is None:
+          obs = Observation()
+          obs.set_success(False)
+        else:
+          obs.add_session_info(hostid=str(self.ip_address), username=user, session_id=session, session_type='meterpreter', agent=self.agent)
         return obs
 
     def __str__(self):

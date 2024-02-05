@@ -123,6 +123,7 @@ class MSFSessionHandler():
         buffer=[]
         busy=True
         # TODO implement timeout
+        # is busy-ness the correct event to signal command completion?
         while busy:
           ret = self.msfclient.call('console.read',[self.console_id])
           #print(ret)
@@ -130,6 +131,7 @@ class MSFSessionHandler():
           if ret["data"] != "":
             print(ret["data"])
             buffer.append(ret["data"])
+            # handle edge cases
             if "Meterpreter session" in ret["data"]:
               # deal with sessions closing prematurely
               # TODO: do proper regex matching
@@ -138,12 +140,21 @@ class MSFSessionHandler():
               else:
                 bg_cmd = "bg\n"
                 self.msfclient.call('console.write',[self.console_id,bg_cmd])
+            # upgrade to meterpreter returns non-busy signal before completion
+            # TODO: is this the best place to handle this kind of event
+            # can it be handled within the action itself (ie fetch more data
+            # from the console)
+            if "Post module execution completed" in ret["data"]:
+                print(ret["busy"])
+                print("Override busy signal")
+                ret["busy"] = True
+            if "Waiting up to 30 seconds for the session to come back" in ret["data"]:
+                print(ret["busy"])
+                print("Waiting for 30s")
+                sleep(30)
+                print("Override busy signal")
+                ret["busy"] = True
           busy=ret["busy"]
-
-        #print(buffer)
-        # perhaps format buffer??
-        # console can return multiple newlines in the buffer
-        # concatenate the buffer array into one string (with embedded newlines)
         return "".join(buffer)
 
     def _connect_msfclient(self):

