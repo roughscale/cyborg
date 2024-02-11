@@ -20,7 +20,8 @@ from CybORG.Simulator.Interface import Interface
 from CybORG.Simulator.LocalGroup import LocalGroup
 from CybORG.Simulator.MSFServerSession import MSFServerSession
 from CybORG.Simulator.Process import Process
-from CybORG.Simulator.Session import VelociraptorServer, RedAbstractSession, Session
+from CybORG.Simulator.Session import VelociraptorServer, RedAbstractSession
+from CybORG.Simulator.Session import MSFSession as Session
 
 from CybORG.Simulator.User import User
 
@@ -103,6 +104,7 @@ class Host(Entity):
         self.info = info if info is not None else {}
         self.events = {'NetworkConnections': [], 'ProcessCreation': []}
 
+        self.enable_ephemeral = True
         self.global_ephemeral_port = 50000
         self.global_pid = 32000
 
@@ -113,28 +115,32 @@ class Host(Entity):
         return observation
 
     def get_ephemeral_port(self):
-        # limit range to reduce action parameter space explosion
-        #port = randrange(49152, 60000)
-        #count_port = 0
-        #while port in self.ephemeral_ports:
-        #    port = randrange(50000,50010)
-        #    #port = randrange(49152, 60000)
-        #    count_port += 1
-        #    # avoid port exhaustion in cases of divergence
-        #    if count_port > 10848:
-        #        print("port exhaustion on host")
-        #        sys.exit(1)
-        port = self.global_ephemeral_port
-        self.global_ephemeral_port += 1
-        if self.global_ephemeral_port > 50004:
-            self.global_ephemeral_port = 50000
-        self.ephemeral_ports.append(port)
+        if self.enable_ephemeral:
+          port = randrange(49152, 60000)
+          count_port = 0
+          while port in self.ephemeral_ports:
+            #port = randrange(50000,50010)
+            port = randrange(49152, 60000)
+            count_port += 1
+            # avoid port exhaustion in cases of divergence
+            if count_port > 10848:
+                print("port exhaustion on host")
+                sys.exit(1)
+          self.ephemeral_ports.append(port)
+        else:
+          # the following has been removed
+          # the following limits port ranges
+          # to reduce entropy when testing
+          port = self.global_ephemeral_port
+          self.global_ephemeral_port += 1
+          if self.global_ephemeral_port > 50004:
+              self.global_ephemeral_port = 50000
         return port
 
-    def add_session(self, username, ident, agent, parent, timeout=0, pid=None, session_type="Shell", name=None, artifacts=None,
+    def add_session(self, username, ident, agent, parent, timeout=0, pid=None, session_type="Shell", name=None, routes=[], artifacts=None,
             is_escalate_sandbox:bool=False):
-        print("host add session ident")
-        print(ident)
+        #print("host add session ident")
+        #print(ident)
         if parent is not None:
             parent_id = parent.ident
         else:
@@ -146,18 +152,24 @@ class Host(Entity):
             pid = self.add_process(name=str(session_type), user=username, pid=pid).pid
         if session_type == 'MetasploitServer':
             new_session = MSFServerSession(host=self.hostname, user=username, ident=ident, agent=agent, process=pid,
-                                           timeout=timeout, session_type=session_type, name=name)
+                    timeout=timeout, session_type=session_type, name=name, routes=routes)
         elif session_type == 'RedAbstractSession':
             new_session = RedAbstractSession(host=self.hostname, agent=agent, username=username, ident=ident, pid=pid,
                                              timeout=timeout, session_type=session_type, name=name)
         elif session_type == 'VelociraptorServer':
             new_session = VelociraptorServer(host=self.hostname, agent=agent, username=username, ident=ident, pid=pid,
                                              timeout=timeout, session_type=session_type, name=name, artifacts=artifacts)
+        # comment out for the moment
+        # MSFSession seems to be a State version of Session. however at the moment both the State and Host use the same Sesssion object
+        # should this be a subclass?
+        #elif session_type == 'MSFSession':
+        #    new_session = MSFSession(host=self.hostname, agent=agent, username=username, ident=ident, pid=pid,
+        #                         timeout=timeout, parent=parent_id, session_type=session_type, name=name, is_escalate_sandbox=is_escalate_sandbox)
         else:
             new_session = Session(host=self.hostname, agent=agent, username=username, ident=ident, pid=pid,
-                                  timeout=timeout, parent=parent_id, session_type=session_type, name=name, is_escalate_sandbox=is_escalate_sandbox)
+                                  timeout=timeout, parent=parent_id, session_type=session_type, name=name, is_escalate_sandbox=is_escalate_sandbox, routes=routes)
 
-        print(new_session)
+        #print(new_session)
         if parent is not None:
             parent.children[new_session.ident] = new_session
         # TODO revisit the base ssh issue
@@ -176,22 +188,28 @@ class Host(Entity):
             pids = []
             for process in self.processes:
                 pids.append(process.pid)
-            #pid = randrange(32768)
-            #count_pid = 0
-            #print(pid)
-            #print(pids)
-            #while pid in pids:
-            #    pid = randrange(32768)
-            #    print(pid)
-            #    count_pid += 1
-            #    # avoid pid exhaustion loop
-            #    if count_pid > 32768:
-            #        print("pid exhaustion on host")
-            #        sys.exit(1)
-            pid = self.global_pid
-            self.global_pid += 1
-            if self.global_pid > 32004:
-                self.global_pid = 32000
+            if self.enable_ephemeral:
+              pid = randrange(32768)
+              count_pid = 0
+              #print(pid)
+              #print(pids)
+              while pid in pids:
+                pid = randrange(32768)
+                #print(pid)
+                count_pid += 1
+                # avoid pid exhaustion loop
+                if count_pid > 32768:
+                    print("pid exhaustion on host")
+                    sys.exit(1)
+            else:
+              # the following has been disabled
+              # it was used to reduce entropy
+              # for testing
+              pid = self.global_pid
+              self.global_pid += 1
+              if self.global_pid > 32004:
+                 self.global_pid = 32000
+
         if type(open_ports) is dict:
             open_ports = [open_ports]
 

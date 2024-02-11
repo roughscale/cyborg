@@ -22,12 +22,12 @@ from CybORG.Emulator.ParameterState import ParameterState
 
 class QEmuController(EnvironmentController):
 
-   def __init__(self, scenario_filepath: str = None, scenario_mod: dict = None, agents: dict = None, verbose=True, fully_obs=False):
+   def __init__(self, scenario_filepath: str = None, scenario_mod: dict = None, agents: dict = None, **kwargs):
         # As the action parameter space is deterministic and fully known by the agent
         # we need to be able to ingest all possible parameters from the emulated environment configuration
         self.parameter_state = None
         self.session_handler = MSFSessionHandler()
-        super().__init__(scenario_filepath, scenario_mod=scenario_mod, agents=agents, fully_obs=fully_obs)
+        super().__init__(scenario_filepath, scenario_mod=scenario_mod, agents=agents, **kargs)
 
    def reset(self, agent=None):
         print("QEmulationController reset")

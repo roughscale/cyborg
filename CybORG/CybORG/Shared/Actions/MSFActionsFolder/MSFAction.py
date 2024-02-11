@@ -18,7 +18,43 @@ class MSFAction(SessionAction):
         super().__init__(session)
         self.agent = agent
 
-    def get_local_source_interface(self, local_session: Session, remote_address: IPv4Address, state: State) -> (Session, Interface):
+
+    def get_local_source_interface(self, local_session, remote_address: IPv4Address, state: State) -> (Session, Interface):
+        # ignore local_session parameter. This is to ensure backward compatbility
+        # this identifies the whether there is session that contains a route to the remote_address
+        #
+        # first, check if there is a match of an existing session route 
+        # breakdown list comp
+        sessions = [s for s in state.sessions[self.agent] ]
+        print(sessions)
+        routes = [ r for s in sessions for r in s.routes]
+        print(routes)
+        session_routes = [ s for s in state.sessions[self.agent] for r in s.routes if remote_address in r]
+        print(session_routes)
+        if len(session_routes)== 0:
+            return None, None
+        target_session = session_routes[0]
+        # the following checks for a subnet on the session host that contains the remote_addr
+        # this isn't always the case, as there may be a route via a gateway
+        for interface in state.hosts[target_session.host].interfaces:
+            print(interface)
+            print(interface.subnet)
+            if remote_address in interface.subnet:
+               print("remote addr found interface subnet list")
+               return local_session, interface
+        # is there an edge case where there is no route in the session but there is a route on the interface?
+        # yes. if a shell exists on target, but autoroute hasn't been executed.  
+        # or there is a route in the session but not on any interface?
+        # yes, if target is accessible via gateway
+        # assuming valid session route implies network routability
+        # if no matching interface, return first non-local interface
+        for interface in state.hosts[target_session.host].interfaces:
+            if interface.name != 'lo':
+               return local_session, interface
+
+        return None,None
+
+    def get_local_source_interface_original(self, local_session: Session, remote_address: IPv4Address, state: State) -> (Session, Interface):
         # discovers the local session and interface from routing through existing sessions
         remote_subnet = state.get_subnet_containing_ip_address(remote_address)
         #print("local session: {}".format(local_session)) # this should be the MSF_SHELL/Meterpreter, but it seems it could be MSFServer??

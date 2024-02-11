@@ -14,21 +14,27 @@ class MeterpreterIPConfig(MeterpreterAction):
     def sim_execute(self, state):
         obs = Observation()
         obs.set_success(False)
-        if self.session not in state.sessions[self.agent] or state.sessions[self.agent][self.session].session_type != SessionType.MSF_SERVER:
+        # get details of the server session
+        server_sessions = [ s for s in state.sessions[self.agent] if s.session_type == SessionType.MSF_SERVER ]
+        if self.session not in [ s.ident for s in server_sessions]:
+            # no server session found
             return obs
-        #if self.meterpreter_session not in state.sessions[self.agent] or state.sessions[self.agent][self.meterpreter_session].session_type != SessionType.METERPRETER:
-        #    return obs
+        server_session = server_sessions[0]
         # find session id for the host
         # identify host by ip
-        target_host = [ h for h in state.hosts for i in h.interfaces if i.ip_address == self.ip_address ]
-        target_sessions = [ s for s in state.sessions[self.agent] for h in state.hosts if h.hostname == target_host ]
-        print(target_host)
-        print(target_sessions)
-        if state.sessions[self.agent][self.session].active and state.sessions[self.agent][self.meterpreter_session].active:
-            host = state.hosts[state.sessions[self.agent][self.meterpreter_session].host]
+        target_hosts = [ h for h,v in state.hosts.items() for i in v.interfaces if i.ip_address == self.ip_address ]
+        target_host = target_hosts[0]
+        target_sessions = [ s for s in state.sessions[self.agent] if s.host == target_host and s.session_type == SessionType.METERPRETER]
+        if len(target_sessions) == 0:
+            obs.set_success(False)
+            return obs
+        # choose first session
+        self.meterpreter_session = target_sessions[0]
+        if server_session.active and self.meterpreter_session.active:
+            host = state.hosts[self.meterpreter_session.host]
             obs.set_success(True)
             for interface in host.interfaces:
-                obs.add_interface_info(hostid=str(self.ip_address), **(interface.get_state()))
+                obs.add_interface_info(hostid=target_host, **(interface.get_state()))
         return obs
 
     def emu_execute(self, session_handler):

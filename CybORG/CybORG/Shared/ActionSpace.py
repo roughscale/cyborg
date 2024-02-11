@@ -82,6 +82,21 @@ class ActionSpace:
         }
         return max_action
 
+    def get_action_space_size(self):
+        max_action = {
+            'action': len(self.actions),
+            'subnet': len(self.subnet),
+            'ip_address': len(self.ip_address),
+            'session': len(self.server_session),
+            'username': len(self.username),
+            'password': len(self.password),
+            'process': len(self.process),
+            'port': len(self.port),
+            'target_session': len(self.client_session),
+            'agent': len(self.agent),
+            'hostname': len(self.hostname)
+        }
+        return max_action
     def reset(self, agent):
         self.subnet = {}
         self.ip_address = {}

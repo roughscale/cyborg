@@ -55,6 +55,7 @@ Agents:
       name: MSFShell
       pid: 1500
       ident: 0
+      routes: [ External ]
     wrappers: []  
 Hosts:
   Attacker0:

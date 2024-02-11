@@ -16,20 +16,22 @@ class MSFPortscan(MSFScanner):
 
     def sim_execute(self, state: State, session_handler = None):
         obs = Observation()
-        if self.session not in state.sessions[self.agent]:
+
+        server_sessions = [ s for s in state.sessions['Red'] if s.ident == self.session]
+        if self.session not in [ s.ident for s in server_sessions if s.session_type == SessionType.MSF_SERVER and s.active]:
+            # invalid server session
             obs.set_success(False)
             return obs
-        from_host = state.sessions['Red'][self.session].host
-        session = state.sessions['Red'][self.session]
+
+        # choose first server session
+        session = server_sessions[0]
+        from_host = session.host
 
         if str(self.ip_address) == "127.0.0.1":
             target_host = state.hosts[from_host]
         else:
             target_host = state.hosts[state.ip_addresses[self.ip_address]]
 
-        if session.session_type != SessionType.MSF_SERVER or not session.active:
-            obs.set_success(False)
-            return obs
         target_subnet = None
         ports = None
         if self.ip_address == lo:
@@ -38,17 +40,19 @@ class MSFPortscan(MSFScanner):
             # from ConcreteActions/Portscan
             ports = [ "all" ]
         else:
-
-            # why is this necessary?
+            # this identifies the subnet of ip address
             for subnet in state.subnets.values():
                 if self.ip_address in subnet.ip_addresses:
                     target_subnet = subnet.cidr
                     break
 
-            # why is this necessary?
+            #from_interface = [ i for i in target_host.interfaces if ip.ipaddress == self.ip_address ]
+
+            # this checks if the remote address is routeable from the server session
             session, from_interface = self.get_local_source_interface(local_session=session, remote_address=self.ip_address, state=state)
+            
             # from ConcreteActions/Portscan
-            if from_interface.subnet != lo:
+            if from_interface is not None and from_interface.subnet != lo:
               # checks what ports are accessible from the originating host
               ports = self.check_routable([ state.subnets[from_interface.subnet] ], [s for s in state.subnets.values() if self.ip_address in s.cidr])
 
@@ -111,24 +115,24 @@ class MSFPortscan(MSFScanner):
         return obs
 
     def emu_execute(self, session_handler) -> Observation:
-        result = Observation()
+        obs = Observation()
         from CybORG.Emulator.Session import MSFSessionHandler
         if type(session_handler) is not MSFSessionHandler:
-            result.set_success(False)
-            return result
+            obs.set_success(False)
+            return obs
 
         output = session_handler.execute_module(mtype='auxiliary', mname='scanner/portscan/tcp',
                                                 opts={'RHOSTS': str(self.ip_address),
                                                       'PORTS': '21,22,80,111,135,139,443,445,8000,8009,8010,8020,8027,8080'})
         session_handler._log_debug(output)
-        result.add_raw_obs(output)
+        obs.add_raw_obs(output)
         try:
             for values in output.split('\n'):
                 if values.find('TCP OPEN') != -1:
                     # new port is open
                     port = values.split(f"{self.ip_address}:")[-1].split(" ")[0]
-                    result.add_process(hostid=str(self.ip_address), local_port=int(port), local_address=self.ip_address)
-                    result.set_success(True)
+                    obs.add_process(hostid=str(self.ip_address), local_port=int(port), local_address=self.ip_address)
+                    obs.set_success(True)
         except Exception as e:
             session_handler._log_debug(
                 f"Error occured in MSFPortscan output parsing with output: {output} and error {e}")
@@ -155,7 +159,7 @@ class MSFPortscan(MSFScanner):
         [*] 127.0.0.1: - Scanned 1 of 1 hosts(100 % complete)
         [*] Auxiliary module execution completed'
         """
-        return result
+        return obs
 
     def __str__(self):
         return super(MSFPortscan, self).__str__() + f", Target: {self.ip_address}"

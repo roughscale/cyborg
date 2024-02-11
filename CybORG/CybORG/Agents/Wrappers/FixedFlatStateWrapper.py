@@ -8,23 +8,26 @@ from CybORG.Shared.Enums import OperatingSystemType, SessionType, ProcessName, P
     OperatingSystemDistribution, OperatingSystemVersion, OperatingSystemKernelVersion, Architecture, \
     OperatingSystemPatch, FileVersion
 
+from pprint import pprint
 import inspect, random
+import copy
 
 
 class FixedFlatStateWrapper(BaseWrapper):
-    def __init__(self, env: BaseWrapper=None, agent=None):
+    def __init__(self, env: BaseWrapper=None, agent=None, max_params: dict = {}):
         super().__init__(env, agent)
-        self.MAX_HOSTS = 5
-        self.MAX_PROCESSES = 5 #20
-        self.MAX_CONNECTIONS = 2 
-        self.MAX_VULNERABILITIES = 1
-        self.MAX_INTERFACES = 2 # 4
-        self.MAX_SESSIONS = 5 # 20
-        self.MAX_USERS = 5 # 10. MAX USERS PER HOST
+
+        self.MAX_HOSTS = max_params.get("MAX_HOSTS", 5)
+        self.MAX_PROCESSES = max_params.get("MAX_PROCESSES", 10) #20
+        self.MAX_CONNECTIONS = max_params.get("MAX_CONNECTIONS", 2) 
+        self.MAX_VULNERABILITIES = max_params.get("MAX_VULNERABILITIES", 1)
+        self.MAX_INTERFACES = max_params.get("MAX_INTERFACES", 2) # 4
+        self.MAX_SESSIONS = max_params.get("MAX_SESSIONS", 5) # 20
+        self.MAX_USERS = max_params.get("MAX_USERS", 5) # 10. MAX USERS PER HOST
         # not currently used so disable
-        self.MAX_FILES = 0 #10
-        self.MAX_GROUPS = 0 #10
-        self.MAX_PATCHES = 0 #10
+        self.MAX_FILES = max_params.get("MAX_FILES", 0) #10
+        self.MAX_GROUPS = max_params.get("MAX_GROUPS", 0) #10
+        self.MAX_PATCHES = max_params.get("MAX_PATCHES", 0) #10
         self.hostname = {}
         self.username = {}
         self.group_name = {}
@@ -47,7 +50,8 @@ class FixedFlatStateWrapper(BaseWrapper):
         #print(result.observation)
         # following converts dict into list
         #result.state = self.observation_change(result.state)
-        result.observation = self.observation_change(result.observation)
+        # need to do deep copy to avoid obs dict from mutating in observation_change
+        result.observation = self.observation_change(copy.deepcopy(result.observation))
         #print("ff result.observation")
         #print(result.observation)
         #print("ff result.state")
@@ -209,9 +213,10 @@ class FixedFlatStateWrapper(BaseWrapper):
                     host["Processes"] = []
                 while len(host["Processes"]) < self.MAX_PROCESSES:
                     host["Processes"].append({})
-                while len(host["Processes"]) > self.MAX_PROCESSES:
-                    # host["Processes"].pop()
-                    #print(host["Processes"])
+                # no longer popping processes 
+                #while len(host["Processes"]) > self.MAX_PROCESSES:
+                #   host["Processes"].pop()
+                if len(host["Processes"]) > self.MAX_PROCESSES:
                     raise ValueError("Too many processes in observation for fixed size")
 
                 for proc_idx, process in enumerate(host['Processes']):
@@ -601,12 +606,32 @@ class FixedFlatStateWrapper(BaseWrapper):
                     else:
                         flat_obs.append(-1.0)
 
+                    if "Routes" not in session:
+                        session["Routes"] = []
+                    while len(session["Routes"]) < self.MAX_INTERFACES:
+                           session["Routes"].append(None)
+                    if len(session["Routes"]) > self.MAX_INTERFACES:
+                        raise ValueError("Too may routes in session for fixed size")
+
+                    if "Routes" in session:
+                      for route_idx, route in enumerate(session["Routes"]):
+                        element = route
+                        if element is not None:
+                          flat_obs.append(float(int(element.network_address))/4294967296)
+                          flat_obs.append(float(int(element.prefixlen))/4294967296)
+                        else:
+                          flat_obs.append(-1.0)
+                          flat_obs.append(-1.0)
+
                 if 'Interface' not in host:
                     host["Interface"] = []
                 while len(host["Interface"]) < self.MAX_INTERFACES:
                     host["Interface"].append({})
-                while len(host["Interface"]) > self.MAX_INTERFACES:
+                #while len(host["Interface"]) > self.MAX_INTERFACES:
+                if len(host["Interface"]) > self.MAX_INTERFACES:
                     # host["Interface"].pop()
+                    print("Host: {}".format(key_name))
+                    print(host["Interface"])
                     raise ValueError("Too many interfaces in observation for fixed size")
 
                 if 'Interface' in host:

@@ -39,8 +39,7 @@ class CybORG (CybORGLogger):
                  scenario_file: str,
                  environment: str = "sim",
                  env_config=None,
-                 agents: dict = None,
-                 fully_obs: bool = False):
+                 agents: dict = None):
         """Instantiates the CybORG class.
 
         Parameters
@@ -62,7 +61,6 @@ class CybORG (CybORGLogger):
         """
         self.env = environment
         self.scenario_file = scenario_file
-        self.fully_obs = fully_obs
         self._log_info(f"Using scenario file {scenario_file}")
         self.environment_controller = self._create_env_controller(
             env_config, agents
@@ -77,17 +75,11 @@ class CybORG (CybORGLogger):
         ----------
         """
         if self.env == 'sim':
-            return SimulationController(self.scenario_file, agents=agents, fully_obs=self.fully_obs)
+            return SimulationController(self.scenario_file, agents=agents, **env_config)
         if self.env == 'qemu':
-            return QEmuController(self.scenario_file, agents=agents, fully_obs=self.fully_obs)
+            return QEmuController(self.scenario_file, agents=agents, **env_config)
         if self.env == 'aws':
-
-            if env_config:
-                return AWSClientController(
-                    self.scenario_file, agents=agents, **env_config
-                )
-            else:
-                return AWSClientController(self.scenario_file, agents=agents)
+            return AWSClientController(self.scenario_file, agents=agents, **env_config)
         raise NotImplementedError(
             f"Unsupported environment '{self.env}'. Currently supported "
             f"environments are: {self.supported_envs}"

@@ -611,6 +611,7 @@ class Observation:
                          pid: int = None,
                          session_type: str = None,
                          active: bool = True,
+                         routes: list = [],
                          **kwargs):
         if hostid is None:
             hostid = str(len(self.data['hosts']))
@@ -646,6 +647,14 @@ class Observation:
             if type(session_type) is str:
                 session_type = CyEnums.SessionType.parse_string(session_type)
             new_session["Type"] = session_type
+
+        if session_type == CyEnums.SessionType.METERPRETER:
+            # add Meterpreter specific attributes
+            if not bool(routes): 
+                routes = kwargs.get("Routes", None)
+            if routes is None:
+                routes = []
+            new_session["Routes"] = routes
 
         if pid is None:
             # pid 0 represents unknown PID
@@ -966,6 +975,12 @@ class Observation:
 
         for host_k in filter_hosts:
             del self.data['hosts'][host_k]
+
+        # filter networks
+        # not sure if this is needed.  the above doesn't mutate the networks key
+        #if "subnets" in self.data["network"]:
+        #    for subnet in obs["network"]["subnets"]:
+
 
     @property
     def success(self):

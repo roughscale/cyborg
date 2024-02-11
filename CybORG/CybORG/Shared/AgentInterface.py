@@ -79,6 +79,9 @@ class AgentInterface:
             self.state_space.initialise_state(scenario)
         else:
             self.state_space = None
+        # 
+        #print("Agent Interface state init")
+        #print(self.action_space.get_action_space_size())
 
 
     def update(self, obs: dict, known=True, init=False):
@@ -88,13 +91,15 @@ class AgentInterface:
         #print("update action space")
         #print("obs: {}".format(obs))
         self.action_space.update(obs, known, init)
-        #print(self.action_space.get_action_space())
+        #print("agent update")
+        #print(self.action_space.get_action_space_size())
 
     def update_state(self, obs):
         self.state_space.update(obs)
 
     def get_state(self):
-        return self.state_space.get_state()
+        # return Object
+        return self.state_space
 
     def set_init_obs(self, init_obs, true_obs):
         if isinstance(init_obs, Observation):
@@ -102,13 +107,17 @@ class AgentInterface:
         if isinstance(true_obs, Observation):
             true_obs = true_obs.data
         # this sets "all" attributes of the agent's internal state to False/unknown
-        print("agent set_true_obs")
-        print(true_obs)
+        #print("agent set_true_obs")
+        #print(true_obs)
+        #print("update agent param space with true obs")
         self.update(true_obs, False, True)
+        #print(self.action_space.get_action_space_size())
         # this sets "specified" attributes to True/known
-        print("agent set_init_obs")
-        print(init_obs)
+        #print("agent set_init_obs")
+        #print(init_obs)
+        #print("update agent param space with init obs")
         self.update(init_obs, True)
+        #print(self.action_space.get_action_space_size())
         # update state if fullyobs
         if self.fully_obs:
           self.update_state(init_obs)
@@ -126,6 +135,8 @@ class AgentInterface:
             observation = observation.data
         if action_space is None:
             action_space = self.action_space
+        #print("agent interface get action")
+        #print(type(self.agent))
         self.last_action = self.agent.get_action(observation, action_space, egreedy)
         return self.last_action
 

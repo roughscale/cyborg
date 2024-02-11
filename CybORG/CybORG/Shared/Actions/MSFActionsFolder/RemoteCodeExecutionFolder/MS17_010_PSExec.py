@@ -25,12 +25,17 @@ class MS17_010_PSExec(RemoteCodeExecution):
     def sim_execute(self, state):
         obs = Observation()
         obs.set_success(False)
-        if self.session not in state.sessions[self.agent]:
-            return obs
-        session = state.sessions[self.agent][self.session]
 
-        if session.session_type != SessionType.MSF_SERVER or not session.active:
+        server_sessions = [ s for s in state.sessions['Red'] if s.ident == self.session]
+        if self.session not in [ s.ident for s in server_sessions if s.session_type == SessionType.MSF_SERVER and session.active]:
+            # invalid server session
+            obs.set_success(False)
             return obs
+
+        # choose first server session
+        session = server_sessions[0]
+        from_host = session.host
+
         target_subnet = None
         ports = None
         for subnet in state.subnets.values():
@@ -137,13 +142,14 @@ class MS17_010_PSExec(RemoteCodeExecution):
                 # now adds the username to the session info.  Is this username returned in the Observation in the emulated case?
                 obs.add_session_info(hostid=hostid, username=root_user.username, pid=target_process.pid, session_id=int(new_session.ident), session_type=new_session.session_type, agent=self.agent)
 
+                # this is now disabled.  This is discoverable by the MeterpreterIPConfig action
                 # for multi-homed hosts, also return the details of the other interfaces
                 # this may need to be a separate action depending on what the emulated
                 # case does
-                target_interface = target_host.get_interface(ip_address=self.ip_address)
-                for interface in target_host.interfaces:
-                    if interface.ip_address != lo and interface.ip_address != target_interface.ip_address:
-                      obs.add_interface_info(hostid=hostid,ip_address=interface.ip_address, subnet=interface.subnet)
+                #target_interface = target_host.get_interface(ip_address=self.ip_address)
+                #for interface in target_host.interfaces:
+                #    if interface.ip_address != lo and interface.ip_address != target_interface.ip_address:
+                #      obs.add_interface_info(hostid=hostid,ip_address=interface.ip_address, subnet=interface.subnet)
             else:
                 # This is a failure!  Why do we add the interface info to the obs?
                 # Comment out to reduce complexity of handling temporary state changes in failure cases

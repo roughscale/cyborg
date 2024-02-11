@@ -16,17 +16,15 @@ class MSFPingsweep(MSFScanner):
 
     def sim_execute(self, state: State, session_handler = None):
         obs = Observation()
-        if self.session not in state.sessions[self.agent]:
+        # session is an ident here.
+        server_sessions = [ s for s in state.sessions['Red'] if s.ident == self.session]
+        if self.session not in [ s.ident for s in server_sessions if s.session_type == SessionType.MSF_SERVER and s.active]:
             #print("session not in state sessions")
             obs.set_success(False)
             return obs
-        from_host = state.sessions['Red'][self.session].host
-        session = state.sessions['Red'][self.session]
-
-        if session.session_type != SessionType.MSF_SERVER or not session.active:
-            #print("session not MSF_SERVER type")
-            obs.set_success(False)
-            return obs
+        # choose first server session
+        session = server_sessions[0]
+        from_host = session.host
 
         # get sessions from state 
         # sessions = state.get_sessions_by_remote_ip(self.ip_address, agent="Red)

@@ -38,6 +38,30 @@ class Session(Entity):
         self.children.pop(child_id)
 
 
+class MSFSession(Session):
+    # this class extends the Session class to model Metasploit sessions
+
+    def __init__(self, ident: int, host: str, username: str, agent: str, pid: int, timeout: int = 0,
+            session_type: str = 'shell', active: bool = True, parent=None, name=None,
+            is_escalate_sandbox: bool = False, routes=[]):
+
+        super().__init__(ident=ident, host=host, username=username, agent=agent, pid=pid, timeout=timeout, 
+                session_type=session_type, active=active,
+                parent=parent, name=name, is_escalate_sandbox=is_escalate_sandbox)
+        
+        self.routes = routes
+
+    def add_routes(self, cidrs: list):
+        # use set to ensure non duplicates
+        routes_set = set(self.routes)
+        routes_set.update(cidrs)
+        self.routes = list(routes_set)
+
+    def get_state(self):
+        return {"username": self.username, "session_id": self.ident, "host": self.host,
+                "session_type": self.session_type, "agent": self.agent, "routes": self.routes }
+
+        
 class SimulatedSessionHandler():
     # a session handler for a simulated environment that tracks client/target session information.  It simulates the 
     # session handler for the Metasploit Framework session handler.  The session handler tracks sessions

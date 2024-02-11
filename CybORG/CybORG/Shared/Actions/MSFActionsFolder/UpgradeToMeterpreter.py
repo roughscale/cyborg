@@ -20,17 +20,33 @@ class UpgradeToMeterpreter(MSFAction):
         obs = Observation()
         obs.set_success(False)
         # TODO: Sort ip_address to session handling
-        if self.session not in state.sessions[self.agent] or self.ip_address not in state.sessions[self.agent]:
-            return obs
-        server_session = state.sessions[self.agent][self.session]
-        session_to_upgrade = state.sessions[self.agent][self.ip_address]
 
-        # action fails if either chosen session is not active or of the correct type
-        if server_session.session_type != SessionType.MSF_SERVER \
-                or not (
-                session_to_upgrade.session_type == SessionType.MSF_SHELL or session_to_upgrade.session_type == SessionType.METERPRETER) or not server_session.active \
-                or not session_to_upgrade.active:
+        server_sessions = [ s for s in state.sessions['Red'] if s.ident == self.session]
+        if self.session not in [ s.ident for s in server_sessions if s.session_type == SessionType.MSF_SERVER and s.active]:
+            # invalid server session
+            obs.set_success(False)
             return obs
+
+        # choose first server session
+        server_session = server_sessions[0]
+        from_host = server_session.host
+
+        # find_session_by_ip_addr
+        target_sessions = [ s for s in state.sessions[self.agent] if s.host == state.ip_addresses[self.ip_address]]
+        # identify suitable suitable
+        suitable_sessions = []
+        for qual_session in target_sessions: 
+
+          # action fails if there is not suitable session (ie not active or of the correct type)
+          if (qual_session.session_type == SessionType.MSF_SHELL or qual_session.session_type == SessionType.METERPRETER) and qual_session.active:
+            suitable_sessions.append(qual_session)
+
+        # no suitable sessions
+        if len(suitable_sessions) == 0:
+            return obs
+
+        # choose first target session.  may need to be probablistic if more than 1 qualifying session
+        session_to_upgrade = suitable_sessions[0]
 
         # find shared subnet of the two hosts
         server_interface = None
@@ -56,37 +72,44 @@ class UpgradeToMeterpreter(MSFAction):
 
         obs.set_success(True)
 
-        new_session = state.add_session(host=session_to_upgrade.host, agent=self.agent,
-                                        user=session_to_upgrade.username, session_type="meterpreter",
-                                        parent=server_session)
-        process = state.hosts[new_session.host].get_process(new_session.pid)
-        process.ppid = session_to_upgrade.pid
-        process.path = "/tmp/"
+        # create new process on target host
         # Randomly generate name:
-        process.name = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase) for _ in range(5))
-        local_port = state.hosts[session_to_upgrade.host].get_ephemeral_port()
+        process_name = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase) for _ in range(5))
+        hostname = state.ip_addresses[self.ip_address]
+        target_host = state.hosts[hostname]
+
+        target_process = target_host.add_process(name=process_name, path="/tmp", user=session_to_upgrade.username, ppid=session_to_upgrade.pid)
+
+        local_port = state.hosts[hostname].get_ephemeral_port()
+        new_session = state.add_session(host=target_host.hostname, agent=self.agent,
+                                        user=session_to_upgrade.username, session_type="meterpreter",
+                                        parent=server_session, process=target_process.pid)
+
         new_connection = {"Application Protocol": AppProtocol.TCP,
                           "remote_address": server_address,
                           "remote_port": 4433,
-                          "local_address": upgrade_address,
+                          "local_address": str(self.ip_address),
                           "local_port": local_port}
-        process.connections.append(new_connection)
+        target_process.connections.append(new_connection)
 
         remote_port = {"local_port": 4433,
                        "Application Protocol": AppProtocol.TCP,
                        "local_address": server_address,
-                       "remote_address": upgrade_address,
+                       "remote_address": str(self.ip_address),
                        "remote_port": local_port
                        }
+
+        # update process on server host
         state.hosts[server_session.host].get_process(server_session.pid).connections.append(remote_port)
 
-        obs.add_session_info(hostid=str(self.session_to_upgrade), session_id=new_session.ident,
-                             session_type=new_session.session_type, agent=self.agent)
+        obs.add_session_info(hostid=hostname, session_id=new_session.ident,
+                             session_type=new_session.session_type, agent=self.agent, username=target_process.user)
 
-        obs.add_process(hostid=str(server_address), local_address=server_address, local_port=4433,
-                        remote_address=upgrade_address,
-                        remote_port=local_port)
-        obs.add_process(hostid=str(self.session_to_upgrade), local_address=upgrade_address, local_port=local_port,
+        # disable server side process observation for now
+        #obs.add_process(hostid=server_session.host, local_address=server_address, local_port=4433,
+        #                remote_address=str(self.ip_address),
+        #                remote_port=local_port)
+        obs.add_process(hostid=hostname, local_address=str(self.ip_address), local_port=local_port,
                         remote_address=server_address,
                         remote_port=4433)
         return obs

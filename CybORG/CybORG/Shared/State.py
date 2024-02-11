@@ -1,5 +1,5 @@
 from CybORG.Shared.Observation import Observation
-from pprint import pprint
+import pprint
 import copy
 import hashlib
 
@@ -92,6 +92,7 @@ class State(Observation):
 
     # updates the State space with an Observation
     def update(self, observation: Observation, agent="Red"):
+        # this already is a deepcopy!!!
         # convert Observation to dict
         if isinstance(observation, Observation):
           obs = copy.deepcopy(observation.data)
@@ -137,6 +138,8 @@ class State(Observation):
 
     def get_state(self):
         return copy.deepcopy(self.data)
+        #return self.__str__()
+        #return self
 
     @staticmethod
     def get_state_hash(state_vector):
@@ -148,7 +151,7 @@ class State(Observation):
         # check if session is effectively a duplicate
         if "Sessions" in self.data['hosts'][hostid]:
             print("merge_session_info")
-            host_sessions = self.data['hosts'][hostid]["Sessions"]
+            host_sessions = { k:v for k,v in enumerate(self.data['hosts'][hostid]["Sessions"]) if v != {} }
             print("host sessions")
             print(host_sessions)
             print("new session")
@@ -156,7 +159,7 @@ class State(Observation):
             # match on pid provided pid is not 0. Occurs with process number reuse due to pid rotation))
             # Could occur in some cases of privesc of the same session (NOTE: Not currently supported)
             # don't match on both processes having unknown PIDs (PID 0)
-            pid_match = [ i for i,s in enumerate(host_sessions) if (s["PID"] !=0 and s["PID"]== session_info.get("PID")) ]
+            pid_match = [ i for i,s in host_sessions.items() if (s["PID"] !=0 and s["PID"]== session_info.get("PID")) ]
             if len(pid_match) > 0:
                 print("matching pid")
                 print(pid_match)
@@ -164,7 +167,8 @@ class State(Observation):
                     # due to temporary pid rotation, we need to distinguish whether this pid match is due to privesc
                     # or pid rotation
                     # privesc this will occur if the existing session doesn't match the new session id
-                    privesc = [ p for p,s in enumerate(host_sessions) if
+                    # NOTE: This doesn't always relate to privesc.  It should be an additional nonpriv user session
+                    privesc = [ p for p,s in host_sessions.items() if
                             s["Agent"] == session_info.get("Agent") and \
                             s["Type"] == session_info.get("Type") and \
                             s["Username"] != session_info.get("Username") and \
@@ -172,16 +176,16 @@ class State(Observation):
                     if len(privesc) > 0 and session_info["Username"] not in ('root','SYSTEM'):
                         # remove current session from host
                         print("found another matching privesc session. dropping new session")
-                        host_sessions.pop(i)
+                        self.data['hosts'][hostid]["Sessions"].pop(i)
                         return
                     else:
                        print("replacing matching session pid")
                        # replace in State with updated session for that pid
-                       host_sessions[i] = self.get_session_info(hostid=hostid,agent=agent,**session_info)
+                       self.data['hosts'][hostid]["Sessions"][i] = self.get_session_info(hostid=hostid,agent=agent,**session_info)
                     return
 
             # match on same username, agent and session_type
-            match_sessions = [ i for i,s in enumerate(host_sessions) if \
+            match_sessions = [ i for i,s in host_sessions.items() if \
                     s["Agent"] == session_info.get("Agent") and \
                     s["Type"] == session_info.get("Type") and \
                     s["Username"] == session_info.get("Username") ]
@@ -190,15 +194,20 @@ class State(Observation):
                 print(match_sessions)
                 for i in match_sessions:
                   # replace in State with most current session
-                  host_sessions[i] = self.get_session_info(hostid=hostid,agent=agent,**session_info)
+                  print(session_info)
+                  self.data['hosts'][hostid]["Sessions"][i] = self.get_session_info(hostid=hostid,agent=agent,**session_info)
                   return
             print(session_info.get("Active"))
             if session_info.get("Active") == False:
                 print("removing inactive session")
                 inactive_ident = session_info.get("ID")
-                host_sessions.pop(inactive_ident)
+                self.data['hosts'][hostid]["Sessions"].pop(inactive_ident)
+                #host_sessions.pop(inactive_ident)
                 return
         self.add_session_info(hostid=hostid, agent=agent, **session_info)
+        # need to coalesce empty elements
+        #coalesce_list = [ s for s in self.data['hosts'][hostid]["Sessions"] if s != {} ]
+        #self.data['hosts'][hostid]["Sessions"] = coalesce_list
 
     def get_session_info(self,
                          hostid: str = None,
@@ -209,6 +218,7 @@ class State(Observation):
                          pid: int = None,
                          session_type: str = None,
                          active: bool = True,
+                         routes: list = [],
                          **kwargs):
         if hostid is None:
             hostid = str(len(self.data['hosts']))
@@ -244,6 +254,14 @@ class State(Observation):
             if type(session_type) is str:
                 session_type = CyEnums.SessionType.parse_string(session_type)
             new_session["Type"] = session_type
+
+        if session_type == CyEnums.SessionType.METERPRETER:
+            # add Meterpreter specific attributes
+            if not bool(routes):
+                routes = kwargs.get("Routes", None)
+            if routes is None:
+                routes = []
+            new_session["Routes"] = routes
 
         if pid is None:
             pid = kwargs.get("PID", None)
@@ -287,7 +305,7 @@ class State(Observation):
         # examples of these are: 
         # duplicate observations, ie repeat scans
         # successful exploit of existing connection process
-        # successful escalation of existing process
+        # successful escalation of existing process - NOTE usually this results in a new session
         #
         if "Processes" not in self.data['hosts'][hostid]:
             # no existing processes
@@ -298,7 +316,7 @@ class State(Observation):
             else:
                 self.add_process(hostid=hostid,agent=agent,**process)
             return
-        
+    
         print("merging process connections into State observation")
         for p_idx, existing_process in enumerate(self.data['hosts'][hostid]["Processes"]):
            # perhaps for the moment, lets not overwrite "matching connections".
@@ -319,9 +337,10 @@ class State(Observation):
                         # for now just to a straight list extension
                         # now we identify any duplicates in the new process
                         # we should replace existing connection with new connections
-                        match_conn = []
-                        for e_idx, e in enumerate(existing_process["Connections"]):
-                           for p in process["Connections"]:
+                        merged_conn = copy.deepcopy(existing_process["Connections"])
+                        for p in process["Connections"]:
+                            match = False
+                            for e_idx, e in enumerate(existing_process["Connections"]):
                                 # match same hosts. connection must have local_address as
                                 # a minimum. I would have thought connections with PIDs would
                                 # have remote addr!!
@@ -334,24 +353,22 @@ class State(Observation):
                                                     p["local_port"] == e["local_port"]:
                                                       # add duplicate
                                                       print("found duplicate connection")
-                                                      match_conn.append(e_idx)
-                        if len(match_conn) > 0:
-                            # remove duplicates from existing processes
-                            for i in match_conn:
-                                print("removing duplicate connection")
-                                existing_process["Connections"].pop(i)
+                                                      # if we replace with new
+                                                      merged_conn[e_idx] = p
+                                                      match = True
+                                                      break
+                                                      # otherwise continue
+                                                      #continue
+                            if not match:
+                                merged_conn.append(p)
                              
                         print("merging matching PID connections")
-                        # we update the new proc with the existing connections
-                        # as this will overwrite the existing connection in later dict update
-                        process["Connections"].extend(existing_process["Connections"])
-                        #print(process)
+                        # we update the new proc with the merged connections
+                        process["Connections"] = merged_conn
                     # merge non-connection related attributes
                     print("merge matching PID processes")
                     print(process)
-                    existing_process.update(process)
-                    print(existing_process)
-                    self.data["hosts"][hostid]["Processes"][p_idx] = existing_process
+                    self.data["hosts"][hostid]["Processes"][p_idx] = process
                     return
            # match bare connections (match those with only local_port and local_address)
            # should this only occur in all cases where PID is not in existing or new process?
@@ -363,54 +380,51 @@ class State(Observation):
                new_conn = process["Connections"] # list
                existing_conn = existing_process["Connections"] # list
                match_conn = []
-               for e_idx,e in enumerate(existing_conn):
-                  for n_idx, n in enumerate(new_conn):
+               # following is copy by value and forms the initial new value
+               merged_conn = copy.deepcopy(existing_conn)
+               for n_idx, n in enumerate(new_conn):
+                 match = False
+                 for e_idx,e in enumerate(existing_conn):
+                     # skip null elements
+                     if e == {}:
+                         continue
                      # match the keys
-                     if ["local_address"] == e["local_address"]:
-                       # local_port may not be in the Connection
-                       if ("local_port" in n and "local_port" in e and n["local_port"] != e["local_port"]):
-                              continue
+                     if n["local_address"] == e["local_address"] and n["local_port"] == e["local_port"]:
                        if e.get("remote_address") is None:
-                              print("found matching bare connection")
-                              print(e)
-                              match_conn.append(e_idx)
+                         print("found matching bare connection")
+                         # replace with new connection
+                         print(e)
+                         merged_conn[e_idx] = n
+                         match = True
+                         break
                        elif n.get("remote_address") is None:
-                              # drop bare connection in favor of existing conn
-                               print("drop new bare conn in favour of existing conn")
-                               print(n)
-                               new_conn.pop(n_idx)                   
-                               print(process)
+                         # drop bare connection in favor of existing conn
+                         print("drop new bare conn in favour of existing conn")
+                         match = True
+                         break
                        elif e["remote_address"] == n["remote_address"]:
-                               print("supersede existing remote connection")
-                               print(e)
-                               match_conn.append(e_idx)
-
-               if len(match_conn) > 0:
-                   print("removing matching bare connections")
-                   print(existing_process["Connections"])
-                   # need to remove indices in reverse order
-                   for i in sorted(match_conn, reverse=True):
-                       # remove matching existing connection
-                       # this should remove from the original
-                       print(i)
-                       print(existing_process["Connections"][i])
-                       existing_process["Connections"].pop(i)
-                   print("testing removal")
-                   # the following should match!
-                   print(existing_process)
-                   print(self.data["hosts"][hostid]["Processes"][p_idx])
-                   
-                   # update the new_process connections with existing connections
-                   print("updating new process with bare connection details")
-                   process["Connections"].extend(existing_process["Connections"])
-                   print(process)
-                   print("updating existing process with new connection process")
-                   existing_process.update(process)
-                   print(existing_process)
-                   # the following should match as all operations have taken place
-                   # on copies by reference
-                   print(self.data["hosts"][hostid]["Processes"][p_idx])
-                   return
+                         print("supersede existing remote connection")
+                         print(e)
+                         merged_conn[e_idx] = n
+                         match = True
+                         break
+                     elif "remote_address" in n and "remote_address" in e and \
+                             n["remote_address"] == e["remote_address"] and \
+                             n["remote_port"] == e["remote_port"]:
+                       if e["local_address"] == n["local_address"]:
+                          print("supersede existing local connection")
+                          print(e)
+                          merged_conn[e_ix] = n
+                          match = True
+                          break
+                 if not match:
+                     merged_conn.append(n)
+                         
+                 # update the new_process connections with merged connections
+                 print("updating new process with bare connection details")
+               process["Connections"] = merged_conn
+               print(process)
+               return
 
            else:
                # how to handle non-PID matching
@@ -431,6 +445,12 @@ class State(Observation):
                return
         #else:
         self.add_process(hostid=hostid, agent=agent, **process)
+        # need to coalesce process list
+        #coalesce_list = [ p for p in self.data['hosts'][hostid]["Processes"] for c in p["Connections"] if any(c) ]
+        #print(coalesce_list)
+        #self.data['hosts'][hostid]["Processes"] = coalesce_list
+
+
 
     def get_process(self,
                     hostid: str = None,
@@ -628,7 +648,15 @@ class State(Observation):
 
     def merge_interface_info(self, hostid, agent, **interface):
         self.add_interface_info(hostid=hostid, agent=agent, **interface)
+        # as the above appends to a list, coalesce null elements in list
+        #coalesce_list = [ i for i in self.data['hosts'][hostid]["Interface"] if i != {} ]
+        #self.data['hosts'][hostid]["Interface"] = coalesce_list
 
     def merge_system_info(self, hostid, agent, **info):
         self.add_system_info(hostid=hostid, agent=agent, **info)
 
+
+
+    def __str__(self):
+        state_str = pprint.pformat(self.data)
+        return f"{self.__class__.__name__}:\n{state_str}"

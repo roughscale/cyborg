@@ -54,6 +54,11 @@ class ScenarioSession:
     def ident(self) -> str:
         return self._info.get("ident", None)
 
+    # Allow MSFServerSession to set initial session routes
+    @property
+    def routes(self) -> list:
+        return self._info.get("routes", [])
+
     def __str__(self):
         return f"Session {self.name}, {self.parent} -> {self.username}@{self.hostname}: {self.session_type} -> {self.pid}"
 

@@ -33,7 +33,7 @@ class EnvironmentController:
         agent interface object for agents in scenario
     """
 
-    def __init__(self, scenario_path: str, scenario_mod: dict = None, agents: dict = None, fully_obs: bool = False):
+    def __init__(self, scenario_path: str, scenario_mod: dict = None, agents: dict = None, **kwargs):
         """Instantiates the Environment Controller.
         Parameters
         ----------
@@ -54,7 +54,7 @@ class EnvironmentController:
         # self.scenario_dict = self._parse_scenario(scenario_path, scenario_mod=scenario_mod)
         scenario_dict = self._parse_scenario(scenario_path)
         self.scenario = Scenario(scenario_dict)
-        self.fully_obs = fully_obs
+        self.fully_obs = kwargs.get("fully_obs",False)
         self._create_environment()
         self.agent_interfaces = self._create_agents(agents)
         self.reward = {}
@@ -64,14 +64,15 @@ class EnvironmentController:
         self.observation = {}
         self.INFO_DICT['True'] = {"hosts": {}, "network": { "subnets": [] } }
         for subnet in self.scenario.subnets:
-            subnet_cidr = self.subnet_cidr_map[subnet]
-            self.INFO_DICT['True']['network']['subnets'].append(str(subnet_cidr))
+            # true info dict needs name of subnet not CIDR (which can change)
+            #subnet_cidr = self.subnet_cidr_map[subnet]
+            self.INFO_DICT['True']['network']['subnets'].append(subnet)
         for host in self.scenario.hosts:
             self.INFO_DICT['True']['hosts'][host] = {'SystemInfo': 'All', 'Sessions': 'All', 'Interfaces': 'All', 'UserInfo': 'All',
                                       'Processes': ['All']}
 
         # This uses the INFO_DICT as a filter to generate the complete State of the Target Environment.
-        # print("INFO_DICT['True']")
+        #print("INFO_DICT['True']")
         #print(self.INFO_DICT['True'])
         true_state = self.get_true_state(self.INFO_DICT['True'])
         #print("Get True State of INFO_DICT['True']")
@@ -94,9 +95,12 @@ class EnvironmentController:
         for agent in self.scenario.agents:
             self.INFO_DICT[agent] = {}
             osint_network = self.scenario.get_agent_info(agent).osint.get('Network',{})
+            #print("_get_agent_osint")
             if 'Subnets' in osint_network:
+                #print(osint_network['Subnets'])
+                #print([v for k,v in self.subnet_cidr_map.items() if k in osint_network['Subnets']])
                 self.INFO_DICT[agent]['network'] = {}
-                self.INFO_DICT[agent]['network']['subnets'] = [ str(v) for k, v in self.subnet_cidr_map.items() if k in osint_network['Subnets'] ]
+                self.INFO_DICT[agent]['network']['subnets'] = [ k for k, v in self.subnet_cidr_map.items() if k in osint_network['Subnets'] ]
             osint_hosts = self.scenario.get_agent_info(agent).osint.get('Hosts', {})
             for hostname,hostinfo in osint_hosts.items():
                 self.INFO_DICT[agent]['hosts'] = {}
@@ -126,13 +130,24 @@ class EnvironmentController:
         self.reward = {}
         self.steps = 0
         self.done = False
+        if self.fully_obs:
+          pass
+        #print("EnvController reset")
+        #print("info dict true")
+        #print(self.INFO_DICT['True'])
         self.init_state = self._filter_obs(self.get_true_state(self.INFO_DICT['True'])).data
-        #print("agent init_state")
+        #print("agent init_state. filtered info dict true")
         #print(self.init_state)
         for agent_name, agent_object in self.agent_interfaces.items():
             agent_object.reset()
             # get Agent OSINT
             self._get_agent_osint()
+            #print("info dict agent name")
+            #print(self.INFO_DICT[agent_name])
+            agent_obs = self.get_true_state(self.INFO_DICT[agent_name])
+            print(agent_obs)
+            filtered_agent_obs = self._filter_obs(agent_obs, agent_name)
+            #print(filtered_agent_obs)
             self.observation[agent_name] = self._filter_obs(self.get_true_state(self.INFO_DICT[agent_name]), agent_name)
             agent_object.set_init_obs(self.observation[agent_name].data, self.init_state)
             #print("agent object obs")
@@ -143,7 +158,7 @@ class EnvironmentController:
               state[agent_name] = agent_object.get_state()
               #print("agent object state")
               #print(state[agent_name])
-
+            #print("action space size: {}".format(agent_object.action_space.get_action_space_size()))
 
         if agent is None:
             return Results(observation=self.init_state)
@@ -180,7 +195,7 @@ class EnvironmentController:
         #print("env step")
         #print("step action var")
         #print(type(action)) # of type Action but has custom __str__ method
-        #print(action)
+        print(action)
         # all agents act on the state
         for agent_name, agent_object in self.agent_interfaces.items():
             # pass observation to agent to get action
@@ -196,19 +211,22 @@ class EnvironmentController:
 
             # perform action on (environment) state and get an observation
             next_observation[agent_name] = self._filter_obs(self.execute_action(self.action[agent_name]), agent_name)
-            #print("next observation processes")
-            #print(next_observation[agent_name])
-            if "hosts" in next_observation[agent_name].data:
-                for h in next_observation[agent_name].data["hosts"]:
-                    if "Processes" in h:
-                        print(h["Processes"])
+            #print("next observation following env.step()")
+            #print(type(next_observation[agent_name]))
+            print(next_observation[agent_name])
+            #print("next obnservation processes")
+            #if "hosts" in next_observation[agent_name].data:
+            #    for h in next_observation[agent_name].data["hosts"]:
+            #        if "Processes" in h:
+            #            print(h["Processes"])
 
             if self.fully_obs:
+              # why do we need to do deepcopy? Do we mutate the object in update_state??
               agent_object.update_state(copy.deepcopy(next_observation[agent_name]))
               next_state[agent_name] = agent_object.get_state()
               #print(agent_object.get_max_elements())
-              #print("next state:")
-              #print(next_state[agent_name])
+              #print(type(next_state[agent_name]))
+              print(next_state[agent_name])
 
         # get true observation
         #print("get true observation")
@@ -272,7 +290,7 @@ class EnvironmentController:
                # next_state[agent] is only a dict
                # see if we can substitute state for observation
                #result = Results(observation=self.observation[agent].data, state=next_state[agent], done=self.done, reward=round(self.reward[agent], 1),
-               result = Results(observation=next_state[agent], done=self.done, reward=round(self.reward[agent], 1),
+               result = Results(observation=next_state[agent].data, done=self.done, reward=round(self.reward[agent], 1),
                              action_space=self.agent_interfaces[agent].action_space.get_action_space(),
                              action=self.action[agent])
             else:
@@ -502,6 +520,8 @@ class EnvironmentController:
         else:
             subnets = list(self.subnet_cidr_map.values())
 
+        #print("_filter_obs subnets list")
+        #print(subnets)
         # this is generating the proper list of subnets
         # cidrs needs to be in IPV4Network format!
         obs.filter_addresses(
@@ -514,7 +534,7 @@ class EnvironmentController:
     def test_valid_action(self, action: Action, agent: AgentInterface):
         # returns true if the parameters in the action are in and true in the action set else return false
         action_space = agent.action_space.get_action_space()
-        print(action)
+        #print(action)
         #print(action_space)
         #print(action.get_params())
         # first check that the action class is allowed

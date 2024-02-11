@@ -14,16 +14,17 @@ import inspect, random
 class FixedFlatWrapper(BaseWrapper):
     def __init__(self, env: BaseWrapper=None, agent=None):
         super().__init__(env, agent)
-        self.MAX_HOSTS = 5
-        self.MAX_PROCESSES = 6 #100
-        self.MAX_CONNECTIONS = 2
-        self.MAX_VULNERABILITIES = 1
-        self.MAX_INTERFACES = 2 #4
-        self.MAX_FILES = 0 #10
-        self.MAX_SESSIONS = 5 #20
-        self.MAX_USERS = 0 #10
-        self.MAX_GROUPS = 0 #10
-        self.MAX_PATCHES = 0 #10
+        self.MAX_HOSTS = max_params.get("MAX_HOSTS", 5)
+        self.MAX_PROCESSES = max_params.get("MAX_PROCESSES", 10) #100
+        self.MAX_CONNECTIONS = max_params.get("MAX_CONNECTIONS", 2)
+        self.MAX_VULNERABILITIES = max_params.get("MAX_VULNERABILITIES", 1)
+        self.MAX_INTERFACES = max_params.get("MAX_INTERFACES", 2) # 4
+        self.MAX_SESSIONS = max_params.get("MAX_SESSIONS", 5) # 20
+        self.MAX_USERS = max_params.get("MAX_USERS", 5) # 10. MAX USERS PER HOST
+        # not currently used so disable
+        self.MAX_FILES = max_params.get("MAX_FILES", 0) #10
+        self.MAX_GROUPS = max_params.get("MAX_GROUPS", 0) #10
+        self.MAX_PATCHES = max_params.get("MAX_PATCHES", 0) #10
         self.hostname = {}
         self.username = {}
         self.group_name = {}

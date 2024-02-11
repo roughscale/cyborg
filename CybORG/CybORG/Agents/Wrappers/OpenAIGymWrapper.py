@@ -17,7 +17,7 @@ class OpenAIGymWrapper(Env, BaseWrapper):
             assert isinstance(self.get_action_space(self.agent_name), int)
             self.action_space = spaces.Discrete(self.get_action_space(self.agent_name))
         # can we do the following without doing an env.reset??  can we do this on an observation_space
-        print("openai wrapper self.env {}".format(type(self.env)))
+        #print("openai wrapper self.env {}".format(type(self.env)))
         box_len = len(self.observation_change(self.env.reset(self.agent_name).observation))
         self.observation_space = spaces.Box(-1.0, 3.0, shape=(box_len,), dtype=np.float32)
         self.reward_range = (float('-inf'), float('inf'))
