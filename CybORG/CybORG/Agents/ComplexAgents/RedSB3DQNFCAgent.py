@@ -64,7 +64,22 @@ class RedSB3DQNFCAgent(BaseAgent):
         prioritized_replay_beta0=float(0.4)
         prioritized_replay_beta_iters=int(total_steps/50)
 
-        print("Policy Class: {}".format(self.__class__.__name__))
+        if double and dueling:
+            ModelClass = DoubleDuelingDQN
+            PolicyClass = DuelingDQNPolicy
+        elif double and not dueling:
+            ModelClass = DoubleDQN
+            PolicyClass = DQNPolicy
+        elif not double and dueling:
+            ModelClass = DuelingDQN
+            PolicyClass = DuelingDQNPolicy
+        else:
+            ModelClass = DQN
+            PolicyClass = DQNPolicy
+
+        print("Agent Class: {}".format(self.__class__.__name__))
+        print("ModelClass: {}".format(ModelClass.__name__))
+        print("PolicyClass: {}".format(PolicyClass.__name__))
         print("Hyperparameters:")
         print("Total Steps {}".format(total_steps))
         print("Input Size {}".format(input_size))
@@ -91,21 +106,8 @@ class RedSB3DQNFCAgent(BaseAgent):
                 "beta": prioritized_replay_beta0
                 }
 
-        if double and dueling:
-            DQNClass = DoubleDuelingDQN
-            DQNPolicyClass = DuelingDQNPolicy
-        elif double and not dueling:
-            DQNClass = DoubleDQN
-            DQNPolicyClass = DQNPolicy
-        elif not double and dueling:
-            DQNClass = DuelingDQN
-            DQNPolicyClass = DuelingDQNPolicy
-        else:
-            DQNClass = DQN
-            DQNPolicyClass = DQNPolicy
-
-        self.dqn = DQNClass(
-                policy=DQNPolicyClass,
+        self.model = ModelClass(
+                policy=PolicyClass,
                 env=env,
                 learning_rate=lr_schedule, 
                 buffer_size=buffer_size,
@@ -142,12 +144,12 @@ class RedSB3DQNFCAgent(BaseAgent):
         # how many "features" does the state space contain??
         # 
 
-        self.learn_callback = LearnCallback(self.dqn)
+        self.learn_callback = LearnCallback(self.model)
 
     def load(self,classtype,file):
         if classtype == "DuelingDQN":
-            DQNClass = DuelingDQN
-        self.dqn = DQNClass.load(file)
+            ModelClass = DuelingDQN
+        self.model = ModelClass.load(file)
         return self
 
 class LearnCallback(BaseCallback):

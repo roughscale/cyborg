@@ -12,10 +12,11 @@ import inspect, random
 
 
 class FixedFlatWrapper(BaseWrapper):
-    def __init__(self, env: BaseWrapper=None, agent=None):
+    def __init__(self, env: BaseWrapper=None, agent=None, max_params: dict={}):
         super().__init__(env, agent)
+
         self.MAX_HOSTS = max_params.get("MAX_HOSTS", 5)
-        self.MAX_PROCESSES = max_params.get("MAX_PROCESSES", 10) #100
+        self.MAX_PROCESSES = max_params.get("MAX_PROCESSES", 5) #100
         self.MAX_CONNECTIONS = max_params.get("MAX_CONNECTIONS", 2)
         self.MAX_VULNERABILITIES = max_params.get("MAX_VULNERABILITIES", 1)
         self.MAX_INTERFACES = max_params.get("MAX_INTERFACES", 2) # 4
@@ -557,6 +558,23 @@ class FixedFlatWrapper(BaseWrapper):
                         flat_obs.append(float(session["PID"])/32768)
                     else:
                         flat_obs.append(-1.0)
+
+                    if "Routes" not in session:
+                           session["Routes"] = []
+                    while len(session["Routes"]) < self.MAX_INTERFACES:
+                           session["Routes"].append(None)
+                    if len(session["Routes"]) > self.MAX_INTERFACES:
+                        raise ValueError("Too may routes in session for fixed size")
+
+                    if "Routes" in session:
+                      for route_idx, route in enumerate(session["Routes"]):
+                        element = route
+                        if element is not None:
+                          flat_obs.append(float(int(element.network_address))/4294967296)
+                          flat_obs.append(float(int(element.prefixlen))/4294967296)
+                        else:
+                          flat_obs.append(-1.0)
+                          flat_obs.append(-1.0)
 
                 if 'Interface' not in host:
                     host["Interface"] = []

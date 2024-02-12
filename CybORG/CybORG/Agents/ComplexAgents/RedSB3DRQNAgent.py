@@ -27,9 +27,7 @@ class RedSB3DRQNAgent(BaseAgent):
 
     def __init__(self):
 
-        self.dqn = None
-        self.dqn_policy = None
-        self.steps_done = 0
+        self.model = None
 
     def end_episode(self):
         pass
@@ -43,8 +41,8 @@ class RedSB3DRQNAgent(BaseAgent):
             initial_eps, 
             final_eps, 
             total_steps,
-            double,
-            dueling,
+            double=None, # double not implemented yet
+            dueling=None, # dueling not implement yet,
             ):
         """ set up DQN """
         """ lr_schedule needs to be of Schedule type """
@@ -53,7 +51,7 @@ class RedSB3DRQNAgent(BaseAgent):
         input_size=env.observation_space.shape[0]
         #net_arch=[input_size]
         #net_arch=[1024,256,64]
-        net_arch=[input_size,input_size]
+        net_arch=[input_size]
 
         learning_rate=float(0.0001)
         # LR is provided as a schedule
@@ -68,6 +66,11 @@ class RedSB3DRQNAgent(BaseAgent):
         prioritized_replay_beta0=float(0.4)
         prioritized_replay_beta_iters=int(total_steps/50)
 
+        ModelClass = DeepRecurrentQNetwork
+        PolicyClass = DRQNPolicy
+
+        print("ModelClass: {}".format(ModelClass.__name__))
+        print("PolicyClass: {}".format(PolicyClass.__name__))
         print("Hyperparameters:")
         print("Total Steps {}".format(total_steps))
         print("Input Size {}".format(input_size))
@@ -76,8 +79,8 @@ class RedSB3DRQNAgent(BaseAgent):
         print("Final Epsilon: {}".format(final_eps))
         print("Exploration Fraction: {}".format(exploration_fraction))
         print("Gamma: {}".format(gamma))
-        print("Double: {}".format(double))
-        print("Dueling: {}".format(dueling))
+        #print("Double: {}".format(double))
+        #print("Dueling: {}".format(dueling))
         print("Learning Rate (Constant): {}".format(learning_rate))
         print("PER Alpha: {}".format(prioritized_replay_alpha))
         print("PER Beta0: {}".format(prioritized_replay_beta0))
@@ -94,24 +97,8 @@ class RedSB3DRQNAgent(BaseAgent):
                 "beta": prioritized_replay_beta0
                 }
 
-        # just implement regular DQN for the moment
-        #if double and dueling:
-        #    DQNClass = DoubleDuelingDQN
-        #     DQNPolicyClass = DuelingDQNPolicy
-        #elif double and not dueling:
-        #    DQNClass = DoubleDQN
-        #    DQNPolicyClass = DQNPolicy
-        #elif not double and dueling:
-        #    DQNClass = DuelingDQN
-        #    DQNPolicyClass = DuelingDQNPolicy
-        #else:
-        #    DQNClass = DQN
-        #    DQNPolicyClass = DQNPolicy
-        DQNClass = DeepRecurrentQNetwork
-        DQNPolicyClass = DRQNPolicy
-
-        self.dqn = DQNClass(
-                policy=DQNPolicyClass,
+        self.model = ModelClass(
+                policy=PolicyClass,
                 env=env,
                 learning_rate=lr_schedule, 
                 buffer_size=buffer_size,
@@ -141,7 +128,7 @@ class RedSB3DRQNAgent(BaseAgent):
         self.num_actions = self.env.action_space.n
         #print(self.num_actions)
 
-        self.learn_callback = LearnCallback(self.dqn)
+        self.learn_callback = LearnCallback(self.model)
 
 class LearnCallback(BaseCallback):
 
