@@ -34,6 +34,22 @@ dueling=True
 # set n_envs to 1 initially. No parallelisation
 n_envs=1
 
+env_config = {
+   "fully_obs": True,
+   "max_params": {
+        "MAX_HOSTS": 5,
+        "MAX_PROCESSES": 5,
+        "MAX_CONNECTIONS": 2,
+        "MAX_VULNERABILITIES": 1,
+        "MAX_INTERFACES": 2,
+        "MAX_SESSIONS": 5,
+        "MAX_USERS": 5,
+        "MAX_FILES": 0,
+        "MAX_GROUPS": 0,
+        "MAX_PATCHES": 0
+   }
+}
+
 path = str(inspect.getfile(CybORG))
 curr_dir = os.getcwd()
 
@@ -44,7 +60,7 @@ curr_dir = os.getcwd()
 path = path[:-10] + "/Shared/Scenarios/TestMSFSessionKillChainScenario.yaml"
 #print(path)
 
-cyborg = CybORG(path,'qemu',fully_obs=True)
+cyborg = CybORG(path,'qemu',env_config=env_config)
 
 # print env controller network/environment state (ie not agent state!)
 #environment=cyborg.environment_controller.state
@@ -58,7 +74,7 @@ enum_env = EnumActionWrapper(cyborg)
 print("enum wrapped env")
 print(enum_env)
 #wrapped_env = FixedFlatStateWrapper(EnumActionWrapper(cyborg))
-wrapped_env = FixedFlatStateWrapper(enum_env)
+wrapped_env = FixedFlatStateWrapper(enum_env,max_params=env_config["max_params"])
 print(wrapped_env)
 #env = OpenAIGymWrapper(env=wrapped_env, agent_name="Red")
 # wraps env in DummyVecEnv VecEnv environment

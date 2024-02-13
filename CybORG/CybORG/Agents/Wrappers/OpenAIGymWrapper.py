@@ -1,5 +1,6 @@
 import numpy as np
-from gym import spaces, Env
+#from gym import spaces, Env
+from gymnasium import spaces, Env
 from typing import Union, List
 from prettytable import PrettyTable
 
@@ -40,7 +41,9 @@ class OpenAIGymWrapper(Env, BaseWrapper):
         # state has to be returned in the FO case
         # hard enabled for now!
         #return np.array(result.observation, dtype=np.float32), result.reward, result.done, info
-        return np.array(result.observation, dtype=np.float32), result.reward, result.done, info
+        # gymnasium supports terminated and truncated instead of done
+        # for our environment done == terminated.  there should not be any truncated eventuality, set to False
+        return np.array(result.observation, dtype=np.float32), result.reward, result.done, False, info
 
     # create local method to wrap python list into np.array.  Does this affect the about
     # result.observation which hasn't used this method?
@@ -50,11 +53,12 @@ class OpenAIGymWrapper(Env, BaseWrapper):
     #    return np.array(observation, dtype=np.float32)
 
 
-    def reset(self, agent=None):
+    def reset(self, agent=None, seed=None, **kwargs):
+        super().reset(seed=seed)
         result = self.env.reset(self.agent_name)
         result.action_space = self.action_space_change(result.action_space)
         result.observation = self.observation_change(result.observation)
-        return np.array(result.observation, dtype=np.float32)
+        return np.array(result.observation, dtype=np.float32), result.info
 
     def render(self):
         # TODO: If FixedFlatWrapper it will error out!

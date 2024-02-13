@@ -15,7 +15,7 @@ import copy
 import os
 
 # number of evaulation episodes
-n_eval_eps=100
+n_eval_eps=1
 
 env_config = {
    "fully_obs": True,
@@ -44,7 +44,7 @@ scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionDQNScenario.yaml"
 model_path=path[:-17] + "/exports/dqn_20231223_2000"
 #print(path)
 
-cyborg = CybORG(scenario_path,'sim',env_config=env_config)
+cyborg = CybORG(scenario_path,'qemu', env_config=env_config)
 
 # print env controller network/environment state (ie not agent state!)
 #environment=cyborg.environment_controller.state

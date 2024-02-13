@@ -1,7 +1,7 @@
 import random
 import hashlib
 from CybORG.Agents.SimpleAgents.BaseAgent import BaseAgent
-from gym import spaces
+from gymnasium import spaces
 from CybORG.Shared import Results
 import numpy as np
 # following libraries are for Schwartz implementation
