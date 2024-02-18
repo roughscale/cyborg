@@ -35,7 +35,7 @@ class Host(Entity):
 
     def __init__(self, system_info: dict, hostname: str = None, users: dict = None,
                  files: list = None, sessions: dict = None, processes: list = None, interfaces: list = None, info: dict = None,
-                 services: dict = None):
+                 services: dict = None, enable_ephemeral=True):
         super().__init__()
         self.original_services = {}
         self.os_type = OperatingSystemType.parse_string(system_info["OSType"])
@@ -104,7 +104,7 @@ class Host(Entity):
         self.info = info if info is not None else {}
         self.events = {'NetworkConnections': [], 'ProcessCreation': []}
 
-        self.enable_ephemeral = True
+        self.enable_ephemeral = enable_ephemeral
         self.global_ephemeral_port = 50000
         self.global_pid = 32000
 
@@ -169,7 +169,7 @@ class Host(Entity):
             new_session = Session(host=self.hostname, agent=agent, username=username, ident=ident, pid=pid,
                                   timeout=timeout, parent=parent_id, session_type=session_type, name=name, is_escalate_sandbox=is_escalate_sandbox, routes=routes)
 
-        #print(new_session)
+        #print(new_sessioa)
         if parent is not None:
             parent.children[new_session.ident] = new_session
         # TODO revisit the base ssh issue

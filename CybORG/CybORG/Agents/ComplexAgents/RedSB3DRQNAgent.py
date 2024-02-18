@@ -17,7 +17,7 @@ from stable_baselines3.dqn.policies import DQNPolicy
 from stable_baselines3.common.torch_layers import FlattenExtractor
 from stable_baselines3.common.utils import get_linear_fn, constant_fn
 from stable_baselines3.common.callbacks import BaseCallback
-from sb3_contrib.per.prioritized_replay_sequence_buffer import PrioritizedReplaySequenceBuffer
+from sb3_contrib.per.replay_sequence_buffer import ReplaySequenceBuffer
 
 
 class RedSB3DRQNAgent(BaseAgent):
@@ -41,6 +41,7 @@ class RedSB3DRQNAgent(BaseAgent):
             initial_eps, 
             final_eps, 
             total_steps,
+            batch_size=32,
             double=None, # double not implemented yet
             dueling=None, # dueling not implement yet,
             ):
@@ -51,6 +52,7 @@ class RedSB3DRQNAgent(BaseAgent):
         input_size=env.observation_space.shape[0]
         #net_arch=[input_size]
         #net_arch=[1024,256,64]
+        #net_arch=[input_size, int(input_size/2)]
         net_arch=[input_size]
 
         learning_rate=float(0.0001)
@@ -82,6 +84,7 @@ class RedSB3DRQNAgent(BaseAgent):
         #print("Double: {}".format(double))
         #print("Dueling: {}".format(dueling))
         print("Learning Rate (Constant): {}".format(learning_rate))
+        print("Exp Replay Batch Size: {}".format(batch_size))
         print("PER Alpha: {}".format(prioritized_replay_alpha))
         print("PER Beta0: {}".format(prioritized_replay_beta0))
         # Not provided in implementation
@@ -103,13 +106,14 @@ class RedSB3DRQNAgent(BaseAgent):
                 learning_rate=lr_schedule, 
                 buffer_size=buffer_size,
                 learning_starts=learning_starts,
-                batch_size=32, # default is 32
+                batch_size=batch_size, # default is 32
                 tau=1.0, # default. Doesn't scale the target network values when updating
                 gamma=gamma,
                 train_freq=1, #default is 4
                 gradient_steps=1, #default
-                replay_buffer_class=PrioritizedReplaySequenceBuffer, # None resolves to BufferReplay
-                replay_buffer_kwargs=per_buffer_args, #default is None
+                replay_buffer_class=ReplaySequenceBuffer, # None resolves to BufferReplay
+                #replay_buffer_kwargs=per_buffer_args, #default is None
+                replay_buffer_kwargs=None, #default is None
                 optimize_memory_usage=False, # default
                 target_update_interval=target_network_update_freq, #default
                 exploration_fraction=exploration_fraction, #default is 0.1

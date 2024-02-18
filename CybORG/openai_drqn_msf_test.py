@@ -23,7 +23,12 @@ alpha = .5    # learning rate. NOT USED. Separate LR schedule is created
 gamma = .99   # discount rate
 initial_epsilon = 1.0 # high explore factor
 final_epsilon = 0.02  # explore/exploit factor
-
+# batch size is normally 32 for non-RNN ER.
+# given that we are providing sub-sequence of 10 transitions,
+# reduce batch size so that total transitions roughly matches
+# in size to reduce computational time
+batch_size=4
+# num_prev_trans=10
 #step_limit_reached=200
 num_episodes=1000 # NOT USED. Total steps is used
 #num_evals=100
@@ -38,6 +43,7 @@ n_envs = 1
 
 env_config = {
    "fully_obs": False,
+   "randomize_env": False,
    "max_params": {
         "MAX_HOSTS": 5,
         "MAX_PROCESSES": 2,
@@ -73,7 +79,7 @@ action_space=env.action_space
 
 # initialise agent learning
 #total_steps = num_episodes * step_limit_reached
-agent.agent.initialise(env,gamma,initial_epsilon,final_epsilon,total_steps)
+agent.agent.initialise(env,gamma,initial_epsilon,final_epsilon,total_steps,batch_size=batch_size)
 callback=agent.agent.learn_callback
 
 done = False

@@ -20,7 +20,7 @@ from stable_baselines3.dqn.policies import DQNPolicy
 from stable_baselines3.common.torch_layers import FlattenExtractor
 from stable_baselines3.common.utils import get_linear_fn, constant_fn
 from stable_baselines3.common.callbacks import BaseCallback
-from sb3_contrib.per.prioritized_replay_buffer import PrioritizedReplayBuffer
+from stable_baselines3.common.prioritized_replay_buffer import PrioritizedReplayBuffer
 
 
 class RedSB3DQNFCAgent(BaseAgent):
@@ -30,7 +30,7 @@ class RedSB3DQNFCAgent(BaseAgent):
 
     def __init__(self):
 
-        self.dqn = None
+        self.model = None
         self.dqn_policy = None
         self.steps_done = 0
 

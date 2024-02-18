@@ -22,7 +22,7 @@ class State:
     This class contains all the data for the simulated network, including ips, subnets, hosts and sessions.
     The methods mostly modify the network state, but tend to delegate most of the work to the Host class.
     """
-    def __init__(self, scenario):
+    def __init__(self, scenario, randomize_env = True):
         self.scenario = scenario
         self.subnet_name_to_cidr = None  # contains mapping of subnet names to subnet cidrs
         self.ip_addresses = None  # contains mapping of ip addresses to hostnames
@@ -37,6 +37,8 @@ class State:
 
         self.sessions_count = {}  # contains a mapping of agent name to number of sessions
         self.hostname_to_interface = {} # contains a mapping of hostname interfaces to ip addresses
+
+        self.randomize_env = randomize_env
 
         self._initialise_state(scenario)
         self.step = 0
@@ -110,7 +112,7 @@ class State:
 
     def reset(self):
         # only reset state (if True don't re-initialise with randomisation)
-        only_reset_state=False
+        only_reset_state=(not self.randomize_env)
         print("State reset: CIDR randomness disabled {}".format(only_reset_state))
         self._initialise_state(self.scenario, reset=only_reset_state)
         self.step = 0
@@ -179,7 +181,8 @@ class State:
             host_info = scenario.get_host(hostname)
             self.hosts[hostname] = Host(system_info=host_info['SystemInfo'], processes=host_info['Processes'],
                                         users=host_info['UserInfo'], interfaces=self.hostname_to_interface[hostname],
-                                        hostname=hostname, info=host_info.get('info'), services=host_info.get('Services'))
+                                        hostname=hostname, info=host_info.get('info'), services=host_info.get('Services'),
+                                        enable_ephemeral=self.randomize_env)
 
         for agent in scenario.agents:
             agent_info = scenario.get_agent_info(agent)

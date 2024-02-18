@@ -84,7 +84,7 @@ callback=agent.agent.learn_callback
 start=time.time()
 print("Episodes start: {}".format(time.ctime(start)))
 print()
-agent.agent.dqn.learn(total_timesteps=total_steps,log_interval=1,callback=callback)
+agent.agent.model.learn(total_timesteps=total_steps,log_interval=1,callback=callback)
 end=time.time()
 print("Episodes end: {}".format(time.ctime(end)))
 # save model to file

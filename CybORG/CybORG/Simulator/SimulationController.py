@@ -27,6 +27,7 @@ class SimulationController(EnvironmentController):
     """
     def __init__(self, scenario_filepath: str = None, scenario_mod: dict = None, agents: dict = None, **kwargs):
         self.state = None
+        self.randomize_env = kwargs.get("randomize_env",True)
         super().__init__(scenario_filepath, scenario_mod=scenario_mod, agents=agents, **kwargs) 
 
     def reset(self, agent=None):
@@ -80,7 +81,7 @@ class SimulationController(EnvironmentController):
         return scenario_dict
 
     def _create_environment(self):
-        self.state = State(self.scenario)
+        self.state = State(self.scenario, self.randomize_env)
         self.hostname_ip_map = {ip: h for ip, h in self.state.ip_addresses.items()}
         self.subnet_cidr_map = self.state.subnet_name_to_cidr
 
