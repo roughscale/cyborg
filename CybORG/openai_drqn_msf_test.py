@@ -79,7 +79,15 @@ action_space=env.action_space
 
 # initialise agent learning
 #total_steps = num_episodes * step_limit_reached
-agent.agent.initialise(env,gamma,initial_epsilon,final_epsilon,total_steps,batch_size=batch_size)
+agent.agent.initialise(
+        env=env,
+        gamma=gamma,
+        initial_eps=initial_epsilon,
+        final_eps=final_epsilon,
+        total_steps=total_steps,
+        batch_size=batch_size,
+        tensorboard_log="./runs/drqn/")
+
 callback=agent.agent.learn_callback
 
 done = False

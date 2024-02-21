@@ -44,6 +44,7 @@ class RedSB3DRQNAgent(BaseAgent):
             batch_size=32,
             double=None, # double not implemented yet
             dueling=None, # dueling not implement yet,
+            tensorboard_log=None
             ):
         """ set up DQN """
         """ lr_schedule needs to be of Schedule type """
@@ -120,7 +121,7 @@ class RedSB3DRQNAgent(BaseAgent):
                 exploration_initial_eps=initial_eps,
                 exploration_final_eps=final_eps,
                 max_grad_norm=10, #default
-                tensorboard_log=None, #default
+                tensorboard_log=tensorboard_log, #default is None
                 policy_kwargs={"net_arch": net_arch}, #default is None
                 verbose=1,
                 seed=None, #default
@@ -184,6 +185,11 @@ class LearnCallback(BaseCallback):
         print("Reward: {}".format(self.locals["rewards"][0]))
         print("Done: {}".format(self.locals["dones"][0]))
         print()
+        # log step metrics
+        #print("_on_step callback")
+        #print(self.logger)
+        #print(dir(self))
+        self.logger.dump(step=self.num_timesteps)
         return True
         #if self.locals["dones"] == True and self.locals["self"]._episode_num == 2:
         #    #print(self.locals["self"]._episode_num)
