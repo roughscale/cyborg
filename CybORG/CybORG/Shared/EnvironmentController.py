@@ -87,15 +87,21 @@ class EnvironmentController:
         self._get_agent_osint()
 
         # populate initial observations with OSINT
+        print(self.agent_interfaces.items())
         for agent_name, agent in self.agent_interfaces.items():
+            #print("agent osint state")
+            #print(self.get_true_state(self.INFO_DICT[agent_name]))
             self.observation[agent_name] = self._filter_obs(self.get_true_state(self.INFO_DICT[agent_name]), agent_name)
+            #print("set agent init obs")
+            #print(self.observation[agent_name].data)
             agent.set_init_obs(self.observation[agent_name].data, self.init_state)
 
     def _get_agent_osint(self):
+        #print("_get_agent_osint")
         for agent in self.scenario.agents:
             self.INFO_DICT[agent] = {}
             osint_network = self.scenario.get_agent_info(agent).osint.get('Network',{})
-            #print("_get_agent_osint")
+            #print(osint_network)
             if 'Subnets' in osint_network:
                 #print(osint_network['Subnets'])
                 #print([v for k,v in self.subnet_cidr_map.items() if k in osint_network['Subnets']])
@@ -111,7 +117,7 @@ class EnvironmentController:
                 #print(self.INFO_DICT[agent]['hosts'][hostid])
             for host in self.INFO_DICT[agent]['hosts'].keys():
                 self.INFO_DICT[agent]['hosts'][host]['Sessions'] = agent
-        #pprint(self.INFO_DICT[agent])
+        #print(self.INFO_DICT[agent])
 
     def reset(self, agent: str = None) -> Results:
         """Resets the environment and get initial agent observation and actions.

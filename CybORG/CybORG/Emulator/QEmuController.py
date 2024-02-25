@@ -27,7 +27,9 @@ class QEmuController(EnvironmentController):
         # we need to be able to ingest all possible parameters from the emulated environment configuration
         self.parameter_state = None
         self.session_handler = MSFSessionHandler()
-        super().__init__(scenario_filepath, scenario_mod=scenario_mod, agents=agents, **kargs)
+        self.subnets = kwargs.get("subnets",None)
+        self.hosts = kwargs.get("hosts",None)
+        super().__init__(scenario_filepath, scenario_mod=scenario_mod, agents=agents, **kwargs)
 
    def reset(self, agent=None):
         print("QEmulationController reset")
@@ -64,6 +66,15 @@ class QEmuController(EnvironmentController):
         print(new_obs_hosts)
         # add host key values to Observation
         result.add_key_value("hosts",new_obs_hosts)
+
+        #obs_subnets = obs["network"]["subnets"]
+        #new_obs_subnets = {}
+        #for subnet_k,subnet_v in obs_subnets.items():
+        #    if subnet_k in self.subnet_cidr_map:
+        #        new_obs_subnets[self.subnet_cidr_map[subnet_k]] = subnet_k
+        #    else:
+        #        new_obs_subnets[subnet_k] = subnet_v
+        #result.add_key_value("network",{ "subnets": new_obs_subnets })
         return result
 
    def _parse_scenario(self, scenario_filepath: str, scenario_mod: dict = None):
@@ -88,22 +99,36 @@ class QEmuController(EnvironmentController):
         # perhaps hardcode this for now to match the deployed environment
         #self.hostname_ip_map = {ip: h for ip, h in self.state.ip_addresses.items()}
         #self.subnet_cidr_map = self.state.subnet_name_to_cidr
-        self.hostname_ip_map = { 
-                "10.13.37.100": "Attacker0",
-                "10.46.64.100": "External0",
-                "10.58.85.10": "External0",
-                "10.58.85.100": "Internal0",
-                "10.58.85.101": "Internal1",
-                "10.58.85.102": "Internal2"
-        }
+        # generate from the self.subnets and self.hosts provided
+        self.hostname_ip_map = {}
+        self.subnet_cidr_map = {}
+        for name,cidr in self.subnets.items():
+            print(name,cidr)
+            self.subnet_cidr_map[name] = IPv4Network(cidr)
+
+        for subnet in self.hosts:
+            for name,ip_address in self.hosts[subnet].items():
+                print(name,ip_address)
+                self.hostname_ip_map[ip_address] = name
+
+        #self.hostname_ip_map = { 
+        #        "10.13.37.100": "Attacker0",
+        #        "10.46.64.100": "External0",
+        #        "10.58.85.10": "External0",
+        #        "10.58.85.100": "Internal0",
+        #        "10.58.85.101": "Internal1",
+        #        "10.58.85.102": "Internal2"
+        #}
         #"10.46.64.100": "Attacker0",
         #"10.58.85.100": "Attacker0",
         # following values have to be in IPv4Network format
-        self.subnet_cidr_map = {
-                "Attacker": IPv4Network("10.13.37.0/24"),
-                "External": IPv4Network("10.46.64.0/24"),
-                "Internal": IPv4Network("10.58.85.0/24")
-        }
+        #self.subnet_cidr_map = {
+        #        "Attacker": IPv4Network("10.13.37.0/24"),
+        #        "External": IPv4Network("10.46.64.0/24"),
+        #        "Internal": IPv4Network("10.58.85.0/24")
+        #}
+        #print(self.subnet_cidr_map)
+        #print(self.hostname_ip_map)
         # for the moment we need to create an object for action parameter space generation
         # we wil reuse the Simulator State object for the moment, but this will be replaced
         # by a function that can ingest this information from the emulated environment itself.
@@ -112,7 +137,11 @@ class QEmuController(EnvironmentController):
         # subnet and ip_address generation is done by the _initialise_state() function.  
         # I suppose for the emulated case, it is more apt to describe it as
         # _initialise_parameter_space()
-        self.parameter_state = ParameterState(self.scenario)
+        env_config = {
+                "subnets": self.subnets,
+                "hosts": self.hosts
+                }
+        self.parameter_state = ParameterState(self.scenario, env_config)
 
    def get_true_state(self, info: dict) -> Observation:
         output = self.parameter_state.get_true_state(info)

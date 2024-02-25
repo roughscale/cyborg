@@ -22,8 +22,9 @@ class ParameterState:
     This class contains the data for the network, including ips, subnets, hosts and sessions which is used 
     to generate the Agent's action parameter space
     """
-    def __init__(self, scenario):
+    def __init__(self, scenario, env_config):
         self.scenario = scenario
+        self.env_config = env_config
         self.subnet_name_to_cidr = None  # contains mapping of subnet names to subnet cidrs
         self.ip_addresses = None  # contains mapping of ip addresses to hostnames
 
@@ -34,7 +35,7 @@ class ParameterState:
         self.sessions_count = {}  # contains a mapping of agent name to number of sessions
         self.hostname_to_interface = {} # contains a mapping of hostname interfaces to ip addresses
 
-        self._initialise_parameter_state(scenario)
+        self._initialise_parameter_state(self.scenario, self.env_config)
 
         self.external_hosts = [ "Attacker0" ] # list of hostnames that are external of the system
 
@@ -49,13 +50,13 @@ class ParameterState:
                 #print("true state network")
                 #print(info['network'])
                 #print(self.subnets.items())
-                for name, cidr in self.subnets.items():
-                    #print(name,cidr,str(cidr))
+                for key,subnet in self.subnets.items():
+                    #print(key,subnet,subnet.name,subnet.cidr)
                     # cidr of type Subnet. need to use str representation
-                    if str(cidr) in info['network']['subnets']:
-                        #print("str(cidr) in info network subnets")
-                        #print(str(cidr))
-                        true_obs.add_subnet(cidr=str(cidr))
+                    if subnet.cidr in info['network']['subnets'] or subnet.name in info['network']['subnets']:
+                        #print("subnet in info network subnets")
+                        #print(subnet)
+                        true_obs.add_subnet(cidr=subnet.cidr)
             for hostname, host in self.hosts.items():
                 if hostname in info['hosts']:
                     if 'Processes' in info['hosts'][hostname] and hostname not in self.external_hosts:
@@ -116,11 +117,11 @@ class ParameterState:
         # only reset state (don't re-initialise with randomisation)
         only_reset_state=True
         print("State reset: CIDR randomness disabled {}".format(only_reset_state))
-        self._initialise_parameter_state(self.scenario, reset=only_reset_state)
+        self._initialise_parameter_state(self.scenario, reset=only_reset_state, env_config=self.env_config)
         self.step = 0
         self.time = copy.deepcopy(self.original_time)
 
-    def _initialise_parameter_state(self, scenario: Scenario, reset=False):
+    def _initialise_parameter_state(self, scenario: Scenario, env_config: dict, reset=False):
         # reset parameter resets the environment without changing the network state configuration
         # ie the network state will retain existing configuration (ip and subnet addressing)
         # otherwise, the network state will be created with address randomisation
@@ -151,27 +152,32 @@ class ParameterState:
           #  list(IPv4Network("10.0.0.0/16").subnets(new_prefix=32 - max(int(log2(maximum_subnet_size + 5)), 4))),
           #  len(scenario.subnets))
           #
-          subnet_list = {
-                  "Attacker": IPv4Network("10.13.37.0/24"),
-                  "External": IPv4Network("10.46.64.0/24"),
-                  "Internal": IPv4Network("10.58.85.0/24")
-                  }
-          host_list = {
-                  "Attacker": {
-                     "Attacker0": IPv4Address("10.13.37.100")
-                   },
-                  "External": {
-                     "Attacker0": IPv4Address("10.46.64.10"),
-                     "External0": IPv4Address("10.46.64.100")
-                  },
-                  "Internal": {
-                     "External0": IPv4Address("10.58.85.10"),
-                     "Internal0": IPv4Address("10.58.85.100"),
-                     "Internal1": IPv4Address("10.58.85.101"),
-                     "Internal2": IPv4Address("10.58.85.102")
-                  }
+          if "subnets" not in env_config and "hosts" not in env_config:
+              raise ValueError
 
-          }
+          subnet_list = env_config["subnets"]
+          host_list = env_config["hosts"]
+          #subnet_list = {
+          #        "Attacker": IPv4Network("10.13.37.0/24"),
+          #        "External": IPv4Network("10.46.64.0/24"),
+          #        "Internal": IPv4Network("10.58.85.0/24")
+          #        }
+          #host_list = {
+          #        "Attacker": {
+          #           "Attacker0": IPv4Address("10.13.37.100")
+          #         },
+          #        "External": {
+          #           "Attacker0": IPv4Address("10.46.64.10"),
+          #           "External0": IPv4Address("10.46.64.100")
+          #        },
+          #        "Internal": {
+          #           "External0": IPv4Address("10.58.85.10"),
+          #           "Internal0": IPv4Address("10.58.85.100"),
+          #           "Internal1": IPv4Address("10.58.85.101"),
+          #           "Internal2": IPv4Address("10.58.85.102")
+          #        }
+
+          #}
           print("initialise subnet/ip configuration")
           for subnet_name in scenario.subnets:
             # subnet_cidr = choice(list(subnets_cidrs[count].subnets(
