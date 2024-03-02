@@ -19,7 +19,7 @@ import subprocess
 # start msfrcpd
 # this is a subprocess is attached to this process so will terminate when this process terminates
 msfrcpd = subprocess.call(["/opt/metasploit-framework/bin/msfrpcd","-P","password"],close_fds=True)
-
+time.sleep(5)
 # set vars
 # initialise Q learning parameters
 gamma = .99   # discount rate
@@ -47,6 +47,27 @@ env_config = {
         "MAX_FILES": 0,
         "MAX_GROUPS": 0,
         "MAX_PATCHES": 0
+   },
+   "subnets": {
+           "Attacker": "10.13.37.0/24",
+           "External": "10.46.64.0/24",
+           "Internal": "10.58.85.0/24"
+   },
+   "hosts": {
+           "Attacker": {
+              "Attacker0": "10.13.37.100"
+            },
+           "External": {
+              "Attacker0": "10.46.64.10",
+              "External0": "10.46.64.100"
+           },
+           "Internal": {
+              "External0": "10.58.85.10",
+              "Internal0": "10.58.85.100",
+              "Internal1": "10.58.85.101",
+              "Internal2": "10.58.85.102"
+           }
+
    }
 }
 
@@ -70,12 +91,12 @@ agent=cyborg.environment_controller.agent_interfaces["Red"]
 unwrapped_action_space=agent.action_space.get_action_space()
 print("unwrapped action space")
 print(unwrapped_action_space)
-enum_env = EnumActionWrapper(cyborg)
-print("enum wrapped env")
-print(enum_env)
+#enum_env = EnumActionWrapper(cyborg)
+#print("enum wrapped env")
+#print(enum_env)
 #wrapped_env = FixedFlatStateWrapper(EnumActionWrapper(cyborg))
-wrapped_env = FixedFlatStateWrapper(enum_env,max_params=env_config["max_params"])
-print(wrapped_env)
+#wrapped_env = FixedFlatStateWrapper(enum_env,max_params=env_config["max_params"])
+#print(wrapped_env)
 #env = OpenAIGymWrapper(env=wrapped_env, agent_name="Red")
 # wraps env in DummyVecEnv VecEnv environment
 # no need for wrapped OpenAiGymWrapper for KB agent
@@ -93,6 +114,7 @@ start=time.time()
 result = env.reset(agent="Red")
 #print(result)
 action_space=result.action_space
+#print("action space after reset")
 #print(action_space)
 time.sleep(2)
 for step in range(0,15):
