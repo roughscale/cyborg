@@ -104,7 +104,7 @@ class MSFAutoroute(MSFAction):
                 routes.append(IPv4Network(subnet))
         
         if len(routes) > 0:
-            obs.add_session(routes=routes, **session.get_state())
+            obs.add_session_info(routes=routes, **session.get_state())
 
         return obs
 
