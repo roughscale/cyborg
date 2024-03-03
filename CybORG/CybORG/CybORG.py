@@ -7,6 +7,7 @@ from CybORG.Shared.EnvironmentController import EnvironmentController
 
 from CybORG.Simulator.SimulationController import SimulationController
 from CybORG.Emulator.QEmuController import QEmuController
+from CybORG.Emulator.AWSClientController import AWSClientController
 
 
 class CybORG (CybORGLogger):

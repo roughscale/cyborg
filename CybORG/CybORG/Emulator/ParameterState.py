@@ -157,27 +157,8 @@ class ParameterState:
 
           subnet_list = env_config["subnets"]
           host_list = env_config["hosts"]
-          #subnet_list = {
-          #        "Attacker": IPv4Network("10.13.37.0/24"),
-          #        "External": IPv4Network("10.46.64.0/24"),
-          #        "Internal": IPv4Network("10.58.85.0/24")
-          #        }
-          #host_list = {
-          #        "Attacker": {
-          #           "Attacker0": IPv4Address("10.13.37.100")
-          #         },
-          #        "External": {
-          #           "Attacker0": IPv4Address("10.46.64.10"),
-          #           "External0": IPv4Address("10.46.64.100")
-          #        },
-          #        "Internal": {
-          #           "External0": IPv4Address("10.58.85.10"),
-          #           "Internal0": IPv4Address("10.58.85.100"),
-          #           "Internal1": IPv4Address("10.58.85.101"),
-          #           "Internal2": IPv4Address("10.58.85.102")
-          #        }
-
-          #}
+          #print(subnet_list)
+          #print(host_list)
           print("initialise subnet/ip configuration")
           for subnet_name in scenario.subnets:
             # subnet_cidr = choice(list(subnets_cidrs[count].subnets(
@@ -189,6 +170,8 @@ class ParameterState:
             #ip_address_selection = sample(list(subnet_cidr.hosts()), len(scenario.get_subnet_hosts(subnet_name)))
             #allocated = 0
             for hostname in scenario.get_subnet_hosts(subnet_name):
+                #print(subnet_name)
+                #print(hostname)
                 hostname_ip_address = host_list[subnet_name][hostname]
                 self.ip_addresses[hostname_ip_address] = hostname
                 #self.ip_addresses[ip_address_selection[allocated]] = hostname
@@ -230,7 +213,7 @@ class ParameterState:
             # 
             for starting_session in agent_info.starting_sessions:
                 if starting_session.parent is None:
-                    print("parentless starting session")
+                    #print("parentless starting session")
                     if starting_session.ident is not None:
                         session_ident = starting_session.ident
                     else:
@@ -245,10 +228,10 @@ class ParameterState:
                         ident=session_ident,
                         name=starting_session.name,
                         artifacts=starting_session.event_artifacts)
-            print(self.sessions[agent])
+            #print(self.sessions[agent])
             for starting_session in agent_info.starting_sessions:
                 if starting_session.parent is not None:
-                    print("parent starting session")
+                    #print("parent starting session")
                     if starting_session.parent in [i.name for i in self.sessions[agent].values()]:
                         parent = self.sessions[agent][
                             {i.name: id for id, i in self.sessions[agent].items()}[starting_session.parent]]

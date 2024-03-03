@@ -36,25 +36,25 @@ class MSFSessionHandler():
             remote_sessions = { k:v for k,v in sessions.items() for r in v["routes"].split(",") if r != '' and IPv4Address(remote_ip) in IPv4Network(r)}
         if session_type is not None:
             type_sessions = [ k for k,v in sessions.items() if v["type"] == session_type ]
-            print(type_sessions)
+            #print(type_sessions)
             remote_sessions = { k:v for k,v in remote_sessions.items() for t in type_sessions if k == t }
         return remote_sessions
 
     def get_session_by_remote_cidr(self, remote_cidr: str, session_type = None):
         sessions = self.get_sessions()
-        print(sessions)
+        #print(sessions)
         # first, check if session target_host is within the cidr
         remote_sessions = { k:v for k,v in sessions.items() if IPv4Network(v["target_host"]) in IPv4Network(remote_cidr) }
-        print(remote_sessions)
+        #print(remote_sessions)
         # otherwise, check if there is a route in a session that can be used
         if len(remote_sessions) == 0:
             remote_sessions = { k:v for k,v in sessions.items() for r in v["routes"].split(",") if r != '' and IPv4Network(remote_cidr) == IPv4Network(r)}
-            print(remote_sessions)
+            #print(remote_sessions)
         if session_type is not None:
             type_sessions = [ k for k,v in sessions.items() if v["type"] == session_type ]
-            print(type_sessions)
+            #print(type_sessions)
             remote_sessions = { k:v for k,v in remote_sessions.items() for t in type_sessions if k == t }
-            print(remote_sessions)
+            #print(remote_sessions)
         return remote_sessions
 
     def get_session_user(self, session_id):
@@ -80,7 +80,7 @@ class MSFSessionHandler():
           session_info = re.match("\[\*\]\sMeterpreter\ssession\s(\d)\sopened\s.* ",line)
         if "[*] Command shell session" in line:
             session_info = re.match("\[\*\]\sCommand\sshell\ssession\s(\d)\sopened\s.*",line)
-        print(session_info)
+        #print(session_info)
       return output
 
     def execute_shell_action(self, action, session):
@@ -110,14 +110,16 @@ class MSFSessionHandler():
             self.msfclient.call('console.write',[self.console_id,opts_cmd])
           if payload_name is not None:
               payload_cmd = "set PAYLOAD {}\n".format(payload_name)
+              #print(payload_cmd)
               self.msfclient.call('console.write',[self.console_id,payload_cmd])
           if payload_opts is not None:
               for p_opt_name,p_opt_vals in payload_opts.items():
                 payload_opts_cmd = "set {0} {1}\n".format(p_opt_name,p_opt_vals)
+                #print(payload_opts_cmd)
                 self.msfclient.call('console.write',[self.console_id,payload_opts_cmd])
           # execute module
           run_cmd = "run\n"
-          #print(run_cmd)
+        #print(run_cmd)
         self.msfclient.call('console.write',[self.console_id,run_cmd])
         # get results
         buffer=[]
@@ -129,7 +131,7 @@ class MSFSessionHandler():
           #print(ret)
           # deal with meterpreter sessions
           if ret["data"] != "":
-            print(ret["data"])
+            #print(ret["data"])
             buffer.append(ret["data"])
             # handle edge cases
             if "Meterpreter session" in ret["data"]:
@@ -145,14 +147,14 @@ class MSFSessionHandler():
             # can it be handled within the action itself (ie fetch more data
             # from the console)
             if "Post module execution completed" in ret["data"]:
-                print(ret["busy"])
-                print("Override busy signal")
+                #print(ret["busy"])
+                #print("Override busy signal")
                 ret["busy"] = True
             if "Waiting up to 30 seconds for the session to come back" in ret["data"]:
-                print(ret["busy"])
-                print("Waiting for 30s")
+                #print(ret["busy"])
+                #print("Waiting for 30s")
                 sleep(30)
-                print("Override busy signal")
+                #print("Override busy signal")
                 ret["busy"] = True
           busy=ret["busy"]
         return "".join(buffer)

@@ -107,6 +107,5 @@ class MeterpreterIPConfig(MeterpreterAction):
             raise ex
 
           session_handler._log_debug(output)
-
         return obs
 

