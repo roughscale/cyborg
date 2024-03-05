@@ -192,17 +192,21 @@ class State:
             # instantiate parentless sessions first
             for starting_session in agent_info.starting_sessions:
                 if starting_session.parent is None:
+                    if starting_session.ident is not None:
+                        session_ident = starting_session.ident
+                    else:
+                        session_ident = self.sessions_count[agent]
+                        self.sessions_count[agent] += 1
                     self.sessions[agent].append(self.hosts[starting_session.hostname].add_session(
                         username=starting_session.username,
                         agent=agent,
                         parent=None,
                         pid=starting_session.pid,
                         session_type=starting_session.session_type,
-                        ident=self.sessions_count[agent],
+                        ident=session_ident,
                         name=starting_session.name,
                         routes=[ v for k,v in self.subnet_name_to_cidr.items() if k in starting_session.routes],
                         artifacts=starting_session.event_artifacts))
-                    self.sessions_count[agent] += 1
             for starting_session in agent_info.starting_sessions:
                 if starting_session.parent is not None:
                     if starting_session.parent in [i.name for i in self.sessions[agent]]:

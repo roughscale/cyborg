@@ -8,13 +8,14 @@ from CybORG.Simulator.Entity import Entity
 
 class Session(Entity):
 
-    def __init__(self, ident: int, host: str, username: str, agent: str,
+    def __init__(self, ident: int, host: str, ip_addr: IPv4Address, username: str, agent: str,
                  pid: int, timeout: int = 0, session_type: str = 'shell', 
                  active: bool = True, parent=None, name=None,
                  is_escalate_sandbox: bool = False):
         super().__init__()
         self.ident = ident
         self.host = host
+        self.ip_addr = ip_addr
         self.username = username
         self.agent = agent
         self.timeout = timeout
@@ -27,7 +28,7 @@ class Session(Entity):
         self.is_escalate_sandbox = is_escalate_sandbox
 
     def get_state(self):
-        return {"username": self.username, "session_id": self.ident, "host": self.host,
+        return {"username": self.username, "session_id": self.ident, "host": self.host, "ip_addr": self.ip_addr,
                 "pid": self.pid, "session_type": self.session_type, "agent": self.agent, "active": self.active}
 
     def set_orphan(self):
@@ -41,11 +42,11 @@ class Session(Entity):
 class MSFSession(Session):
     # this class extends the Session class to model Metasploit sessions
 
-    def __init__(self, ident: int, host: str, username: str, agent: str, pid: int, timeout: int = 0,
+    def __init__(self, ident: int, host: str, ip_addr: IPv4Address, username: str, agent: str, pid: int, timeout: int = 0,
             session_type: str = 'shell', active: bool = True, parent=None, name=None,
             is_escalate_sandbox: bool = False, routes=[]):
 
-        super().__init__(ident=ident, host=host, username=username, agent=agent, pid=pid, timeout=timeout, 
+        super().__init__(ident=ident, host=host, ip_addr=ip_addr, username=username, agent=agent, pid=pid, timeout=timeout, 
                 session_type=session_type, active=active,
                 parent=parent, name=name, is_escalate_sandbox=is_escalate_sandbox)
         
@@ -58,7 +59,7 @@ class MSFSession(Session):
         self.routes = list(routes_set)
 
     def get_state(self):
-        return {"username": self.username, "session_id": self.ident, "host": self.host,
+        return {"username": self.username, "session_id": self.ident, "host": self.host, "ip_addr": self.ip_addr,
                 "session_type": self.session_type, "agent": self.agent, "routes": self.routes }
 
         

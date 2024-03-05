@@ -159,7 +159,7 @@ class State(Observation):
             # match on pid provided pid is not 0. Occurs with process number reuse due to pid rotation))
             # Could occur in some cases of privesc of the same session (NOTE: Not currently supported)
             # don't match on both processes having unknown PIDs (PID 0)
-            pid_match = [ i for i,s in host_sessions.items() if (s["PID"] !=0 and s["PID"]== session_info.get("PID")) ]
+            pid_match = [ i for i,s in host_sessions.items() if ("PID" in s and s["PID"] !=0 and s["PID"]== session_info.get("PID")) ]
             if len(pid_match) > 0:
                 print("matching pid")
                 print(pid_match)
@@ -168,11 +168,12 @@ class State(Observation):
                     # or pid rotation
                     # privesc this will occur if the existing session doesn't match the new session id
                     # NOTE: This doesn't always relate to privesc.  It should be an additional nonpriv user session
+                    # NOTE: We no longer use PIDs in session observation as it doesn't occur in emulated case.
                     privesc = [ p for p,s in host_sessions.items() if
                             s["Agent"] == session_info.get("Agent") and \
                             s["Type"] == session_info.get("Type") and \
                             s["Username"] != session_info.get("Username") and \
-                            s["PID"] != session_info.get("PID")]
+                            s["PID"] != session_info.get("PID",None)]
                     if len(privesc) > 0 and session_info["Username"] not in ('root','SYSTEM'):
                         # remove current session from host
                         print("found another matching privesc session. dropping new session")
@@ -647,6 +648,15 @@ class State(Observation):
         self.add_file_info(hostid=hostid, agent=agent, **file_info)
 
     def merge_interface_info(self, hostid, agent, **interface):
+        print("merge interface")
+        print(interface)
+        # compare interface with existing host interface list
+        if "Interface" in self.data["hosts"][hostid]:
+          for intf in self.data['hosts'][hostid]["Interface"]:
+            # if new interface is a subset of existing interface
+            # nothing to merge or add
+            if interface == dict(set(interface.items()) & set(intf.items())):
+                return
         self.add_interface_info(hostid=hostid, agent=agent, **interface)
         # as the above appends to a list, coalesce null elements in list
         #coalesce_list = [ i for i in self.data['hosts'][hostid]["Interface"] if i != {} ]

@@ -50,7 +50,7 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
         print("hostname")
         print(hostname)
 
-        sessions = [ s for s in state.sessions[self.agent] if s.host == hostname ]
+        sessions = [ s for s in state.sessions[self.agent] if s.ip_addr == self.ip_address ]
         print("sessions on the target host")
         print(sessions)
         if len(sessions) == 0:
@@ -135,15 +135,17 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
                                                 user=root_user.username, session_type="meterpreter", parent=server_session)
 
         local_port = target_host.get_ephemeral_port()
+        # get random reverse shell port
+        lport = randint(4400,4500)
         new_connection = {"remote_port": local_port,
                                   "Application Protocol": "tcp",
                                   "remote_address": server_address,
-                                  "local_port": 4455,
+                                  "local_port": lport,
                                   "local_address": str(self.ip_address)
                                   }
         state.hosts[new_session.host].get_process(new_session.pid).connections.append(new_connection)
 
-        remote_port = {"remote_port": 4455,
+        remote_port = {"remote_port": lport,
                                "Application Protocol": "tcp",
                                "local_address": server_address,
                                "remote_address": str(self.ip_address),
@@ -157,8 +159,8 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
         #if session != server_session:
         #            local_port = None
 
-        obs.add_process(hostid=hostname, local_address=str(self.ip_address), local_port=local_port, remote_address=server_address, remote_port=4455)
-        obs.add_process(hostid=server_session.host, local_address=str(server_address), local_port=4455, remote_address=str(self.ip_address), remote_port=local_port)
+        obs.add_process(hostid=hostname, local_address=str(self.ip_address), local_port=local_port, remote_address=server_address, remote_port=lport)
+        obs.add_process(hostid=server_session.host, local_address=str(server_address), local_port=lport, remote_address=str(self.ip_address), remote_port=local_port)
         obs.add_session_info(hostid=hostname, username=new_session.username, session_id=new_session.ident, session_type=new_session.session_type, agent=self.agent)
 
         return obs

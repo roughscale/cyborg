@@ -41,7 +41,7 @@ n_envs=1
 # seems that the actions listed in an Agent spec are actually Agent classes??
 # this is going to cause some difficulties in generalising actions!
 scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionDQNScenario.yaml"
-model_path=path[:-17] + "/exports/dqn_20231223_2000"
+model_path=path[:-17] + "/exports/dqn_20240304_0900"
 #print(path)
 
 cyborg = CybORG(scenario_path,'sim',env_config=env_config)
@@ -73,7 +73,7 @@ print()
 #agent.agent.dqn.learn(total_timesteps=total_steps,log_interval=1,callback=callback)
 print(dir(model))
 print(type(model))
-mean_reward, std_reward = evaluate_policy(model.dqn.policy, env, n_eval_episodes=n_eval_eps, deterministic=True)
+mean_reward, std_reward = evaluate_policy(model.model.policy, env, n_eval_episodes=n_eval_eps, deterministic=True)
 end=time.time()
 print(mean_reward)
 print(std_reward)

@@ -1,13 +1,14 @@
 # Copyright DST Group. Licensed under the MIT license.
 from CybORG.Simulator.Session import Session
 from CybORG.Simulator.Process import Process
+from ipaddress import IPv4Address
 
 
 class MSFServerSession(Session):
 
-    def __init__(self, ident: str, host: str, user: str, agent: str,
+    def __init__(self, ident: str, host: str, ip_addr: IPv4Address, user: str, agent: str,
                  process: Process, timeout: int = 0, session_type: str = 'msf server', name=None, routes={}):
-        super().__init__(ident, host, user, agent,
+        super().__init__(ident, host, ip_addr, user, agent,
                  process, timeout, session_type, name=name)
         self.routes = routes  # routes have the structure sessionid: list of subnets
           

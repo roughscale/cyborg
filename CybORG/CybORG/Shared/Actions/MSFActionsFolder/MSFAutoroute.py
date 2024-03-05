@@ -32,9 +32,9 @@ class MSFAutoroute(MSFAction):
         hostname = state.ip_addresses[self.ip_address]
         print(hostname)
         # breakdown list comp
-        session_hosts = [ s.host for s in state.sessions[self.agent] ]
+        #session_hosts = [ s.host for s in state.sessions[self.agent] ]
         # Documentation claims Autoroute can also work on SSH-type sessions.
-        host_sessions = [ s for s in state.sessions[self.agent] if s.host == hostname and s.session_type == SessionType.METERPRETER ]
+        host_sessions = [ s for s in state.sessions[self.agent] if s.ip_addr == self.ip_address and s.session_type == SessionType.METERPRETER ]
         print(host_sessions)
         if len(host_sessions) == 0:
             obs.set_success(False)
@@ -62,7 +62,7 @@ class MSFAutoroute(MSFAction):
                 # add session observation
                 print("updated host session state")
                 print(sess.get_state())
-                obs.add_session_info(hostid=sess.host, session_id=sess.ident, session_type=sess.session_type, agent=sess.agent, routes=sess.routes, username=sess.username, pid=sess.pid, active=sess.active)
+                obs.add_session_info(hostid=sess.host, session_id=sess.ident, session_type=sess.session_type, agent=sess.agent, routes=sess.routes, username=sess.username, active=sess.active)
                 #msf_session.routes[self.ip_address] = interfaces
         else:
             obs.set_success(False)
@@ -107,8 +107,9 @@ class MSFAutoroute(MSFAction):
             # get existing session
             sess = sessions[session]
             print(sess)
+            user = session_handler.get_session_user(session)
             #obs.add_session_info(hostid=self.ip_address, session_id=session, session_type=sess.session_type, agent=sess.agent, routes=routes, username=sess.username, pid=sess.pid, active=sess.active)
-            obs.add_session_info(hostid=str(self.ip_address), session_id=session, routes=routes, session_type=sess["type"], username=sess["username"],agent=self.agent)
+            obs.add_session_info(hostid=str(self.ip_address), session_id=int(session), routes=routes, session_type=sess["type"], username=user,agent=self.agent)
             #obs.add_session_info(routes=routes, **sessions[session].get_state())
 
         return obs

@@ -657,8 +657,10 @@ class Observation:
             new_session["Routes"] = routes
 
         if pid is None:
+            # we now no longer use unknown PIDs
             # pid 0 represents unknown PID
-            pid = kwargs.get("PID", 0)
+            #pid = kwargs.get("PID", 0)
+            pass
         if pid is not None:
             new_session["PID"] = pid
             # again, this shoul be handled in the State/Action not the observation

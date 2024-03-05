@@ -47,7 +47,7 @@ class MSFJuicyPotato(MSFPrivilegeEscalation):
         server_address = server_interface.ip_address
        
         hostname = state.ip_addresses[self.ip_address]
-        target_sessions = [ s for s in state.sessions[self.agent] if s.host == hostname ]
+        target_sessions = [ s for s in state.sessions[self.agent] if s.ip_addr == self.ip_address ]
         print("sessions on the target host")
         print(target_sessions)
         if len(target_sessions) == 0:

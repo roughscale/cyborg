@@ -138,9 +138,14 @@ class Host(Entity):
         return port
 
     def add_session(self, username, ident, agent, parent, timeout=0, pid=None, session_type="Shell", name=None, routes=[], artifacts=None,
-            is_escalate_sandbox:bool=False):
+            is_escalate_sandbox:bool=False, ip_addr=None):
         #print("host add session ident")
         #print(ident)
+        # TODO: check that supplied ip_addr is within the interfaces of the Host
+        # if ip_addr is not supplied, default to primary interface of the Host
+        if ip_addr is None: 
+            primary_interface = [ i.ip_address for i in self.interfaces if i.name == "eth0" ]
+            ip_addr = primary_interface[0]
         if parent is not None:
             parent_id = parent.ident
         else:
@@ -151,7 +156,7 @@ class Host(Entity):
             # where pid is specified
             pid = self.add_process(name=str(session_type), user=username, pid=pid).pid
         if session_type == 'MetasploitServer':
-            new_session = MSFServerSession(host=self.hostname, user=username, ident=ident, agent=agent, process=pid,
+            new_session = MSFServerSession(host=self.hostname, ip_addr=ip_addr, user=username, ident=ident, agent=agent, process=pid,
                     timeout=timeout, session_type=session_type, name=name, routes=routes)
         elif session_type == 'RedAbstractSession':
             new_session = RedAbstractSession(host=self.hostname, agent=agent, username=username, ident=ident, pid=pid,
@@ -166,7 +171,7 @@ class Host(Entity):
         #    new_session = MSFSession(host=self.hostname, agent=agent, username=username, ident=ident, pid=pid,
         #                         timeout=timeout, parent=parent_id, session_type=session_type, name=name, is_escalate_sandbox=is_escalate_sandbox)
         else:
-            new_session = Session(host=self.hostname, agent=agent, username=username, ident=ident, pid=pid,
+            new_session = Session(host=self.hostname, ip_addr=ip_addr, agent=agent, username=username, ident=ident, pid=pid,
                                   timeout=timeout, parent=parent_id, session_type=session_type, name=name, is_escalate_sandbox=is_escalate_sandbox, routes=routes)
 
         #print(new_sessioa)

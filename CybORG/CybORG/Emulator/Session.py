@@ -67,7 +67,14 @@ class MSFSessionHandler():
             return None
         else:
             session = sessions[str(session_id)]
-            return session["username"]
+            # session username s the username at the client end of the session
+            # extract username from session info
+            info = session["info"]
+            user_match = re.match("(.*)@(.*)",info)
+            if user_match is None:
+                return session["username"]
+            else:
+                return user_match[1].strip() # remove whitespace
 
     def execute_module(self, mtype: str, mname:str, opts: dict, payload_name=None, payload_opts=None):
 

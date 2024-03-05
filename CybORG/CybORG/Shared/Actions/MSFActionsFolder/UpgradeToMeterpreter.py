@@ -32,7 +32,9 @@ class UpgradeToMeterpreter(MSFAction):
         from_host = server_session.host
 
         # find_session_by_ip_addr
-        target_sessions = [ s for s in state.sessions[self.agent] if s.host == state.ip_addresses[self.ip_address]]
+        # NOT find by hostname (given multi-homed hosts)
+        #target_sessions = [ s for s in state.sessions[self.agent] if s.host == state.ip_addresses[self.ip_address]]
+        target_sessions = [ s for s in state.sessions[self.agent] if s.ip_addr == self.ip_address]
         # identify suitable suitable
         suitable_sessions = []
         for qual_session in target_sessions: 
@@ -81,18 +83,19 @@ class UpgradeToMeterpreter(MSFAction):
         target_process = target_host.add_process(name=process_name, path="/tmp", user=session_to_upgrade.username, ppid=session_to_upgrade.pid)
 
         local_port = state.hosts[hostname].get_ephemeral_port()
+        lport = random.randint(4400,4500)
         new_session = state.add_session(host=target_host.hostname, agent=self.agent,
                                         user=session_to_upgrade.username, session_type="meterpreter",
                                         parent=server_session, process=target_process.pid)
 
         new_connection = {"Application Protocol": AppProtocol.TCP,
                           "remote_address": server_address,
-                          "remote_port": 4433,
+                          "remote_port": lport,
                           "local_address": str(self.ip_address),
                           "local_port": local_port}
         target_process.connections.append(new_connection)
 
-        remote_port = {"local_port": 4433,
+        remote_port = {"local_port": lport,
                        "Application Protocol": AppProtocol.TCP,
                        "local_address": server_address,
                        "remote_address": str(self.ip_address),
@@ -111,7 +114,7 @@ class UpgradeToMeterpreter(MSFAction):
         #                remote_port=local_port)
         obs.add_process(hostid=hostname, local_address=str(self.ip_address), local_port=local_port,
                         remote_address=server_address,
-                        remote_port=4433)
+                        remote_port=lport)
         return obs
 
     def emu_execute(self, session_handler) -> Observation:
@@ -148,8 +151,9 @@ class UpgradeToMeterpreter(MSFAction):
                 # date = datetime.fromisoformat(split[10] + ' ' + split[11])
                 obs.add_process(hostid=str(self.ip_address), local_port=local_port, remote_port=remote_port,
                                 local_address=local_address, remote_address=remote_address)
-                obs.add_process(hostid=str(remote_address), remote_port=local_port, local_port=remote_port,
-                                remote_address=local_address, local_address=remote_address)
+                # disable server side process obs for now
+                #obs.add_process(hostid=str(remote_address), remote_port=local_port, local_port=remote_port,
+                #                remote_address=local_address, local_address=remote_address)
 
                 # print(f'session: {session}')
                 # print(f'local_port: {local_port}')

@@ -88,5 +88,5 @@ agent.agent.model.learn(total_timesteps=total_steps,log_interval=1,callback=call
 end=time.time()
 print("Episodes end: {}".format(time.ctime(end)))
 # save model to file
-agent.agent.dqn.save(curr_dir+"/exports/dqn.zip")
+agent.agent.model.save(curr_dir+"/exports/dqn.zip")
 

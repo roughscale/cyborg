@@ -24,7 +24,7 @@ class MeterpreterIPConfig(MeterpreterAction):
         # identify host by ip
         target_hosts = [ h for h,v in state.hosts.items() for i in v.interfaces if i.ip_address == self.ip_address ]
         target_host = target_hosts[0]
-        target_sessions = [ s for s in state.sessions[self.agent] if s.host == target_host and s.session_type == SessionType.METERPRETER]
+        target_sessions = [ s for s in state.sessions[self.agent] if s.ip_addr == self.ip_address and s.session_type == SessionType.METERPRETER]
         if len(target_sessions) == 0:
             obs.set_success(False)
             return obs
