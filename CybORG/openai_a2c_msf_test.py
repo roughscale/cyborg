@@ -9,6 +9,7 @@ from CybORG.Shared.State import State
 from stable_baselines3.common.env_util import make_vec_env
 import inspect
 import sys
+import os
 import random
 import time
 import copy
@@ -20,35 +21,52 @@ from pprint import pprint
 # set vars
 # initialise Q learning parameters
 gamma = .99   # discount rate
-total_steps = 500000
-n_steps=5 # 5 default
-n_envs = 16
-norm_adv = True # original impl did NOT normalise.
+total_steps = 1000000
+n_steps=512 # 5 default
+n_envs = 1
+norm_adv = False # original impl did NOT normalise.
 # what are the reasons for normalising advantage.
 # Perhaps it is required in the synchronous implementation??
 vf_coef=0.5 # 0.5 default
 gae_lambda=1.0 # 0.95 default, 1 represents classic advantage calculation
 ent_coef=0.0 # 0.0 default # regularisation 
 
-#action_module = sys.modules['CybORG.Shared.Actions']
-#print(dir(action_module))
+# set max params for observation vector sizei
+# other than MAX_HOSTS, they are max per host
+env_config = {
+   "fully_obs": True,
+   "max_params": {
+        "MAX_HOSTS": 5,
+        "MAX_PROCESSES": 5,
+        "MAX_CONNECTIONS": 2,
+        "MAX_VULNERABILITIES": 1,
+        "MAX_INTERFACES": 2,
+        "MAX_SESSIONS": 5,
+        "MAX_USERS": 5,
+        "MAX_FILES": 0,
+        "MAX_GROUPS": 0,
+        "MAX_PATCHES": 0
+   }
+}
+
 path = str(inspect.getfile(CybORG))
-#print(path)
-#path = path[:-10] + "/Shared/Scenarios/Scenario1b.yaml"
+curr_dir = os.getcwd()
+
 # TestScenario is Scenario1b with only a Red RedMeanderAgent config
 # seems that Scenarios MUST have agents declared ??
 # seems that the actions listed in an Agent spec are actually Agent classes??
 # this is going to cause some difficulties in generalising actions!
 path = path[:-10] + "/Shared/Scenarios/TestMSFSessionA2CScenario.yaml"
+
 #print(path)
 
-cyborg = CybORG(path,'sim',fully_obs=True)
+cyborg = CybORG(path,'sim',env_config=env_config)
 # print env controller network/environment state (ie not agent state!)
 environment=cyborg.environment_controller.state
 #print()
 # the following returns the AgentInterface
 agent=cyborg.environment_controller.agent_interfaces["Red"]
-wrapped_env = FixedFlatStateWrapper(EnumActionWrapper(cyborg))
+wrapped_env = FixedFlatStateWrapper(EnumActionWrapper(cyborg), max_params=env_config["max_params"])
 #env = OpenAIGymWrapper(env=wrapped_env, agent_name="Red")
 env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n_envs=n_envs)
 # EnumAction Object
@@ -87,3 +105,6 @@ print()
 agent.agent.model.learn(total_timesteps=total_steps,log_interval=1,callback=callback)
 end=time.time()
 print("Episodes end: {}".format(time.ctime(end)))
+# save model to file
+agent.agent.model.save(curr_dir+"/exports/a2c.zip")
+

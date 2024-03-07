@@ -139,7 +139,7 @@ class State:
           # using fixed size subnets (VLSM maybe viable alternative if required)
           maximum_subnet_size = max([scenario.get_subnet_size(i) for i in scenario.subnets])
           subnets_cidrs = sample(
-            list(IPv4Network("10.0.0.0/16").subnets(new_prefix=32 - max(int(log2(maximum_subnet_size + 5)), 4))),
+            list(IPv4Network("192.168.0.0/16").subnets(new_prefix=32 - max(int(log2(maximum_subnet_size + 5)), 4))),
             len(scenario.subnets))
           #print("_initialise state subnet/ip generation")
           for subnet_name in scenario.subnets:
@@ -238,6 +238,24 @@ class State:
         #    print(sn.get_state())
         sessions = [s for s in self.sessions[agent] if s.host == hostname]
         return sessions
+
+    def get_session_by_remote_cidr(self, remote_cidr: str, agent: str, session_type = None):
+        sessions = [ s for s in self.sessions[agent] if s.session_type in (SessionType.MSF_SHELL, SessionType.METERPRETER) ]
+        print(sessions)
+        # first, check if session target_host is within the cidr
+        remote_sessions = [ s for s in sessions if IPv4Network(s.ip_addr) in IPv4Network(remote_cidr) ]
+        print(remote_sessions)
+        # otherwise, check if there is a route in a session that can be used
+        if len(remote_sessions) == 0:
+            remote_sessions = [ s.ident  for s in sessions for r in s.routes if r != '' and IPv4Network(remote_cidr) == IPv4Network(r)]
+            print(remote_sessions)
+        if session_type is not None:
+            type_sessions = [ s.ident for s in sessions if s.session_type == session_type ]
+            print(type_sessions)
+            remote_sessions = [ s.ident for s in remote_sessions for t in type_sessions if s.ident == t ]
+            print(remote_sessions)
+        return remote_sessions
+
 
     # mandated process being supplied to function
     def add_session(self, host: str, user: str, agent: str, parent: int, process: int, session_type: str = "shell",

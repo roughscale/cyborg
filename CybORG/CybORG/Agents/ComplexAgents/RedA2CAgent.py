@@ -54,7 +54,7 @@ class RedA2CAgent(BaseAgent):
         input_size=env.observation_space.shape[0]
         #net_arch=[input_size]
         #net_arch=[1024,256,64]
-        net_arch=[input_size]
+        net_arch=[input_size,input_size]
 
         learning_rate=float(0.0001)
         # LR is provided as a schedule
@@ -99,6 +99,13 @@ class RedA2CAgent(BaseAgent):
         #print(self.num_actions)
 
         self.learn_callback = LearnCallback(self.model)
+
+    def load(self,classtype,file):
+        # A2C only has one model class type.
+        ModelClass = A2C
+        print(ModelClass.load)
+        self.model = ModelClass.load(file)
+        return self
 
 class LearnCallback(BaseCallback):
 

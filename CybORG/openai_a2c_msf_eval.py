@@ -8,6 +8,7 @@ from CybORG.Shared.Results import Results
 from CybORG.Shared.State import State
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
+#from stable_baselines3.a2c.policies import MlpPolicy
 import inspect
 import sys
 import time
@@ -40,8 +41,8 @@ n_envs=1
 # seems that Scenarios MUST have agents declared ??
 # seems that the actions listed in an Agent spec are actually Agent classes??
 # this is going to cause some difficulties in generalising actions!
-scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionDQNScenario.yaml"
-model_path=path[:-17] + "/exports/dqn_20240306_2300"
+scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionA2CScenario.yaml"
+model_path=path[:-17] + "/exports/a2c_20240307_0700.zip"
 #print(path)
 
 cyborg = CybORG(scenario_path,'sim',env_config=env_config)
@@ -61,7 +62,7 @@ env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n
 print(env.action_space) # Discrete
 
 # load agent from export file
-model=agent.agent.load("DuelingDQN",model_path)
+model=agent.agent.load("A2C",model_path)
 
 # initialise agent learning
 #agent.agent.initialise(env,gamma,initial_epsilon,final_epsilon,total_steps,double,dueling)

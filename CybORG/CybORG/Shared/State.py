@@ -191,13 +191,22 @@ class State(Observation):
                     s["Type"] == session_info.get("Type") and \
                     s["Username"] == session_info.get("Username") ]
             if len(match_sessions) > 0:
-                print("replacing match session")
-                print(match_sessions)
+                # replacing session could override previous session routes
+                # ignore matching session in this case
+                #print(match_sessions)
                 for i in match_sessions:
+                  ignore=False
                   # replace in State with most current session
+                  existing_session = self.data['hosts'][hostid]["Sessions"][i]
+                  if "routes" in existing_session and "routes" in session_info:
+                      if len(existing_session["routes"]) == len(session_info["routes"]):
+                          print("ignoring matching session")
+                          ignore = True
                   print(session_info)
-                  self.data['hosts'][hostid]["Sessions"][i] = self.get_session_info(hostid=hostid,agent=agent,**session_info)
-                  return
+                  if not ignore:
+                      print("replacing match session")
+                      self.data['hosts'][hostid]["Sessions"][i] = self.get_session_info(hostid=hostid,agent=agent,**session_info)
+                return
             print(session_info.get("Active"))
             if session_info.get("Active") == False:
                 print("removing inactive session")

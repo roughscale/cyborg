@@ -27,12 +27,12 @@ class MSFPingsweep(MSFScanner):
         from_host = session.host
 
         # get sessions from state 
-        # sessions = state.get_sessions_by_remote_ip(self.ip_address, agent="Red)
-        # if len(sessions) == 0:
-        #  obs.set_success(False)
-        #   return obs
-        # else:
-        #  target_session = sessions[0]
+        sessions = state.get_session_by_remote_cidr(self.subnet, agent="Red")
+        if len(sessions) == 0:
+           obs.set_success(False)
+           return obs
+
+        # Valid session to execute pingsweep
 
         #if self.target_session in state.sessions['Red']:
         #    target_session = state.sessions['Red'][self.target_session]
