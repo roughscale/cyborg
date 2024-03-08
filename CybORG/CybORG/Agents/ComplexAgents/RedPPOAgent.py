@@ -63,7 +63,7 @@ class RedPPOAgent(BaseAgent):
         # LR is provided as a schedule
         lr_schedule=constant_fn(learning_rate)
 
-        print("Policy Class: {}".format(self.__class__.__name__))
+        print("Model Class: {}".format(self.__class__.__name__))
         print("Hyperparameters:")
         print("Number Steps {}".format(n_steps))
         print("Input Size {}".format(input_size))

@@ -9,6 +9,7 @@ from CybORG.Shared.State import State
 from stable_baselines3.common.env_util import make_vec_env
 import inspect
 import sys
+import os
 import random
 import time
 import copy
@@ -20,44 +21,59 @@ from pprint import pprint
 # set vars
 # initialise Q learning parameters
 gamma = .99   # discount rate
-total_steps = 600000
-n_steps=1024 # 1024 default. 128 used in Atari PPO
+total_steps = 400000 # matches TRPO
+n_steps=1024 # 1024 default. 128 used in Atari PPO. # matches TRPO
 # rollout_steps = n_steps * n_envs
 # batch_size must be a multiple of rollout_steps
 # batch_size must be > 1 if norm_adv is True
-batch_size=1024 # 128 default  32x8 spec in Atari. This is now per env
-n_epochs=10 # 10 default. atari PPO spec is 3. didn't help
+batch_size=1024 # 128 default  32x8 spec in Atari. This is now per env # matches TRPO
+n_epochs=10 # 10 default. atari PPO spec is 3. didn't help # matches TRPO
 clip_range=0.1 # 0.2 default. atari PPO spec is 0.1 x annealed 1 to 0
-n_envs = 2 # atari PPO is 8
-norm_adv = False # normalise adv across batch samples. Not in original paper
+n_envs = 1 # atari PPO is 8 # matches TRPO
+norm_adv = False # normalise adv across batch samples. Not in original paper # matches TRPO
 vf_coef=1.0 # 0.5 default. atari spec is 1
-gae_lambda=1.0 # 0.95 default. atari spec is 0.95
-ent_coef=0.01 # 0.0 default. atari spec is 0.01
+gae_lambda=1.0 # 0.95 default. atari spec is 0.95 # matches TRPO
+ent_coef=0.0 # 0.0 default. atari spec is 0.01
 #target_kl=0.01 # float or None (default)
-target_kl=None
+target_kl=0.01 # matches TRPO
 # net_arch is expressed as proportions of the input vector size
 #net_arch = [ 1.0, 0.5]
-net_arch = [1.0]
+net_arch = [1.0, 1.0] # matches TRPO
 
-#action_module = sys.modules['CybORG.Shared.Actions']
-#print(dir(action_module))
+# set max params for observation vector sizei
+# other than MAX_HOSTS, they are max per host
+env_config = {
+   "fully_obs": True,
+   "max_params": {
+        "MAX_HOSTS": 5,
+        "MAX_PROCESSES": 5,
+        "MAX_CONNECTIONS": 2,
+        "MAX_VULNERABILITIES": 1,
+        "MAX_INTERFACES": 2,
+        "MAX_SESSIONS": 5,
+        "MAX_USERS": 5,
+        "MAX_FILES": 0,
+        "MAX_GROUPS": 0,
+        "MAX_PATCHES": 0
+   }
+}
+
 path = str(inspect.getfile(CybORG))
-#print(path)
-#path = path[:-10] + "/Shared/Scenarios/Scenario1b.yaml"
+curr_dir = os.getcwd()
+
 # TestScenario is Scenario1b with only a Red RedMeanderAgent config
 # seems that Scenarios MUST have agents declared ??
 # seems that the actions listed in an Agent spec are actually Agent classes??
 # this is going to cause some difficulties in generalising actions!
 path = path[:-10] + "/Shared/Scenarios/TestMSFSessionPPOScenario.yaml"
-#print(path)
 
-cyborg = CybORG(path,'sim',fully_obs=True)
+cyborg = CybORG(path,'sim',env_config=env_config)
 # print env controller network/environment state (ie not agent state!)
 environment=cyborg.environment_controller.state
 #print()
 # the following returns the AgentInterface
 agent=cyborg.environment_controller.agent_interfaces["Red"]
-wrapped_env = FixedFlatStateWrapper(EnumActionWrapper(cyborg))
+wrapped_env = FixedFlatStateWrapper(EnumActionWrapper(cyborg),max_params=env_config["max_params"])
 #env = OpenAIGymWrapper(env=wrapped_env, agent_name="Red")
 env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n_envs=n_envs)
 # EnumAction Object
@@ -96,3 +112,6 @@ print()
 agent.agent.model.learn(total_timesteps=total_steps,log_interval=1,callback=callback)
 end=time.time()
 print("Episodes end: {}".format(time.ctime(end)))
+# save model to file
+agent.agent.model.save(curr_dir+"/exports/ppo.zip")
+

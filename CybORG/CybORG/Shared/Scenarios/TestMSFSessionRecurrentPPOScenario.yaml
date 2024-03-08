@@ -27,19 +27,11 @@ Agents:
     #- TomcatCredentialScanner
     - MSFPortscan
     - MSFPingsweep
-    - MSFV4L2KernelExploit # linux based priv esc.  Need to implement MSF for emulated case
+    - MSFSubUidShell # linux based priv esc.  Need to implement MSF for emulated case
     - MSFJuicyPotato # windows based priv esc. Need to implement MSF in emulated case.
-    #- ServicePersistenceWindows
-    ##- UpgradeToMeterpreter
-    #    - GetUid
-    #- GetPid
-    #- GetShell
-    #- LocalTime
-    #- MeterpreterPS
-    #- SysInfo
-    #- MeterpreterReboot
-    ##- MeterpreterIPConfig
-    ##- MSFAutoroute
+    - UpgradeToMeterpreter
+    - MeterpreterIPConfig
+    - MSFAutoroute
     agent_type: RedRecurrentPPOAgent
     reward_calculator_type: Goal
     starting_sessions:
@@ -53,6 +45,8 @@ Agents:
       type: MSF_SHELL
       name: MSFShell
       pid: 1500
+      ident: 0
+      routes: [ External ]
     wrappers: []  
 Hosts:
   Attacker0:

@@ -45,7 +45,13 @@ class RedRecurrentPPOAgent(BaseAgent):
             batch_size=128, # default
             n_epochs=10, # default
             clip_range=0.2, # default
-            n_envs=1
+            n_envs=1,
+            gae_lambda=0.95, # default
+            normalize_advantage=True, # default
+            ent_coef= 0.0, # default
+            vf_coef=0.5, # default
+            target_kl=None, # default
+            net_arch = [1.0, 1.0],
             ):
         """ set up recurrent PPO """
         """ lr_schedule needs to be of Schedule type """
@@ -58,12 +64,13 @@ class RedRecurrentPPOAgent(BaseAgent):
         input_size=self.env.observation_space.shape[0]
         #net_arch=[input_size]
         #net_arch=[1024,256,64]
-        net_arch=[input_size,int(input_size/2)]
+        net_arch=[ int(input_size * n) for n in net_arch ]
 
         learning_rate=float(0.0001)
         # LR is provided as a schedule
         lr_schedule=constant_fn(learning_rate)
 
+        print("Model Class: {}".format(self.__class__.__name__))
         print("Hyperparameters:")
         print("Number Steps {}".format(n_steps))
         print("Input Size {}".format(input_size))
@@ -73,6 +80,11 @@ class RedRecurrentPPOAgent(BaseAgent):
         print("Batch Size: {}".format(batch_size))
         print("Number of Parallel Envs: {}".format(n_envs))
         print("Learning Rate (Constant): {}".format(learning_rate))
+        print("GAE lambda: {}".format(gae_lambda))
+        print("Normalise Advantage: {}".format(normalize_advantage))
+        print("Entropy Co-efficient: {}".format(ent_coef))
+        print("Value Function Co-efficient: {}".format(vf_coef))
+        print("Target KL: {}".format(target_kl))
         print()
 
 
@@ -85,6 +97,11 @@ class RedRecurrentPPOAgent(BaseAgent):
                 n_epochs = n_epochs,
                 gamma=gamma,
                 clip_range=clip_range,
+                gae_lambda=gae_lambda,
+                normalize_advantage=normalize_advantage,
+                ent_coef=ent_coef,
+                vf_coef=vf_coef,
+                target_kl=target_kl,
                 max_grad_norm=0.5, #default
                 tensorboard_log=None, #default
                 policy_kwargs={"net_arch": net_arch}, #default is None
