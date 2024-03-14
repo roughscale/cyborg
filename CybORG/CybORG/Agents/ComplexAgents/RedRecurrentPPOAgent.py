@@ -41,6 +41,7 @@ class RedRecurrentPPOAgent(BaseAgent):
     def initialise(self, 
             env, 
             gamma,
+            total_timesteps,
             n_steps=128, # default
             batch_size=128, # default
             n_epochs=10, # default
@@ -52,6 +53,7 @@ class RedRecurrentPPOAgent(BaseAgent):
             vf_coef=0.5, # default
             target_kl=None, # default
             net_arch = [1.0, 1.0],
+            tensorboard_log = None
             ):
         """ set up recurrent PPO """
         """ lr_schedule needs to be of Schedule type """
@@ -72,6 +74,7 @@ class RedRecurrentPPOAgent(BaseAgent):
 
         print("Model Class: {}".format(self.__class__.__name__))
         print("Hyperparameters:")
+        print("Total Timesteps {}".format(total_timesteps))
         print("Number Steps {}".format(n_steps))
         print("Input Size {}".format(input_size))
         print("Net Arch: {}".format(net_arch))
@@ -103,7 +106,7 @@ class RedRecurrentPPOAgent(BaseAgent):
                 vf_coef=vf_coef,
                 target_kl=target_kl,
                 max_grad_norm=0.5, #default
-                tensorboard_log=None, #default
+                tensorboard_log=tensorboard_log,
                 policy_kwargs={"net_arch": net_arch}, #default is None
                 verbose=1,
                 seed=None, #default

@@ -21,7 +21,7 @@ from pprint import pprint
 # set vars
 # initialise Q learning parameters
 gamma = .99   # discount rate
-total_steps = 400000 # matches TRPO
+total_steps = 300000 # matches TRPO
 n_steps=1024 # 1024 default. 128 used in Atari PPO. # matches TRPO
 # rollout_steps = n_steps * n_envs
 # batch_size must be a multiple of rollout_steps
@@ -60,6 +60,7 @@ env_config = {
 
 path = str(inspect.getfile(CybORG))
 curr_dir = os.getcwd()
+tensorboard_log="./runs/ppo/"
 
 # TestScenario is Scenario1b with only a Red RedMeanderAgent config
 # seems that Scenarios MUST have agents declared ??
@@ -101,7 +102,20 @@ action_space=env.action_space
 
 # initialise agent learning
 #total_steps = num_episodes * step_limit_reached
-agent.agent.initialise(env,gamma=gamma,n_steps=n_steps,batch_size=int(batch_size*n_envs), n_epochs=n_epochs, clip_range=clip_range, n_envs=n_envs,ent_coef=ent_coef,vf_coef=vf_coef,normalize_advantage=norm_adv,gae_lambda=gae_lambda,target_kl=target_kl,net_arch=net_arch)
+agent.agent.initialise(env,gamma=gamma,
+        n_steps=n_steps,
+        batch_size=int(batch_size*n_envs),
+        n_epochs=n_epochs,
+        clip_range=clip_range,
+        n_envs=n_envs,
+        ent_coef=ent_coef,
+        vf_coef=vf_coef,
+        normalize_advantage=norm_adv,
+        gae_lambda=gae_lambda,
+        target_kl=target_kl,
+        net_arch=net_arch,
+        tensorboard_log=tensorboard_log)
+
 callback=agent.agent.learn_callback
 
 done = False

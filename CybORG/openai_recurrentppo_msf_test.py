@@ -38,6 +38,7 @@ target_kl=0.01 # matches TRPO
 # net_arch is expressed as proportions of the input vector size
 #net_arch = [ 1.0, 0.5]
 net_arch = [1.0, 1.0] # matches TRPO
+tensorboard_log = "./runs/recurrent_ppo"
 
 # set max params for observation vector sizei
 # other than MAX_HOSTS, they are max per host
@@ -92,7 +93,22 @@ env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n
 print(env.action_space) # Discrete
 #print(env.observation_space) # Box
 #total_steps = num_episodes * step_limit_reached
-agent.agent.initialise(env,gamma=gamma,n_steps=n_steps,batch_size=int(batch_size*n_envs), n_epochs=n_epochs, clip_range=clip_range, n_envs=n_envs,ent_coef=ent_coef,vf_coef=vf_coef,normalize_advantage=norm_adv,gae_lambda=gae_lambda,target_kl=target_kl,net_arch=net_arch)
+agent.agent.initialise(env,
+        total_timesteps=total_steps,
+        gamma=gamma,
+        n_steps=n_steps,
+        batch_size=int(batch_size*n_envs),
+        n_epochs=n_epochs,
+        clip_range=clip_range,
+        n_envs=n_envs,
+        ent_coef=ent_coef,
+        vf_coef=vf_coef,
+        normalize_advantage=norm_adv,
+        gae_lambda=gae_lambda,
+        target_kl=target_kl,
+        net_arch=net_arch,
+        tensorboard_log=tensorboard_log)
+
 callback=agent.agent.learn_callback
 done = False
 

@@ -39,30 +39,15 @@ env_config = {
         "MAX_FILES": 0,
         "MAX_GROUPS": 0,
         "MAX_PATCHES": 0
-   },
-   "subnets": {
-           "Attacker": "192.168.10.0/26",
-           "External": "192.168.254.0/26",
-           "Internal": "192.168.254.64/26"
-   },
-   "hosts": {
-           "Attacker": {
-              "Attacker0": "192.168.10.43"
-            },
-           "External": {
-              "External0": "192.168.254.35"
-           },
-           "Internal": {
-              "External0": "192.168.254.110",
-              "Internal0": "192.168.254.90",
-              "Internal1": "192.168.254.108",
-              "Internal2": "192.168.254.79"
-           }
-
    }
-
 }
 
+# get emulated config from file
+emu_conf_file = open("aws_config.json","r")
+emu_config = json.loads(emu_conf_file)
+env_config.update(emu_config)
+
+print(env_config)
 path = str(inspect.getfile(CybORG))
 n_envs=1
 

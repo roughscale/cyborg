@@ -50,7 +50,8 @@ class RedPPOAgent(BaseAgent):
             vf_coef = 0.5, # default
             target_kl = None, # default
             net_arch = [ 1.0, 1.0 ],
-            n_envs=1
+            n_envs=1,
+            tensorboard_log=None
             ):
         """ set up PPO """
         """ lr_schedule needs to be of Schedule type """
@@ -86,9 +87,9 @@ class RedPPOAgent(BaseAgent):
                 policy=MlpPolicy,
                 env=env,
                 learning_rate=lr_schedule, 
-                n_steps = n_steps, # default 2048
-                batch_size = batch_size, # default 64
-                n_epochs = n_epochs, # default 10
+                n_steps = n_steps,
+                batch_size = batch_size,
+                n_epochs = n_epochs,
                 gamma=gamma,
                 gae_lambda=gae_lambda,
                 clip_range=clip_range,
@@ -96,9 +97,9 @@ class RedPPOAgent(BaseAgent):
                 ent_coef=ent_coef,
                 vf_coef=vf_coef,
                 max_grad_norm=0.5, #default
-                target_kl = target_kl, #default
-                tensorboard_log=None, #default
-                policy_kwargs={"net_arch": net_arch}, #default is None
+                target_kl = target_kl,
+                tensorboard_log=tensorboard_log,
+                policy_kwargs={"net_arch": net_arch},
                 verbose=1,
                 seed=None, #default
                 device="auto", #default
