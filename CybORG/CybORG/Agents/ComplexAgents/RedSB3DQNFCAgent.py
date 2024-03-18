@@ -40,7 +40,7 @@ class RedSB3DQNFCAgent(BaseAgent):
     def set_initial_values(self, action_space, observation):
         pass
 
-    def initialise(self, env, gamma, initial_eps, final_eps, total_steps, double, dueling):
+    def initialise(self, env, gamma, initial_eps, final_eps, total_steps, double=False, dueling=False, tensorboard_log=None):
         """ set up DQN """
         """ lr_schedule needs to be of Schedule type """
         self.env = env
@@ -125,7 +125,7 @@ class RedSB3DQNFCAgent(BaseAgent):
                 exploration_initial_eps=initial_eps,
                 exploration_final_eps=final_eps,
                 max_grad_norm=10, #default
-                tensorboard_log=None, #default
+                tensorboard_log=tensorboard_log,
                 policy_kwargs={"net_arch": net_arch}, #default is None
                 verbose=1,
                 seed=None, #default

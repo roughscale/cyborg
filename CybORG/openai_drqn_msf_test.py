@@ -34,10 +34,11 @@ num_episodes=1000 # NOT USED. Total steps is used
 #num_evals=100
 
 # given larger action space.
-total_steps=500000
+total_steps=1000000
 # at the moment, DRQN doesn't use double or dueling.
 #double=True
 #dueling=False
+tensorboard_log=None #"./runs/drqn/"
 
 n_envs = 1
 
@@ -86,7 +87,7 @@ agent.agent.initialise(
         final_eps=final_epsilon,
         total_steps=total_steps,
         batch_size=batch_size,
-        tensorboard_log="./runs/drqn/")
+        tensorboard_log=tensorboard_log)
 
 callback=agent.agent.learn_callback
 

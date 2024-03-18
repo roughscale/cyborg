@@ -23,6 +23,7 @@ final_epsilon = 0.02  # explore/exploit factor
 total_steps=200000
 double=False
 dueling=True
+tensorboard_log="./runs/dqn"
 
 # set n_envs to 1 initially. No parallelisation
 n_envs=1
@@ -78,7 +79,14 @@ env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n
 print(env.action_space) # Discrete
 
 # initialise agent learning
-agent.agent.initialise(env,gamma,initial_epsilon,final_epsilon,total_steps,double,dueling)
+agent.agent.initialise(env,
+        gamma=gamma,
+        initial_eps=initial_epsilon,
+        final_eps=final_epsilon,
+        total_steps=total_steps,
+        dueling=dueling,
+        tensorboard_log=tensorboard_log)
+
 callback=agent.agent.learn_callback
 
 start=time.time()

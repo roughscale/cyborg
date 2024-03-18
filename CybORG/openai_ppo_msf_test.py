@@ -21,7 +21,7 @@ from pprint import pprint
 # set vars
 # initialise Q learning parameters
 gamma = .99   # discount rate
-total_steps = 300000 # matches TRPO
+total_steps = 400000 # matches TRPO
 n_steps=1024 # 1024 default. 128 used in Atari PPO. # matches TRPO
 # rollout_steps = n_steps * n_envs
 # batch_size must be a multiple of rollout_steps
