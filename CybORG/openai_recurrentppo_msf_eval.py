@@ -13,25 +13,12 @@ import sys
 import time
 import copy
 import os
-import json
-import psutil
-import subprocess
-
-# until we learn how to reset the msfrpcd state (ie console and session ids)
-# start msfrcpd
-# this is a subprocess is attached to this process so will terminate when this process terminates
-msfrcpd = subprocess.call(["/opt/metasploit-framework/bin/msfrpcd","-P","password"],close_fds=True)
-# wait until service is available
-time.sleep(5)
-
-args = sys.argv
-model_name = args[1]
 
 # number of evaulation episodes
-n_eval_eps=1
+n_eval_eps=100
 
 env_config = {
-   "fully_obs": True,
+   "fully_obs": False,
    "max_params": {
         "MAX_HOSTS": 5,
         "MAX_PROCESSES": 5,
@@ -46,11 +33,6 @@ env_config = {
    }
 }
 
-# get emulated config from file
-emu_conf_file = open("aws_config.json","r")
-emu_config = json.load(emu_conf_file)
-env_config.update(emu_config)
-
 path = str(inspect.getfile(CybORG))
 n_envs=1
 
@@ -58,11 +40,11 @@ n_envs=1
 # seems that Scenarios MUST have agents declared ??
 # seems that the actions listed in an Agent spec are actually Agent classes??
 # this is going to cause some difficulties in generalising actions!
-scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionDQNScenario.yaml"
+scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionRecurrentPPOScenario.yaml"
 model_path=path[:-17] + "/exports/" + model_name
 #print(path)
 
-cyborg = CybORG(scenario_path,'aws', env_config=env_config)
+cyborg = CybORG(scenario_path,'sim',env_config=env_config)
 
 # print env controller network/environment state (ie not agent state!)
 #environment=cyborg.environment_controller.state
@@ -70,7 +52,7 @@ cyborg = CybORG(scenario_path,'aws', env_config=env_config)
 # the following returns the AgentInterface
 agent=cyborg.environment_controller.agent_interfaces["Red"]
 #unwrapped_action_space=agent.action_space.get_action_space()
-wrapped_env = FixedFlatStateWrapper(EnumActionWrapper(cyborg),max_params=env_config["max_params"])
+wrapped_env = FixedStateWrapper(EnumActionWrapper(cyborg),max_params=env_config["max_params"])
 #env = OpenAIGymWrapper(env=wrapped_env, agent_name="Red")
 # wraps env in DummyVecEnv VecEnv environment
 env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n_envs=n_envs)
@@ -79,7 +61,7 @@ env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n
 print(env.action_space) # Discrete
 
 # load agent from export file
-model=agent.agent.load("DuelingDQN",model_path)
+model=agent.agent.load("RecurrentPPO",model_path)
 
 # initialise agent learning
 #agent.agent.initialise(env,gamma,initial_epsilon,final_epsilon,total_steps,double,dueling)
@@ -96,8 +78,7 @@ end=time.time()
 print(mean_reward)
 print(std_reward)
 print("Evaluation end: {}".format(time.ctime(end)))
-print("Evaluation duration: {}s".format(end-start))
-
+print("Evalaution duration: {}s".format(end-start)
 # save model to file
 #agent.agent.dqn.save(curr_dir+"/exports/dqn.zip")
 

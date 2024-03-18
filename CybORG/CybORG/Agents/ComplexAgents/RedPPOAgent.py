@@ -112,6 +112,13 @@ class RedPPOAgent(BaseAgent):
 
         self.learn_callback = LearnCallback(self.model)
 
+    def load(self,classtype,file):
+        # PPO only has one model class type.
+        ModelClass = PPO
+        print(ModelClass.load)
+        self.model = ModelClass.load(file)
+        return self
+
 class LearnCallback(BaseCallback):
 
     def __init__(self, model):

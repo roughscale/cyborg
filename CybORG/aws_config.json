@@ -1,0 +1,1 @@
+{"subnets": {"Attacker": "192.168.10.0/26", "Internal": "192.168.72.64/26", "External": "192.168.72.0/26"}, "hosts": {"Attacker": {"Attacker0": "192.168.10.43"}, "Internal": {"Internal1": "192.168.72.82", "Internal0": "192.168.72.99", "External0": "192.168.72.80", "Internal2": "192.168.72.89"}, "External": {"External0": "192.168.72.53"}}}

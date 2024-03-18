@@ -120,6 +120,14 @@ class RedRecurrentPPOAgent(BaseAgent):
 
         self.learn_callback = LearnCallback(self.model)
 
+    def load(self,classtype,file,device="auto"):
+        # RecurrentPPO only has one model class type.
+        ModelClass = RecurrentPPO
+        #self.model = ModelClass.load(file,device=device)
+        #self.model = ModelClass.load(file,device=torch.device('cpu'))
+        self.model = ModelClass.load(file)
+        return self
+
 class LearnCallback(BaseCallback):
 
     def __init__(self, model):

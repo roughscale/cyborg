@@ -8,12 +8,12 @@ from CybORG.Shared.Results import Results
 from CybORG.Shared.State import State
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
+#from stable_baselines3.a2c.policies import MlpPolicy
 import inspect
 import sys
 import time
 import copy
 import os
-import json
 import psutil
 import subprocess
 
@@ -23,9 +23,6 @@ import subprocess
 msfrcpd = subprocess.call(["/opt/metasploit-framework/bin/msfrpcd","-P","password"],close_fds=True)
 # wait until service is available
 time.sleep(5)
-
-args = sys.argv
-model_name = args[1]
 
 # number of evaulation episodes
 n_eval_eps=1
@@ -43,13 +40,29 @@ env_config = {
         "MAX_FILES": 0,
         "MAX_GROUPS": 0,
         "MAX_PATCHES": 0
-   }
-}
+   },
+   "subnets": {
+           "Attacker": "192.168.10.0/26",
+           "External": "192.168.254.0/26",
+           "Internal": "192.168.254.64/26"
+   },
+   "hosts": {
+           "Attacker": {
+              "Attacker0": "192.168.10.43"
+            },
+           "External": {
+              "External0": "192.168.254.35"
+           },
+           "Internal": {
+              "External0": "192.168.254.110",
+              "Internal0": "192.168.254.90",
+              "Internal1": "192.168.254.108",
+              "Internal2": "192.168.254.79"
+           }
 
-# get emulated config from file
-emu_conf_file = open("aws_config.json","r")
-emu_config = json.load(emu_conf_file)
-env_config.update(emu_config)
+   }
+
+}
 
 path = str(inspect.getfile(CybORG))
 n_envs=1
@@ -58,11 +71,11 @@ n_envs=1
 # seems that Scenarios MUST have agents declared ??
 # seems that the actions listed in an Agent spec are actually Agent classes??
 # this is going to cause some difficulties in generalising actions!
-scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionDQNScenario.yaml"
-model_path=path[:-17] + "/exports/" + model_name
+scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionA2CScenario.yaml"
+model_path=path[:-17] + "/exports/a2c_20240307_0700"
 #print(path)
 
-cyborg = CybORG(scenario_path,'aws', env_config=env_config)
+cyborg = CybORG(scenario_path,'aws',env_config=env_config)
 
 # print env controller network/environment state (ie not agent state!)
 #environment=cyborg.environment_controller.state
@@ -79,7 +92,7 @@ env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n
 print(env.action_space) # Discrete
 
 # load agent from export file
-model=agent.agent.load("DuelingDQN",model_path)
+model=agent.agent.load("A2C",model_path)
 
 # initialise agent learning
 #agent.agent.initialise(env,gamma,initial_epsilon,final_epsilon,total_steps,double,dueling)
@@ -96,7 +109,6 @@ end=time.time()
 print(mean_reward)
 print(std_reward)
 print("Evaluation end: {}".format(time.ctime(end)))
-print("Evaluation duration: {}s".format(end-start))
 
 # save model to file
 #agent.agent.dqn.save(curr_dir+"/exports/dqn.zip")

@@ -8,12 +8,13 @@ from CybORG.Shared.Results import Results
 from CybORG.Shared.State import State
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
+#from stable_baselines3.a2c.policies import MlpPolicy
 import inspect
 import sys
 import time
 import copy
-import os
 import json
+import os
 import psutil
 import subprocess
 
@@ -31,7 +32,7 @@ model_name = args[1]
 n_eval_eps=1
 
 env_config = {
-   "fully_obs": True,
+   "fully_obs": False,
    "max_params": {
         "MAX_HOSTS": 5,
         "MAX_PROCESSES": 5,
@@ -58,11 +59,11 @@ n_envs=1
 # seems that Scenarios MUST have agents declared ??
 # seems that the actions listed in an Agent spec are actually Agent classes??
 # this is going to cause some difficulties in generalising actions!
-scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionDQNScenario.yaml"
+scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionRecurrentPPOScenario.yaml"
 model_path=path[:-17] + "/exports/" + model_name
 #print(path)
 
-cyborg = CybORG(scenario_path,'aws', env_config=env_config)
+cyborg = CybORG(scenario_path,'aws',env_config=env_config)
 
 # print env controller network/environment state (ie not agent state!)
 #environment=cyborg.environment_controller.state
@@ -79,7 +80,7 @@ env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n
 print(env.action_space) # Discrete
 
 # load agent from export file
-model=agent.agent.load("DuelingDQN",model_path)
+model=agent.agent.load("RecurrentPPO",model_path)
 
 # initialise agent learning
 #agent.agent.initialise(env,gamma,initial_epsilon,final_epsilon,total_steps,double,dueling)
