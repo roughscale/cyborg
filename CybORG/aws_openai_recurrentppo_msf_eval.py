@@ -35,11 +35,11 @@ env_config = {
    "fully_obs": False,
    "max_params": {
         "MAX_HOSTS": 5,
-        "MAX_PROCESSES": 5,
+        "MAX_PROCESSES": 2,
         "MAX_CONNECTIONS": 2,
         "MAX_VULNERABILITIES": 1,
         "MAX_INTERFACES": 2,
-        "MAX_SESSIONS": 5,
+        "MAX_SESSIONS": 3,
         "MAX_USERS": 5,
         "MAX_FILES": 0,
         "MAX_GROUPS": 0,

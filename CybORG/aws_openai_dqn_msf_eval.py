@@ -16,16 +16,28 @@ import os
 import json
 import psutil
 import subprocess
+import argparse
+import signal
+
+def signal_handler(sig, frame):
+    msfrpcd.terminate()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, signal_handler)
+
+parser = argparse.ArgumentParser(
+        prog="get_env_cfg",
+        description="Get the AWS network configuration")
+parser.add_argument("--env-file",dest="env_file",required=True)
+parser.add_argument("--model-name",dest="model_name",required=True)
+args=parser.parse_args()
 
 # until we learn how to reset the msfrpcd state (ie console and session ids)
 # start msfrcpd
-# this is a subprocess is attached to this process so will terminate when this process terminates
-msfrcpd = subprocess.call(["/opt/metasploit-framework/bin/msfrpcd","-P","password"],close_fds=True)
+msfrpcd = subprocess.Popen(["/opt/metasploit-framework/bin/msfrpcd","-P","password"],close_fds=True)
+msfrpcd.wait()
 # wait until service is available
 time.sleep(5)
-
-args = sys.argv
-model_name = args[1]
 
 # number of evaulation episodes
 n_eval_eps=1
@@ -47,7 +59,7 @@ env_config = {
 }
 
 # get emulated config from file
-emu_conf_file = open("aws_config.json","r")
+emu_conf_file = open(args.env_file,"r")
 emu_config = json.load(emu_conf_file)
 env_config.update(emu_config)
 
@@ -59,7 +71,7 @@ n_envs=1
 # seems that the actions listed in an Agent spec are actually Agent classes??
 # this is going to cause some difficulties in generalising actions!
 scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionDQNScenario.yaml"
-model_path=path[:-17] + "/exports/" + model_name
+model_path=path[:-17] + "/exports/" + args.model_name
 #print(path)
 
 cyborg = CybORG(scenario_path,'aws', env_config=env_config)
@@ -97,7 +109,5 @@ print(mean_reward)
 print(std_reward)
 print("Evaluation end: {}".format(time.ctime(end)))
 print("Evaluation duration: {}s".format(end-start))
-
-# save model to file
-#agent.agent.dqn.save(curr_dir+"/exports/dqn.zip")
+msfrpcd.terminate()
 

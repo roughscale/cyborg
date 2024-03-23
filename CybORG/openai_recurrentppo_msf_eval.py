@@ -14,6 +14,9 @@ import time
 import copy
 import os
 
+args = sys.argv
+model_name = args[1]
+
 # number of evaulation episodes
 n_eval_eps=100
 
@@ -21,11 +24,11 @@ env_config = {
    "fully_obs": False,
    "max_params": {
         "MAX_HOSTS": 5,
-        "MAX_PROCESSES": 5,
+        "MAX_PROCESSES": 2,
         "MAX_CONNECTIONS": 2,
         "MAX_VULNERABILITIES": 1,
         "MAX_INTERFACES": 2,
-        "MAX_SESSIONS": 5,
+        "MAX_SESSIONS": 3,
         "MAX_USERS": 5,
         "MAX_FILES": 0,
         "MAX_GROUPS": 0,
@@ -52,7 +55,7 @@ cyborg = CybORG(scenario_path,'sim',env_config=env_config)
 # the following returns the AgentInterface
 agent=cyborg.environment_controller.agent_interfaces["Red"]
 #unwrapped_action_space=agent.action_space.get_action_space()
-wrapped_env = FixedStateWrapper(EnumActionWrapper(cyborg),max_params=env_config["max_params"])
+wrapped_env = FixedFlatStateWrapper(EnumActionWrapper(cyborg),max_params=env_config["max_params"])
 #env = OpenAIGymWrapper(env=wrapped_env, agent_name="Red")
 # wraps env in DummyVecEnv VecEnv environment
 env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n_envs=n_envs)
@@ -78,7 +81,7 @@ end=time.time()
 print(mean_reward)
 print(std_reward)
 print("Evaluation end: {}".format(time.ctime(end)))
-print("Evalaution duration: {}s".format(end-start)
+print("Evalaution duration: {}s".format(end-start))
 # save model to file
 #agent.agent.dqn.save(curr_dir+"/exports/dqn.zip")
 

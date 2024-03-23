@@ -1,6 +1,13 @@
 import boto3
 import json
 from pprint import pprint
+import argparse
+
+parser = argparse.ArgumentParser(
+        prog="get_env_cfg",
+        description="Get the AWS network configuration")
+parser.add_argument("--vpc-name",dest="vpc_name",required=True)
+args=parser.parse_args()
 
 session = boto3.Session(profile_name='default')
 vpc_client = session.client('ec2')
@@ -23,7 +30,7 @@ target_vpc = vpc_client.describe_vpcs(
            {
             'Name': 'tag:Name',
             'Values': [
-                'target',
+                args.vpc_name,
             ]
           },
          ]
