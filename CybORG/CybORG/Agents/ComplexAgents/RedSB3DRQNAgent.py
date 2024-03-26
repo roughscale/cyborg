@@ -18,6 +18,7 @@ from stable_baselines3.common.torch_layers import FlattenExtractor
 from stable_baselines3.common.utils import get_linear_fn, constant_fn
 from stable_baselines3.common.callbacks import BaseCallback
 from sb3_contrib.per.replay_sequence_buffer import ReplaySequenceBuffer
+from sb3_contrib.per.replay_partial_sequence_buffer import ReplayPartialSequenceBuffer
 
 
 class RedSB3DRQNAgent(BaseAgent):
@@ -112,7 +113,7 @@ class RedSB3DRQNAgent(BaseAgent):
                 gamma=gamma,
                 train_freq=1, #default is 4
                 gradient_steps=1, #default
-                replay_buffer_class=ReplaySequenceBuffer, # None resolves to BufferReplay
+                replay_buffer_class=ReplayPartialSequenceBuffer, # None resolves to BufferReplay
                 #replay_buffer_kwargs=per_buffer_args, #default is None
                 replay_buffer_kwargs=None, #default is None
                 optimize_memory_usage=False, # default
@@ -189,7 +190,8 @@ class LearnCallback(BaseCallback):
         #print("_on_step callback")
         #print(self.logger)
         #print(dir(self))
-        self.logger.dump(step=self.num_timesteps)
+        # following will dump tensor metrics every step 
+        #self.logger.dump(step=self.num_timesteps)
         return True
         #if self.locals["dones"] == True and self.locals["self"]._episode_num == 2:
         #    #print(self.locals["self"]._episode_num)
