@@ -32,8 +32,12 @@ class MSFSessionHandler():
         remote_sessions = { k:v for k,v in sessions.items() if v["target_host"] == remote_ip }
         #print(remote_sessions)
         # otherwise, check if there is a route in a session that can be used
-        if len(remote_sessions) == 0:
-            remote_sessions = { k:v for k,v in sessions.items() for r in v["routes"].split(",") if r != '' and IPv4Address(remote_ip) in IPv4Network(r)}
+        # why would we do this?
+        # perhaps to enable remote code execution actions for hosts that are not immediately accessilbe
+        # but it is causing errors for local actions - running on wrong host
+        # temp disable to see the impact
+        #if len(remote_sessions) == 0:
+        #    remote_sessions = { k:v for k,v in sessions.items() for r in v["routes"].split(",") if r != '' and IPv4Address(remote_ip) in IPv4Network(r)}
         if session_type is not None:
             type_sessions = [ k for k,v in sessions.items() if v["type"] == session_type ]
             #print(type_sessions)

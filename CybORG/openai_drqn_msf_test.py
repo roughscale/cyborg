@@ -27,17 +27,14 @@ final_epsilon = 0.02  # explore/exploit factor
 # given that we are providing sub-sequence of 10 transitions,
 # reduce batch size so that total transitions roughly matches
 # in size to reduce computational time
-batch_size=8
-# num_prev_trans=10
-#step_limit_reached=200
-num_episodes=1000 # NOT USED. Total steps is used
-#num_evals=100
+batch_size=32
+num_prev_seq=16
 
 # given larger action space.
 total_steps=1000000
-# at the moment, DRQN doesn't use double or dueling.
-#double=True
-#dueling=False
+dueling=True
+# at the moment, DRQN doesn't use double.
+#double=Trued
 #tensorboard_log = "./runs/drqn/"
 tensorboard_log = None
 
@@ -88,6 +85,8 @@ agent.agent.initialise(
         final_eps=final_epsilon,
         total_steps=total_steps,
         batch_size=batch_size,
+        num_prev_seq=num_prev_seq,
+        dueling=dueling,
         tensorboard_log=tensorboard_log)
 
 callback=agent.agent.learn_callback
