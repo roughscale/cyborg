@@ -46,8 +46,6 @@ class MSFPortscan(MSFScanner):
                     target_subnet = subnet.cidr
                     break
 
-            #from_interface = [ i for i in target_host.interfaces if ip.ipaddress == self.ip_address ]
-
             # this checks if the remote address is routeable from the server session
             session, from_interface = self.get_local_source_interface(local_session=session, remote_address=self.ip_address, state=state)
             
@@ -68,26 +66,16 @@ class MSFPortscan(MSFScanner):
         obs.set_success(True)
 
         for process in target_host.processes:
-            # does this return every process running on the targets?
-            #print("portscan success")
-            #print(process)
             for conn in process.connections:
                 # multiple connections per process ?
-                # they should not have the same port!
-                print(conn)
                 # From ConcreteActions/Portscan
                 if 'local_port' in conn and (conn['local_port'] in ports or 'all' in ports):
-                # not sure why these ports are hardcoded.  lets adopt the ConcreteActions/Portscan code
-                #if 'local_port' in conn and conn['local_port'] in [21, 22, 80, 111, 135, 139, 443, 445] + list(range(8000, 8100)):
-                    # internal so avoids nacls
                     if self.ip_address == IPv4Address("127.0.0.1"):
                         if (conn['local_address'] == IPv4Address("127.0.0.1") or conn['local_address'] == IPv4Address("0.0.0.0")) and 'remote_address' not in conn:
                             hostid = state.ip_addresses[self.ip_address]
                             obs.add_process(hostid=hostid, local_port=conn["local_port"], local_address=self.ip_address)
                     # lets break this up
                     elif (conn['local_address'] == IPv4Address("0.0.0.0") or conn['local_address'] == self.ip_address) and 'remote_address' not in conn:
-                                #print(conn["local_port"])
-                                #print("add process")
                                 # does this process also add to the list of ports in the ActionSpace??
                                 # multi homed hosts have more than 1 ip address
                                 hostid = state.ip_addresses[self.ip_address]
@@ -103,15 +91,6 @@ class MSFPortscan(MSFScanner):
                                               if c["local_port"] != conn["local_port"] and \
                                                  c["local_address"] != self.ip_address:
                                                    obs.add_process(hostid=hostid, local_port=conn["local_port"], local_address=self.ip_address)
-                                # From ConcreteActions/Portscan
-                                # this seems to add the network connection with the environment state
-                                # why do we add a network connection for a port scan???
-                                #target_host.events['NetworkConnections'].append({'local_address': self.ip_address,
-                                #                                     'local_port': conn["local_port"],
-                                #                                     'remote_address': originating_ip_address,
-                                #                                     'remote_port': target_host.get_ephemeral_port()})
-
-        #print(obs)
         return obs
 
     def emu_execute(self, session_handler) -> Observation:

@@ -28,42 +28,27 @@ class MSFAutoroute(MSFAction):
         # we need to identify the sessions on the host
         # check target session
         interfaces = []
-        print(state.sessions[self.agent])
         hostname = state.ip_addresses[self.ip_address]
-        print(hostname)
-        # breakdown list comp
-        #session_hosts = [ s.host for s in state.sessions[self.agent] ]
         # Documentation claims Autoroute can also work on SSH-type sessions.
         host_sessions = [ s for s in state.sessions[self.agent] if s.ip_addr == self.ip_address and s.session_type == SessionType.METERPRETER ]
-        print(host_sessions)
         if len(host_sessions) == 0:
             obs.set_success(False)
             return obs
         # choose first target session if more than one
         meterpreter_session = host_sessions[0]
-        print(meterpreter_session)
-        # not sure about session children at the moment
-        #if meterpreter_session in msf_session.children.values() and meterpreter_session.session_type == SessionType.METERPRETER:
         obs.set_success(True)
         routes = []
         # for autoroute, we don't add interface observations.  We add the routes to the existing session object
         for interface in state.hosts[meterpreter_session.host].interfaces:
                 if str(interface.ip_address) != '127.0.0.1':
-                    #    interfaces.append(interface)
-                    #    obs.add_interface_info(hostid=str(self.ip_address), subnet=interface.subnet)
-                    print(interface.subnet)
                     routes.append(IPv4Network(interface.subnet))
 
         if len(routes) > 0:
                 # update simulator state change
-                print("update host session routes in state")
                 sess = meterpreter_session
                 sess.add_routes(routes)
                 # add session observation
-                print("updated host session state")
-                print(sess.get_state())
                 obs.add_session_info(hostid=sess.host, session_id=sess.ident, session_type=sess.session_type, agent=sess.agent, routes=sess.routes, username=sess.username, active=sess.active)
-                #msf_session.routes[self.ip_address] = interfaces
         else:
             obs.set_success(False)
         return obs
@@ -76,9 +61,7 @@ class MSFAutoroute(MSFAction):
             return obs
 
         sessions = session_handler.get_session_by_remote_ip(str(self.ip_address), session_type="meterpreter")
-        print(sessions)
         if len(sessions) == 0:
-            print("no meterpreter session for host {}".format(str(self.ip_address)))
             obs.set_success(False)
             return obs
 
@@ -100,17 +83,13 @@ class MSFAutoroute(MSFAction):
                 obs.set_success(True)
                 subnet = line.split(' ')[5]
                 # for autoroute, we don't add interface observations.  We add the routes to the existing session object
-                #obs.add_interface_info(hostid=str(self.ip_address), subnet=IPv4Network(subnet))
                 routes.append(IPv4Network(subnet))
         
         if len(routes) > 0:
             # get existing session
             sess = sessions[session]
-            print(sess)
             user = session_handler.get_session_user(session)
-            #obs.add_session_info(hostid=self.ip_address, session_id=session, session_type=sess.session_type, agent=sess.agent, routes=routes, username=sess.username, pid=sess.pid, active=sess.active)
             obs.add_session_info(hostid=str(self.ip_address), session_id=int(session), routes=routes, session_type=sess["type"], username=user,agent=self.agent)
-            #obs.add_session_info(routes=routes, **sessions[session].get_state())
 
         return obs
 

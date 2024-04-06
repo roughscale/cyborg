@@ -1,5 +1,4 @@
 import numpy as np
-#from gym import spaces, Env
 from gymnasium import spaces, Env
 from typing import Union, List
 from prettytable import PrettyTable
@@ -17,8 +16,6 @@ class OpenAIGymWrapper(Env, BaseWrapper):
         else:
             assert isinstance(self.get_action_space(self.agent_name), int)
             self.action_space = spaces.Discrete(self.get_action_space(self.agent_name))
-        # can we do the following without doing an env.reset??  can we do this on an observation_space
-        #print("openai wrapper self.env {}".format(type(self.env)))
         box_len = len(self.observation_change(self.env.reset(self.agent_name).observation))
         self.observation_space = spaces.Box(-1.0, 3.0, shape=(box_len,), dtype=np.float32)
         self.reward_range = (float('-inf'), float('inf'))
@@ -28,30 +25,12 @@ class OpenAIGymWrapper(Env, BaseWrapper):
     def step(self, action: Union[int, List[int]] = None) -> (object, float, bool, dict):
         self.action = action
         result = self.env.step(self.agent_name, action)
-        # In the FO case, result returns both observation and state, and we need to 
-        # return the state rather than the observation.  Ideally we could 
-        # remove any need for fully_obs flag in this object if we just return state 
-        # as the observation!
         result.observation = self.observation_change(result.observation)
-        # we have returned the state as the observation in the FixedFlatStateWrapper
-        #result.state = self.observation_change(result.state)
         result.action_space = self.action_space_change(result.action_space)
         info = vars(result)
-        # also have created local observation_change method to wrap the np.array
-        # state has to be returned in the FO case
-        # hard enabled for now!
-        #return np.array(result.observation, dtype=np.float32), result.reward, result.done, info
         # gymnasium supports terminated and truncated instead of done
         # for our environment done == terminated.  there should not be any truncated eventuality, set to False
         return np.array(result.observation, dtype=np.float32), result.reward, result.done, False, info
-
-    # create local method to wrap python list into np.array.  Does this affect the about
-    # result.observation which hasn't used this method?
-    # commented out for the moment
-    #def observation_change(self, observation: list):
-    #    # convert python list into np.array
-    #    return np.array(observation, dtype=np.float32)
-
 
     def reset(self, agent=None, seed=None, **kwargs):
         super().reset(seed=seed)

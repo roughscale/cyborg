@@ -32,8 +32,6 @@ class UpgradeToMeterpreter(MSFAction):
         from_host = server_session.host
 
         # find_session_by_ip_addr
-        # NOT find by hostname (given multi-homed hosts)
-        #target_sessions = [ s for s in state.sessions[self.agent] if s.host == state.ip_addresses[self.ip_address]]
         target_sessions = [ s for s in state.sessions[self.agent] if s.ip_addr == self.ip_address]
         # identify suitable suitable
         suitable_sessions = []
@@ -108,10 +106,6 @@ class UpgradeToMeterpreter(MSFAction):
         obs.add_session_info(hostid=hostname, session_id=new_session.ident,
                              session_type=new_session.session_type, agent=self.agent, username=target_process.user)
 
-        # disable server side process observation for now
-        #obs.add_process(hostid=server_session.host, local_address=server_address, local_port=4433,
-        #                remote_address=str(self.ip_address),
-        #                remote_port=local_port)
         obs.add_process(hostid=hostname, local_address=str(self.ip_address), local_port=local_port,
                         remote_address=server_address,
                         remote_port=lport)
@@ -129,8 +123,6 @@ class UpgradeToMeterpreter(MSFAction):
            obs.set_success(False)
            return obs
         session_id = list(target_sessions.keys())[0]
-        #print(target_sessions[session_id])
-        # need to identify the LHOST from the session
         lhost = self.get_lhost(target_sessions[session_id]["tunnel_local"])
         lport = random.randint(4400,4500)
         output = session_handler.execute_module(mtype='post', mname='multi/manage/shell_to_meterpreter',
@@ -142,25 +134,13 @@ class UpgradeToMeterpreter(MSFAction):
             if '[*] Meterpreter session' in line:
                 obs.set_success(True)
                 split = line.split(' ')
-                # print(list(enumerate(split)))
                 session = int(split[3])
                 remote_address, remote_port = split[5][1:].split(':')
                 # no need to identify local_address. this should be the self.ip_address
                 # local_address could be the NAT gateway
                 local_address, local_port = split[7][:-1].split(':')
-                # date = datetime.fromisoformat(split[10] + ' ' + split[11])
                 obs.add_process(hostid=str(self.ip_address), local_port=local_port, remote_port=remote_port,
                                 local_address=local_address, remote_address=remote_address)
-                # disable server side process obs for now
-                #obs.add_process(hostid=str(remote_address), remote_port=local_port, local_port=remote_port,
-                #                remote_address=local_address, local_address=remote_address)
-
-                # print(f'session: {session}')
-                # print(f'local_port: {local_port}')
-                # print(f'local_address: {local_address}')
-                # print(f'remote_port: {remote_port}')
-                # print(f'remote_address: {remote_address}')
-                # print(f'date: {date}')
         '''Example obs
         [*] Upgrading session ID: 1
         [*] Starting exploit/multi/handler
@@ -172,10 +152,7 @@ class UpgradeToMeterpreter(MSFAction):
         if session == None:
             obs = Observation()
             return obs
-        # get user id of session
-        print("get user from session")
         user = session_handler.get_session_user(session)
-        print(user)
         if user is None:
           obs = Observation()
           obs.set_success(False)

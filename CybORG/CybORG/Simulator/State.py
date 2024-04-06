@@ -29,9 +29,6 @@ class State:
 
         self.hosts = None  # contains mapping of hostnames to host objects
 
-        # this is a dict of lists.  agent names are dict keys, session objects are the list values
-        # we no longer rely upon the dict key
-        # representng the session ident (server and client sessions can share session ident numbers)
         self.sessions = None  # contains mapping of agent names to session objects
         self.subnets = None  # contains mapping of subnet cidrs to subnet objects
 
@@ -56,7 +53,6 @@ class State:
         else:
             if 'network' in info and 'subnets' in info['network']:
                 for name, cidr in self.subnet_name_to_cidr.items():
-                    #print(name,cidr)
                     # cidr of type Subnet. need to use str representation
                     if name in info['network']['subnets']:
                         true_obs.add_subnet(cidr=str(cidr))
@@ -113,7 +109,6 @@ class State:
     def reset(self):
         # only reset state (if True don't re-initialise with randomisation)
         only_reset_state=(not self.randomize_env)
-        print("State reset: CIDR randomness disabled {}".format(only_reset_state))
         self._initialise_state(self.scenario, reset=only_reset_state)
         self.step = 0
         self.time = copy.deepcopy(self.original_time)
@@ -141,27 +136,15 @@ class State:
           subnets_cidrs = sample(
             list(IPv4Network("192.168.0.0/16").subnets(new_prefix=32 - max(int(log2(maximum_subnet_size + 5)), 4))),
             len(scenario.subnets))
-          #print("_initialise state subnet/ip generation")
           for subnet_name in scenario.subnets:
-            #print(subnet_name)
-            # check if subnet cidr is declared in scenario
-            #if "cidr" in subnet_name:
-            #    subnet_cidr = subnet_name["cidr"]
-            #else:
             if True:
               subnet_cidr = choice(list(subnets_cidrs[count].subnets(
                   new_prefix=32 - max(int(log2(scenario.get_subnet_size(subnet_name) + 5)), 4))))
               count += 1
-            #print(subnet_cidr)
             self.subnet_name_to_cidr[subnet_name] = subnet_cidr
             ip_address_selection = sample(list(subnet_cidr.hosts()), len(scenario.get_subnet_hosts(subnet_name)))
             allocated = 0
             for hostname in scenario.get_subnet_hosts(subnet_name):
-                #print(hostname)
-                # allows mixture of declared and random ips within the subnet
-                # TODO: check this mixture is consistent (valid subnet IP and non-duplicate)
-                #if "ip_address" in subnet_name[hostname]:
-                #    ip_address_selection[allocated] = subnet_name[hostname]["ip_address"]
                 self.ip_addresses[ip_address_selection[allocated]] = hostname
                 interface = {"ip_address": ip_address_selection[allocated], "subnet": subnet_cidr}
                 if hostname in self.hostname_to_interface:
@@ -169,10 +152,6 @@ class State:
                 else:
                     self.hostname_to_interface[hostname] = [interface]
                 allocated += 1
-            # subnet_cidr is of type IPv4Network.  Do we need to use string representation for dict keys?
-            #print("_initialise state")
-            #print(subnet_cidr)
-            #print(type(subnet_cidr))
             self.subnets[subnet_cidr] = Subnet(cidr=subnet_cidr, ip_addresses=ip_address_selection,
                                                nacls=scenario.get_subnet_nacls(subnet_name), name=subnet_name)
 
@@ -231,29 +210,19 @@ class State:
     # session handler methods
     def get_sessions_by_remote_ip(self, remote_ip: str, agent: str):
         hostname = self.ip_addresses[remote_ip]
-        #print("hostname")
-        #print(hostname)
-        #print("all sessions in state")
-        #for sn in self.sessions[agent].values():
-        #    print(sn.get_state())
         sessions = [s for s in self.sessions[agent] if s.host == hostname]
         return sessions
 
     def get_session_by_remote_cidr(self, remote_cidr: str, agent: str, session_type = None):
         sessions = [ s for s in self.sessions[agent] if s.session_type in (SessionType.MSF_SHELL, SessionType.METERPRETER) ]
-        print(sessions)
         # first, check if session target_host is within the cidr
         remote_sessions = [ s for s in sessions if IPv4Network(s.ip_addr) in IPv4Network(remote_cidr) ]
-        print(remote_sessions)
         # otherwise, check if there is a route in a session that can be used
         if len(remote_sessions) == 0:
             remote_sessions = [ s.ident  for s in sessions for r in s.routes if r != '' and IPv4Network(remote_cidr) == IPv4Network(r)]
-            print(remote_sessions)
         if session_type is not None:
             type_sessions = [ s.ident for s in sessions if s.session_type == session_type ]
-            print(type_sessions)
             remote_sessions = [ s.ident for s in remote_sessions for t in type_sessions if s.ident == t ]
-            print(remote_sessions)
         return remote_sessions
 
 
@@ -264,36 +233,22 @@ class State:
         # Add idempotency (Don't create a session if the same already exists)
         # this gets the list of sessions from the simulated environment (total sessions within env)
         existing_sessions = self.sessions
-        print("add_session: existing sessions")
         for sess in existing_sessions[agent]:
             # session similarity will depend (at the moment) upon user, host, session_type, active
-            print(host,user,SessionType.parse_string(session_type),active)
-            print(sess.host,sess.username,sess.session_type,sess.active)
-            #print(type(SessionType.parse_string(session_type)))
-            #print(type(sess.session_type))
             if user == sess.username and SessionType.parse_string(session_type) == sess.session_type and host == sess.host and active == sess.active:
                # if we mandate process (pid) being added at session creation we could limit the similarity to pid matching!
                # don't match according to pid, especially if pids are common across hosts
-               #if process == sess.pid:
-               print("re-using matching host,user,type session")
                return sess
 
         # need to reuse inactive session idents
         # state session index is no longer used as ident
         ident=None
-        print("state.add_session calc session ident")
-        print("state sessions_count")
-        print(self.sessions_count[agent])
-        print("state sessions len")
-        print(len(self.sessions[agent]))
         for i in range(self.sessions_count[agent]):
             if i not in [s.ident for s in self.sessions[agent]]:
                 ident = i
-        
         if ident is None:
            ident = self.sessions_count[agent]
            self.sessions_count[agent] += 1
-           
         # parent is the parent session ident
         if parent in [ s.ident for s in self.sessions[agent]]:
             parent = [ s for s in self.sessions[agent] if s.ident == parent ][0]
@@ -390,10 +345,11 @@ class State:
                 return subnet
         raise ValueError(f"No Subnet contains the ip address {ip_address}")
 
-    def get_dict(self):
-        removed_keys=['scenario','time','original_time']
-        tmp = copy.deepcopy(self.__dict__)
-        output = { k: v for k,v in tmp.items() if k not in removed_keys }
-        for name,obj in output['hosts'].items():
-            output["hosts"][name] = obj.get_dict()
-        return output
+    # Is this still used. Comment out to test
+    #def get_dict(self):
+    #    removed_keys=['scenario','time','original_time']
+    #    tmp = copy.deepcopy(self.__dict__)
+    #    output = { k: v for k,v in tmp.items() if k not in removed_keys }
+    #    for name,obj in output['hosts'].items():
+    #        output["hosts"][name] = obj.get_dict()
+    #    return output

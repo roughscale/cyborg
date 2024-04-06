@@ -1,9 +1,3 @@
-## The following code contains work of the United States Government and is not subject to domestic copyright protection under 17 USC § 105.
-## Additionally, we waive copyright and related rights in the utilized code worldwide through the CC0 1.0 Universal public domain dedication.
-
-"""
-pertaining to the Juicy Potato permissions escalation action
-"""
 # pylint: disable=invalid-name
 from typing import Tuple
 from ipaddress import IPv4Address
@@ -48,8 +42,6 @@ class MSFJuicyPotato(MSFPrivilegeEscalation):
        
         hostname = state.ip_addresses[self.ip_address]
         target_sessions = [ s for s in state.sessions[self.agent] if s.ip_addr == self.ip_address ]
-        print("sessions on the target host")
-        print(target_sessions)
         if len(target_sessions) == 0:
             # no valid session could be found on chosen host
             return Observation(success=False)
@@ -58,10 +50,8 @@ class MSFJuicyPotato(MSFPrivilegeEscalation):
         priv_host_sessions = [s for s in target_sessions if s.username in ('root','SYSTEM') ]
         if len(priv_host_sessions) > 0:
           # return first session
-          print("found existing priv session")
           sess = priv_host_sessions[0]
           obs.set_success(True)
-          print(sess.pid)
           # should we also return the process information of this existing session??
           obs.add_session_info(hostid=hostname, **sess.get_state())
           return obs
@@ -75,14 +65,6 @@ class MSFJuicyPotato(MSFPrivilegeEscalation):
                state.remove_process(target_host_session.host, target_host_session.pid)
                return Observation(success=False), -1
 
-        #else:
-        #       obs=self.sim_escalate(state, hostname, sess, "root")
-        #       # privesc requries existing nonpriv session
-        #       # nonpriv session details
-        #       #print(target_host_session)
-
-        # sim_escalate functionality here
-        # target_hostname=hostname
         target_host = state.hosts[target_host_session.host]
         is_compatible, necessary_processes = self.test_exploit_works(target_host)
         if not is_compatible:
@@ -111,10 +93,6 @@ class MSFJuicyPotato(MSFPrivilegeEscalation):
             # not a windows OS
             obs.set_success(False)
             return obs
-        # process is escalatable on the host
-        # at the moment, this also works even if there are no necessary processes return
-        # in the test_exploit_works function.
-        #
 
         # Simulator State Changes
         # create process on the target state for the meterpreter client
@@ -146,9 +124,6 @@ class MSFJuicyPotato(MSFPrivilegeEscalation):
         # adds connection to the target host 2on the server session
         state.hosts[server_session.host].get_process(server_session.pid).connections.append(remote_port)
 
-        # unknown why this is required
-        #if session != server_session:
-        #            local_port = None
 
         obs.add_process(hostid=hostname, local_address=str(self.ip_address), local_port=local_port, remote_address=server_address, remote_port=4445)
         # disable server process obs for the moment
@@ -166,13 +141,10 @@ class MSFJuicyPotato(MSFPrivilegeEscalation):
             return obs
 
         sessions = session_handler.get_session_by_remote_ip(str(self.ip_address), session_type="meterpreter")
-        print(sessions)
         if len(sessions) == 0:
             obs.set_success(False)
             return obs
         session = list(sessions.keys())[0]
-        # get LHOST from the session tunnel_local
-        #print("target session {}".format(sessions[session]))
         lhost = self.get_lhost(sessions[session]["tunnel_local"])
         lport = randint(4400,4500)
 
@@ -196,16 +168,13 @@ class MSFJuicyPotato(MSFPrivilegeEscalation):
         [*] Backgrounding session 5...
         """
         for line in output.split('\n'):
-          #print(line)
           if '[*] Meterpreter session' in line:
               obs.set_success(True)
-              #print(list(enumerate(line.split(' '))))
               split = line.split(' ')
               session = int(split[3])
               if '-' in split[5]:
                   temp = split[5].replace('(', '').split(':')[0]
                   origin, rip = temp.split('-')
-                  # obs.add_process(remote_address=rip, local_address=origin)
                   rport = None
               else:
                   rip, rport = split[5].replace('(', '').split(':')
@@ -215,10 +184,7 @@ class MSFJuicyPotato(MSFPrivilegeEscalation):
             obs = Observation()
             obs.set_success(False)
             return obs
-        # get user id of session
-        #print("get user from session")
         user = session_handler.get_session_user(session)
-        #print(user)
         if user is None:
           obs = Observation()
           obs.set_success(False)

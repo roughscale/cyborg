@@ -23,10 +23,6 @@ alpha = .5    # learning rate. NOT USED. Separate LR schedule is created
 gamma = .99   # discount rate
 initial_epsilon = 1.0 # high explore factor
 final_epsilon = 0.02  # explore/exploit factor
-# batch size is normally 32 for non-RNN ER.
-# given that we are providing sub-sequence of 10 transitions,
-# reduce batch size so that total transitions roughly matches
-# in size to reduce computational time
 batch_size=32
 num_prev_seq=16
 
@@ -34,7 +30,7 @@ num_prev_seq=16
 total_steps=1000000
 dueling=True
 # at the moment, DRQN doesn't use double.
-#double=Trued
+#double=True
 #tensorboard_log = "./runs/drqn/"
 tensorboard_log = None
 
@@ -61,23 +57,12 @@ path = path[:-10] + "/Shared/Scenarios/TestMSFSessionDRQNScenario.yaml"
 
 cyborg = CybORG(path,'sim',env_config=env_config)
 
-# print env controller network/environment state (ie not agent state!)
-environment=cyborg.environment_controller.state
-
 agent=cyborg.environment_controller.agent_interfaces["Red"]
-#unwrapped_action_space=agent.action_space.get_action_space()
 wrapped_env = FixedFlatStateWrapper(EnumActionWrapper(cyborg),max_params=env_config["max_params"])
 env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n_envs=n_envs)
 #env = OpenAIGymWrapper(env=wrapped_env, agent_name="Red")
 
-# print openaigym action and observation spaces
-print(env.action_space) # Discrete
-#print(env.observation_space) # Box
-
-action_space=env.action_space
-
 # initialise agent learning
-#total_steps = num_episodes * step_limit_reached
 agent.agent.initialise(
         env=env,
         gamma=gamma,

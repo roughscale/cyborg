@@ -32,8 +32,8 @@ class Results:
         self.error = error
         self.error_msg = error_msg
         self.action_name = action_name
-        # the following is in the FO implementation.  Why do we need these and why 
-        # cant we reuse observation and next_observation?
+        # the following is for fully_obs implementation.
+        # NOTE: We should be able to reuse observation and next_observation
         self.state = state
         self.selection_masks = None
 

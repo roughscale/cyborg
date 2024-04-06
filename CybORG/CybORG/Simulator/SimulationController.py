@@ -15,7 +15,6 @@ from CybORG.Shared.EnvironmentController import EnvironmentController
 from CybORG.Shared.Observation import Observation
 from CybORG.Shared.Results import Results
 from CybORG.Simulator.State import State
-from CybORG.Simulator.TrueState import TrueState
 
 
 class SimulationController(EnvironmentController):
@@ -27,14 +26,12 @@ class SimulationController(EnvironmentController):
     """
     def __init__(self, scenario_filepath: str = None, scenario_mod: dict = None, agents: dict = None, **kwargs):
         self.state = None
-        self.randomize_env = kwargs.get("randomize_env",True)
-        super().__init__(scenario_filepath, scenario_mod=scenario_mod, agents=agents, **kwargs) 
+        # TEST: if this is still necessary. doesn't seem to be used in this class
+        #self.randomize_env = kwargs.get("randomize_env",True)
+        super().__init__(scenario_filepath, scenario_mod=scenario_mod, agents=agents, **kwargs)
 
     def reset(self, agent=None):
-        print("SimulationController reset")
         self.state.reset()
-        #print(self.state.hosts)
-        #print(self.state.subnets)
         # allow for multi-homed hosts
         self.hostname_ip_map = {ip: h for ip, h in self.state.ip_addresses.items()}
         self.subnet_cidr_map = self.state.subnet_name_to_cidr
@@ -44,11 +41,7 @@ class SimulationController(EnvironmentController):
         pass
 
     def execute_action(self, action: Action) -> Observation:
-        #print("simulator execute action")
-        #print(action)
-        action_result = action.sim_execute(self.state)
-        return action_result
-        #return action.sim_execute(self.state)
+        return action.sim_execute(self.state)
 
     def restore(self, file: str):
         pass
@@ -56,7 +49,7 @@ class SimulationController(EnvironmentController):
     def save(self, file: str):
         pass
 
-    def get_true_state(self, info: dict) -> TrueState:
+    def get_true_state(self, info: dict) -> Observation:
         output = self.state.get_true_state(info)
         return output
 

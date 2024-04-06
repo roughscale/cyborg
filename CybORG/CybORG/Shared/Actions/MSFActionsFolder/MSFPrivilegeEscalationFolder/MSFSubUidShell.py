@@ -1,6 +1,3 @@
-## The following code contains work of the United States Government and is not subject to domestic copyright protection under 17 USC § 105.
-## Additionally, we waive copyright and related rights in the utilized code worldwide through the CC0 1.0 Universal public domain dedication.
-
 # pylint: disable=invalid-name
 from typing import Tuple
 from ipaddress import IPv4Address
@@ -23,8 +20,6 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
         self.ip_address = ip_address
 
     def sim_execute(self, state: State) -> Observation:
-        # comment out the below and implement AbstractActions/PrivilegeEscalation logic
-        #return self.sim_escalate(state, "root")
 
         obs = Observation()
         # get details of the server session
@@ -47,12 +42,8 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
         # sessions = state.get_sessions_by_remote_ip(self.ip_address)
         # find session on the chosen host
         hostname = state.ip_addresses[self.ip_address]
-        print("hostname")
-        print(hostname)
 
         sessions = [ s for s in state.sessions[self.agent] if s.ip_addr == self.ip_address ]
-        print("sessions on the target host")
-        print(sessions)
         if len(sessions) == 0:
             # no valid session could be found on chosen host
             return Observation(success=False)
@@ -61,29 +52,19 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
         priv_host_sessions = [ s for s in sessions if s.username in ('root','SYSTEM') ]
         if len(priv_host_sessions) > 0:
           # return first session
-          print("found existing priv session")
           obs.set_success(True)
           sess = priv_host_sessions[0]
-          print(sess)
-          print(sess.pid)
           # should we also return the process information of this existing session??
           obs.add_session_info(hostid=hostname, **sess.get_state())
           return obs
 
         if len(sessions) > 1:
-            print("more than one nonpriv sesssion on host.  choosing the first")
-        target_host_session = sessions[0]
+          target_host_session = sessions[0]
 
         # what is the effect of the escalate sandbox?
         if target_host_session.is_escalate_sandbox:
                state.remove_process(target_host_session.host, target_host_session.pid)
                return Observation(success=False),
-
-        #else:
-        #       obs=self.sim_escalate(state, hostname, sess, "root")
-        #       # privesc requries existing nonpriv session
-        #       # nonpriv session details
-        #       #print(target_host_session)
 
         # sim_escalate functionality here
         # target_hostname=hostname
@@ -101,11 +82,6 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
             if proc.decoy_type & DecoyType.ESCALATE:
                 obs.set_success(False)
                 return obs
-
-        # process is escalatable on the host
-        # at the moment, this also works even if there are no necessary processes return
-        # in the test_exploit_works function.
-        #
 
         root_user: User = None
         if target_host.os_type == OperatingSystemType.LINUX:
@@ -155,10 +131,6 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
         # adds connection to the target host 2on the server session
         state.hosts[server_session.host].get_process(server_session.pid).connections.append(remote_port)
 
-        # unknown why this is required
-        #if session != server_session:
-        #            local_port = None
-
         obs.add_process(hostid=hostname, local_address=str(self.ip_address), local_port=local_port, remote_address=server_address, remote_port=lport)
         obs.add_process(hostid=server_session.host, local_address=str(server_address), local_port=lport, remote_address=str(self.ip_address), remote_port=local_port)
         obs.add_session_info(hostid=hostname, username=new_session.username, session_id=new_session.ident, session_type=new_session.session_type, agent=self.agent)
@@ -172,7 +144,6 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
         if type(session_handler) is not MSFSessionHandler:
             obs.set_success(False)
             return obs
-        print("server session {}".format(self.session))
         # get sessions for the target_host
         target_sessions = session_handler.get_session_by_remote_ip(str(self.ip_address), session_type="shell")
         if len(target_sessions) == 0:
@@ -180,8 +151,6 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
             return obs
         else:
           target_session = list(target_sessions.keys())[0]
-          # get LHOST from the session tunnel_local
-          #print("target session {}".format(target_sessions[target_session]))
           lhost = self.get_lhost(target_sessions[target_session]["tunnel_local"])
           lport = randint(4400,4500)
 
@@ -197,13 +166,11 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
             for line in output.split('\n'):
               if '[*] Meterpreter session' in line:
                 obs.set_success(True)
-                #print(list(enumerate(line.split(' '))))
                 split = line.split(' ')
                 session = int(split[3])
                 if '-' in split[5]:
                     temp = split[5].replace('(', '').split(':')[0]
                     origin, rip = temp.split('-')
-                    # obs.add_process(remote_address=rip, local_address=origin)
                     rport = None
                 else:
                     rip, rport = split[5].replace('(', '').split(':')
@@ -211,10 +178,7 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
                 obs.add_process(hostid=str(self.ip_address), local_address=lip, local_port=lport, remote_address=rip, remote_port=rport)
                 # need to set up meterpreter reverse process on attacker
                 obs.add_process(hostid=str(rip), local_address=rip, local_port=rport, remote_address=lip, remote_port=lport)
-            # get user id of session
-            print("get user from session")
             user = session_handler.get_session_user(session)
-            print(user)
             if user is None:
               obs = Observation()
               obs.set_success(False)

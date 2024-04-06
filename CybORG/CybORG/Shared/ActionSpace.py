@@ -97,6 +97,7 @@ class ActionSpace:
             'hostname': len(self.hostname)
         }
         return max_action
+
     def reset(self, agent):
         self.subnet = {}
         self.ip_address = {}
@@ -156,7 +157,6 @@ class ActionSpace:
                             else:
                                 self.server_session[session["ID"]] = False # remove inactive sessions from action parameter space
                         else:
-                            #print("update client session {0} {1}".format(session["ID"],session["Active"]))
                             # assume if not a server session then its a client session
                             if session['Active']:
                                self.client_session[session["ID"]] = known
@@ -166,8 +166,6 @@ class ActionSpace:
                 continue
             if "SystemInfo" in info:
                 if "Hostname" in info["SystemInfo"]:
-                  # need to check the external host per attribute (and not at a higher level)
-                  # as we need to add the external host's session to the parameter space
                   # TODO:
                   # we should only ignore external host for non-blue type agents
                   # as blue agents may need to take actions against an external host
@@ -175,8 +173,6 @@ class ActionSpace:
                     self.hostname[info["SystemInfo"]["Hostname"]] = known
             if "Interface" in info:
                 for interface in info["Interface"]:
-                  #if info[interface]["Subnet"] not in external_hosts["subnet"]
-                  #  or info[interface]["IP address"] not in external_hosts["ipaddr"]:
                     if "Subnet" in interface:
                        self.subnet[interface["Subnet"]] = known
                     if "IP Address" in interface:
@@ -187,18 +183,6 @@ class ActionSpace:
                     # only update for process entries already in the action parameter space
                     if "ProcessName" in process and (process["ProcessName"] in self.process or init):
                         self.process[process["ProcessName"]] = known
-                    # why do we only add port information for connections??
-                    # why is a port scan a connection?
-                    # we should be added ports as a result of a port scan
-                    # so that subsequent attempts to exploit these port services
-                    # will be successful
-                    # it is really upon the exploitation of these services
-                    # that a connection is made!
-                    # is it because this is the only key which contains port information
-                    # NOTE: continue with this logic.  perhaps we should set the port status
-                    # to "open" for scans, and "connected" for successful exploits
-                    # I assume we don't handle the remote/local address here because it is 
-                    # handled in the interface key.
                     if "Connections" in process:
                         for connection in process["Connections"]:
                             if "local_port" in connection and (connection["local_port"] in self.port or init):

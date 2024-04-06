@@ -15,15 +15,6 @@ class BaseWrapper:
     def step(self, agent=None, action=None) -> Results:
         result = self.env.step(agent, action)
         result.observation = self.observation_change(result.observation)
-        # these are added in the FO case. Not sure why it is in BaseWrapper
-        # we could perhaps override in an appropriate class
-        # commented out for the moment
-        # will also need to add this functionality in the Results class
-        # also can we utilise the result.observation instead
-        # do we need observation results in the FO case?
-        #result.state = self.observation_change(result.state)
-        #result.next_state = self.observation_change(result.next_state)
-
         result.action_space = self.action_space_change(result.action_space)
         return result
 
@@ -31,9 +22,6 @@ class BaseWrapper:
         result = self.env.reset(agent)
         result.action_space = self.action_space_change(result.action_space)
         result.observation = self.observation_change(result.observation)
-        # The following 1 line is also added in the FO case. Can we re-use
-        # the result.observation??
-        #result.state = self.observation_change(result.state)
         return result
 
     def get_action(self, observation: dict, action_space: dict):

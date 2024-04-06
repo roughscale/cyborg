@@ -11,7 +11,6 @@ class MSFServerSession(Session):
         super().__init__(ident, host, ip_addr, user, agent,
                  process, timeout, session_type, name=name)
         self.routes = routes  # routes have the structure sessionid: list of subnets
-          
 
     def dead_child(self, child_id: int):
         super().dead_child(child_id)
@@ -33,4 +32,3 @@ class MSFServerSession(Session):
                     return
         # no matching session
         self.routes.update(route)
-

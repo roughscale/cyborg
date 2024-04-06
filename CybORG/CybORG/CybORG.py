@@ -6,7 +6,6 @@ from CybORG.Shared import Observation, Results, CybORGLogger
 from CybORG.Shared.EnvironmentController import EnvironmentController
 
 from CybORG.Simulator.SimulationController import SimulationController
-from CybORG.Emulator.QEmuController import QEmuController
 from CybORG.Emulator.AWSClientController import AWSClientController
 
 
@@ -34,7 +33,7 @@ class CybORG (CybORGLogger):
         Map from agent name to agent interface for all agents to be used internally.
         If None agents will be loaded from description in scenario file (default=None).
     """
-    supported_envs = ['sim', 'qemu', 'aws']
+    supported_envs = ['sim', 'aws']
 
     def __init__(self,
                  scenario_file: str,
@@ -56,9 +55,6 @@ class CybORG (CybORGLogger):
         agents : dict, optional
             Map from agent name to agent interface for all agents to be used internally.
             If None agents will be loaded from description in scenario file (default=None).
-        fully_obs : bool, optional
-            Flag to set whether observed environment is fully or partially observable.
-            (default=False)
         """
         self.env = environment
         self.scenario_file = scenario_file
@@ -77,10 +73,14 @@ class CybORG (CybORGLogger):
         """
         if self.env == 'sim':
             return SimulationController(self.scenario_file, agents=agents, **env_config)
-        if self.env == 'qemu':
-            return QEmuController(self.scenario_file, agents=agents, **env_config)
         if self.env == 'aws':
-            return AWSClientController(self.scenario_file, agents=agents, **env_config)
+
+            if env_config:
+                return AWSClientController(
+                    self.scenario_file, agents=agents, **env_config
+                )
+            else:
+                return AWSClientController(self.scenario_file, agents=agents)
         raise NotImplementedError(
             f"Unsupported environment '{self.env}'. Currently supported "
             f"environments are: {self.supported_envs}"

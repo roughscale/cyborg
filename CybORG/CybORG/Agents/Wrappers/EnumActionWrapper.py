@@ -36,7 +36,7 @@ class EnumActionWrapper(BaseWrapper):
                     params.append(p)
 
                 if len(action_space[p]) == 1:
-                    # the problem is how to add the initial p to an empty param list
+                    # add initial p to an empty param list
                     if len(param_list) == 0: # ie empty list
                         param_list = [ { p: list(action_space[p].keys())[0] } ]
                     else:

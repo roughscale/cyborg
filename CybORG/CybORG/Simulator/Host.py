@@ -66,13 +66,8 @@ class Host(Entity):
                 self.files.append(File(**file))
         self.original_files = deepcopy(self.files)
 
-        # this is a dict of lists (agents are keys, session_dict are list values)
-        # how does re-using session_ids across server and client sessions impact??
-        # what uses this attribute?  nothing particular in this class.  is this
-        # accessed directly from other classes??
         self.sessions = {}
 
-        # supplied dict value upon Host object instantiation
         if sessions is not None:
             for agent_name, session in sessions.items():
                 self.add_session(agent=agent_name, **session)
@@ -119,18 +114,13 @@ class Host(Entity):
           port = randrange(49152, 60000)
           count_port = 0
           while port in self.ephemeral_ports:
-            #port = randrange(50000,50010)
             port = randrange(49152, 60000)
             count_port += 1
             # avoid port exhaustion in cases of divergence
             if count_port > 10848:
-                print("port exhaustion on host")
                 sys.exit(1)
           self.ephemeral_ports.append(port)
         else:
-          # the following has been removed
-          # the following limits port ranges
-          # to reduce entropy when testing
           port = self.global_ephemeral_port
           self.global_ephemeral_port += 1
           if self.global_ephemeral_port > 50004:
@@ -139,11 +129,7 @@ class Host(Entity):
 
     def add_session(self, username, ident, agent, parent, timeout=0, pid=None, session_type="Shell", name=None, routes=[], artifacts=None,
             is_escalate_sandbox:bool=False, ip_addr=None):
-        #print("host add session ident")
-        #print(ident)
-        # TODO: check that supplied ip_addr is within the interfaces of the Host
-        # if ip_addr is not supplied, default to primary interface of the Host
-        if ip_addr is None: 
+        if ip_addr is None:
             primary_interface = [ i.ip_address for i in self.interfaces if i.name == "eth0" ]
             ip_addr = primary_interface[0]
         if parent is not None:
@@ -153,7 +139,6 @@ class Host(Entity):
         if pid is None:
             pid = self.add_process(name=str(session_type), user=username).pid
         else:
-            # where pid is specified
             pid = self.add_process(name=str(session_type), user=username, pid=pid).pid
         if session_type == 'MetasploitServer':
             new_session = MSFServerSession(host=self.hostname, ip_addr=ip_addr, user=username, ident=ident, agent=agent, process=pid,
@@ -164,17 +149,10 @@ class Host(Entity):
         elif session_type == 'VelociraptorServer':
             new_session = VelociraptorServer(host=self.hostname, agent=agent, username=username, ident=ident, pid=pid,
                                              timeout=timeout, session_type=session_type, name=name, artifacts=artifacts)
-        # comment out for the moment
-        # MSFSession seems to be a State version of Session. however at the moment both the State and Host use the same Sesssion object
-        # should this be a subclass?
-        #elif session_type == 'MSFSession':
-        #    new_session = MSFSession(host=self.hostname, agent=agent, username=username, ident=ident, pid=pid,
-        #                         timeout=timeout, parent=parent_id, session_type=session_type, name=name, is_escalate_sandbox=is_escalate_sandbox)
         else:
             new_session = Session(host=self.hostname, ip_addr=ip_addr, agent=agent, username=username, ident=ident, pid=pid,
                                   timeout=timeout, parent=parent_id, session_type=session_type, name=name, is_escalate_sandbox=is_escalate_sandbox, routes=routes)
 
-        #print(new_sessioa)
         if parent is not None:
             parent.children[new_session.ident] = new_session
         # TODO revisit the base ssh issue
@@ -182,7 +160,6 @@ class Host(Entity):
         #     raise ValueError(f"New Session of type {new_session.session_type.name} requires parent but none has been set")
         if agent not in self.sessions:
             self.sessions[agent] = []
-        #self.sessions[agent].append(new_session.ident)
         self.sessions[agent].append(new_session)
         return new_session
 
@@ -196,20 +173,13 @@ class Host(Entity):
             if self.enable_ephemeral:
               pid = randrange(32768)
               count_pid = 0
-              #print(pid)
-              #print(pids)
               while pid in pids:
                 pid = randrange(32768)
-                #print(pid)
                 count_pid += 1
                 # avoid pid exhaustion loop
                 if count_pid > 32768:
-                    print("pid exhaustion on host")
                     sys.exit(1)
             else:
-              # the following has been disabled
-              # it was used to reduce entropy
-              # for testing
               pid = self.global_pid
               self.global_pid += 1
               if self.global_pid > 32004:
@@ -276,8 +246,6 @@ class Host(Entity):
 
     def get_interface(self, name=None, cidr=None, ip_address=None, subnet_name=None):
         """A method to get an interface with a selected name, subnet, or IP Address"""
-        # this appears in the original FO implementation.  Is this still required?
-        # ie are str ip addresses still being passed?
         if isinstance(ip_address,str):
             ip_address = IPv4Address(ip_address)
         for interface in self.interfaces:
@@ -466,15 +434,3 @@ class Host(Entity):
 
     def __str__(self):
         return f'{self.hostname}'
-
-    # the following is in the FO implementation.  Is this still required??
-    # commented out to test
-    #def get_dict(self):
-    #    tmp = deepcopy(self.__dict__)
-    #    output = { k: v for k,v in tmp.items() }
-    #    i_exp = []
-    #    for iobj in output['interfaces']:
-    #        i_exp.append(iobj.get_state())
-    #    output['interfaces'] = i_exp
-    #    return output
-

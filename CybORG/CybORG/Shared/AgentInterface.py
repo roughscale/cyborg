@@ -13,7 +13,7 @@ from CybORG.Shared.RedRewardCalculator import DistruptRewardCalculator, PwnRewar
     HybridImpactPwnRewardCalculator, GoalRewardCalculator
 from CybORG.Shared.Results import Results
 from CybORG.Shared.RewardCalculator import RewardCalculator, EmptyRewardCalculator
-from CybORG.Shared.State import State
+from CybORG.Shared.AgentState import AgentState
 
 # Unused in this Object
 # MAX values are used in the ActionSpace object to determine max action space length
@@ -42,8 +42,6 @@ class AgentInterface:
                  scenario,
                  fully_obs=False,
                  wrappers=None):
-        # the following seem to be "internal state" attributes of the agent
-        # they should be removed in favour of the Observation space
         self.hostname = {}
         self.username = {}
         self.group_name = {}
@@ -53,7 +51,6 @@ class AgentInterface:
         self.password = {}
         self.password_hash = {}
         self.file = {}
-        #
         self.actions = actions
         self.reward_calculator_type = reward_calculator_type
         self.last_action = None
@@ -68,31 +65,21 @@ class AgentInterface:
             for wrapper in wrappers:
                 if wrapper != 'None':
                     self.agent = getattr(sys.modules['CybORG.Agents.Wrappers'], wrapper)(agent=self.agent)
-        # this method for Red Agent does nothing
         self.agent.set_initial_values(
             action_space=self.action_space.get_max_action_space(),
             observation=Observation().data
         )
         self.fully_obs = fully_obs
         if self.fully_obs:
-            self.state_space = State()
+            self.state_space = AgentState()
             self.state_space.initialise_state(scenario)
         else:
             self.state_space = None
-        # 
-        #print("Agent Interface state init")
-        #print(self.action_space.get_action_space_size())
-
 
     def update(self, obs: dict, known=True, init=False):
         if isinstance(obs, Observation):
             obs = obs.data
-        # updates the action space parameters
-        #print("update action space")
-        #print("obs: {}".format(obs))
         self.action_space.update(obs, known, init)
-        #print("agent update")
-        #print(self.action_space.get_action_space_size())
 
     def update_state(self, obs):
         self.state_space.update(obs)
@@ -106,26 +93,10 @@ class AgentInterface:
             init_obs = init_obs.data
         if isinstance(true_obs, Observation):
             true_obs = true_obs.data
-        # this sets "all" attributes of the agent's internal state to False/unknown
-        #print("agent set_true_obs")
-        #print(true_obs)
-        #print("update agent param space with true obs")
         self.update(true_obs, False, True)
-        #print(self.action_space.get_action_space_size())
-        # this sets "specified" attributes to True/known
-        #print("agent set_init_obs")
-        #print(init_obs)
-        #print("update agent param space with init obs")
         self.update(init_obs, True)
-        #print(self.action_space.get_action_space_size())
-        # update state if fullyobs
         if self.fully_obs:
           self.update_state(init_obs)
-          # not sure why these following 2 are required for reward_calculator
-          # this has been removed in the reward calculator class
-          # remove it not required
-          #self.reward_calculator.previous_state = true_obs
-          #self.reward_calculator.init_state = true_obs
         self.reward_calculator.previous_obs = init_obs
         self.reward_calculator.init_obs = init_obs
 
@@ -135,12 +106,9 @@ class AgentInterface:
             observation = observation.data
         if action_space is None:
             action_space = self.action_space
-        #print("agent interface get action")
-        #print(type(self.agent))
         self.last_action = self.agent.get_action(observation, action_space, egreedy)
         return self.last_action
 
-    # this is currently disabled.  No need to integration FO State.
     def train(self, result: Results):
         """Trains an agent with the new tuple from the environment"""
         if isinstance(result.observation, Observation):
@@ -148,8 +116,7 @@ class AgentInterface:
         if isinstance(result.next_observation, Observation):
             result.next_observation = result.next_observation.data
         result.action = self.last_action
-        obs_hash, next_obs_hash, loss, mean_v = self.agent.train(result)
-        return obs_hash, next_obs_hash, loss, mean_v
+        self.agent.train(result)
 
     def end_episode(self):
         self.agent.end_episode()
@@ -169,7 +136,7 @@ class AgentInterface:
         self.action_space.reset(self.agent_name)
         self.agent.end_episode()
         if self.fully_obs:
-          self.state_space = State()
+          self.state_space = AgentState()
           self.state_space.initialise_state(self.scenario)
 
     def create_reward_calculator(self, reward_calculator: str, agent_name: str, scenario: Scenario) -> RewardCalculator:
@@ -195,11 +162,6 @@ class AgentInterface:
     def determine_reward(self, agent_obs: dict, true_obs: dict, action: Action, done: bool) -> float:
         return self.reward_calculator.calculate_reward(current_state=true_obs, action_dict=action,
                                                        agent_observations=agent_obs, done=done)
-
-    # The following is in the original FO implementation.  Don't think it is requried any more.
-    # Commented out to test
-    #def determine_reward_fullyobs(self, agent_obs: dict, true_obs: dict, action: Action, done: bool, state: dict={}, next_state: dict={}) -> float:
-    #    return self.reward_calculator.calculate_reward_fullyobs(state=state, next_state=next_state, true_state=true_obs, action_dict=action,
 
     def get_observation_space(self):
         # returns the maximum observation space for the agent given its action set and the amount of parameters in the environment

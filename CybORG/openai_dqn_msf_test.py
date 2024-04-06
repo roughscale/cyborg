@@ -28,7 +28,7 @@ tensorboard_log="./runs/dqn"
 # set n_envs to 1 initially. No parallelisation
 n_envs=1
 
-# set max params for observation vector sizei
+# set max params for observation vector size
 # other than MAX_HOSTS, they are max per host
 env_config = {
    "fully_obs": True,
@@ -49,34 +49,15 @@ env_config = {
 path = str(inspect.getfile(CybORG))
 curr_dir = os.getcwd()
 
-# TestScenario is Scenario1b with only a Red RedMeanderAgent config
-# seems that Scenarios MUST have agents declared ??
-# seems that the actions listed in an Agent spec are actually Agent classes??
-# this is going to cause some difficulties in generalising actions!
 path = path[:-10] + "/Shared/Scenarios/TestMSFSessionDQNScenario.yaml"
-#print(path)
 
 cyborg = CybORG(path,'sim', env_config=env_config)
 
-# print env controller network/environment state (ie not agent state!)
-#environment=cyborg.environment_controller.state
-#print()
-# the following returns the AgentInterface
 agent=cyborg.environment_controller.agent_interfaces["Red"]
-#unwrapped_action_space=agent.action_space.get_action_space()
-#action_env=EnumActionWrapper(cyborg)
-#print("action env get action space")
-#print(action_env.get_action_space(agent="Red"))
-#wrapped_env = FixedFlatStateWrapper(action_env, max_params=env_config["max_params"])
-#print("wrapped env get action space")
-#print(wrapped_env.get_action_space(agent="Red"))
 wrapped_env = FixedFlatStateWrapper(EnumActionWrapper(cyborg), max_params=env_config["max_params"])
 #env = OpenAIGymWrapper(env=wrapped_env, agent_name="Red")
 # wraps env in DummyVecEnv VecEnv environment
 env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n_envs=n_envs)
-
-# print openaigym action and observation spaces
-print(env.action_space) # Discrete
 
 # initialise agent learning
 agent.agent.initialise(env,

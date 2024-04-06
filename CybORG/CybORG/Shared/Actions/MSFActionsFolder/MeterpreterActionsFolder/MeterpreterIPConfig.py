@@ -45,7 +45,6 @@ class MeterpreterIPConfig(MeterpreterAction):
             return obs
 
         target_sessions = session_handler.get_session_by_remote_ip(str(self.ip_address),session_type="meterpreter")
-        print(target_sessions)
         if len(target_sessions) == 0:
             obs.set_success(False)
             return obs

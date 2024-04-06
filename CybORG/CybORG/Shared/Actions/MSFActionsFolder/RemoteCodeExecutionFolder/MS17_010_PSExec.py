@@ -56,15 +56,9 @@ class MS17_010_PSExec(RemoteCodeExecution):
             target_host = server_session.host
         else:
             target_host = state.hosts[state.ip_addresses[self.ip_address]]
-            # use updated check_routable function
-            #if not self.test_nacl(port=self.port, target_subnet=target_subnet,
-            #                      originating_subnet=state.subnets[server_interface.subnet]):
             ports = self.check_routable(to_subnets=[target_subnet],from_subnets=[state.subnets[server_interface.subnet]])
             if ports is None or ports == []:
                 return obs
-
-        # obs.add_interface_info(hostid='0', ip_address=server_address)
-        # obs.add_interface_info(hostid='1', ip_address=self.target)
 
         # multi-homed hosts may have more than 1 ip address
         hostid = state.ip_addresses[self.ip_address]
@@ -87,10 +81,6 @@ class MS17_010_PSExec(RemoteCodeExecution):
         # find out if smb is vulnerable (Windows OS + smb version)
         # Note that this exploit should actually work for all versions in the range Samba 3.0.20 - 3.0.25rc3
         if smb_proc is not None:# and smb_proc.version == ProcessVersion.SMBv1:
-            # Another instance of a temporary process added to the observation. This may fail and is not cleaned up
-            # Commenting out to reduce complexity of handling temporary state changes in failure cases
-            #obs.add_process(hostid=hostid, local_address=self.ip_address, local_port=self.port, status="open",
-            #                process_type="smb")
             if target_host.os_type == OperatingSystemType.WINDOWS:
 
                 root_user: User = None
@@ -142,18 +132,7 @@ class MS17_010_PSExec(RemoteCodeExecution):
                 # now adds the username to the session info.  Is this username returned in the Observation in the emulated case?
                 obs.add_session_info(hostid=hostid, username=root_user.username, pid=target_process.pid, session_id=int(new_session.ident), session_type=new_session.session_type, agent=self.agent)
 
-                # this is now disabled.  This is discoverable by the MeterpreterIPConfig action
-                # for multi-homed hosts, also return the details of the other interfaces
-                # this may need to be a separate action depending on what the emulated
-                # case does
-                #target_interface = target_host.get_interface(ip_address=self.ip_address)
-                #for interface in target_host.interfaces:
-                #    if interface.ip_address != lo and interface.ip_address != target_interface.ip_address:
-                #      obs.add_interface_info(hostid=hostid,ip_address=interface.ip_address, subnet=interface.subnet)
             else:
-                # This is a failure!  Why do we add the interface info to the obs?
-                # Comment out to reduce complexity of handling temporary state changes in failure cases
-                #obs.add_interface_info(ip_address=self.ip_address)
                 obs.set_success(False)
 
         return obs
@@ -188,13 +167,11 @@ class MS17_010_PSExec(RemoteCodeExecution):
                             process_type="smb")
             if '[*] Meterpreter session' in line:
                 obs.set_success(True)
-                #print(list(enumerate(line.split(' '))))
                 split = line.split(' ')
                 session = int(split[3])
                 if '-' in split[5]:
                     temp = split[5].replace('(', '').split(':')[0]
                     origin, rip = temp.split('-')
-                    # obs.add_process(remote_address=rip, local_address=origin)
                     rport = None
                 else:
                     rip, rport = split[5].replace('(', '').split(':')

@@ -46,10 +46,10 @@ class MSFSession(Session):
             session_type: str = 'shell', active: bool = True, parent=None, name=None,
             is_escalate_sandbox: bool = False, routes=[]):
 
-        super().__init__(ident=ident, host=host, ip_addr=ip_addr, username=username, agent=agent, pid=pid, timeout=timeout, 
+        super().__init__(ident=ident, host=host, ip_addr=ip_addr, username=username, agent=agent, pid=pid, timeout=timeout,
                 session_type=session_type, active=active,
                 parent=parent, name=name, is_escalate_sandbox=is_escalate_sandbox)
-        
+
         self.routes = routes
 
     def add_routes(self, cidrs: list):
@@ -61,23 +61,6 @@ class MSFSession(Session):
     def get_state(self):
         return {"username": self.username, "session_id": self.ident, "host": self.host, "ip_addr": self.ip_addr,
                 "session_type": self.session_type, "agent": self.agent, "routes": self.routes }
-
-        
-class SimulatedSessionHandler():
-    # a session handler for a simulated environment that tracks client/target session information.  It simulates the 
-    # session handler for the Metasploit Framework session handler.  The session handler tracks sessions
-    # as an implementation detail of an Action execution.
-    def __init__(self, agent):
-        self.sessions = {} # a mapping of session IDs for each agent and the client/target of each session.
-        self.session[agent] = {}
-
-    def add_session(self, agent, session: Session):
-        self.session[agent][session.ident] = session
-
-    def get_session_by_host(self, agent, hostname: str):
-        host_sessions = [ s for s in self.sessions[agent] if s.hostname == hostname ]
-        return host_sessions
-
 
 class RedAbstractSession(Session):
     # a session that remembers previously seen information that can be used by actions
