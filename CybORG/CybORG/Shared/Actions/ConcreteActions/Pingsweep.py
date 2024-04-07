@@ -49,7 +49,6 @@ class Pingsweep(ConcreteAction):
             obs.add_interface_info(hostid=str(lo_subnet), subnet=lo_subnet, ip_address=lo)
         else:
             # Check NACL rules allow subnet to be scanned and ICMP is not banned.
-            # host's interface's subnet attrib is of type IPv4Network. ensure state.subnets is of list of type IPv4Network
             available_ports = self.check_routable([state.subnets[i.subnet] for i in state.hosts[from_host].interfaces if i.subnet != lo_subnet], [state.subnets[self.subnet]])
             if 'ICMP' not in available_ports and 'all' not in available_ports:
                 obs.set_success(False)
@@ -58,9 +57,7 @@ class Pingsweep(ConcreteAction):
             target_hosts = []
             for host in state.subnets[self.subnet].ip_addresses:
                 obs.set_success(True)
-                # multi homed hosts have more than 1 ip address
-                hostid = state.ip_addresses[host]
-                target_hosts.append(hostid)
-                obs.add_interface_info(hostid=hostid, ip_address=host, subnet=self.subnet)
+                target_hosts.append(state.ip_addresses[host])
+                obs.add_interface_info(hostid=str(host), ip_address=host, subnet=self.subnet)
 
         return obs

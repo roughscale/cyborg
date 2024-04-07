@@ -41,7 +41,7 @@ Agents:
     #- MeterpreterPS
     #- SysInfo
     #- MeterpreterReboot
-    agent_type: RedSB3DQNFCAgent
+    agent_type: RedDQNAgent
     reward_calculator_type: Goal
     starting_sessions:
     - username: root

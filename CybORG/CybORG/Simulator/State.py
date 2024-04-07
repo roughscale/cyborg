@@ -13,7 +13,6 @@ from CybORG.Simulator.Host import Host
 from CybORG.Simulator.Process import Process
 from CybORG.Simulator.Session import MSFSession as Session
 from CybORG.Simulator.Subnet import Subnet
-from CybORG.Simulator.TrueState import TrueState
 
 
 class State:
@@ -44,8 +43,8 @@ class State:
 
         self.external_hosts = [ "Attacker0" ] # list of hostnames that are external of the system
 
-    def get_true_state(self, info: dict) -> TrueState:
-        true_obs = TrueState()
+    def get_true_state(self, info: dict) -> Observation:
+        true_obs = Observation()
         if info is None:
             raise ValueError('None is not a valid argument for the get true state function in the State class')
         elif info == {}:

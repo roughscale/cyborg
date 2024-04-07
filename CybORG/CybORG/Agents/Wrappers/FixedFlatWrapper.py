@@ -10,13 +10,12 @@ from CybORG.Shared.Enums import OperatingSystemType, SessionType, ProcessName, P
 
 import inspect, random
 
-
 class FixedFlatWrapper(BaseWrapper):
-    def __init__(self, env: BaseWrapper=None, agent=None, max_params: dict={}):
+    def __init__(self, env: BaseWrapper=None, agent=None, max_params: dict = {}):
         super().__init__(env, agent)
 
         self.MAX_HOSTS = max_params.get("MAX_HOSTS", 5)
-        self.MAX_PROCESSES = max_params.get("MAX_PROCESSES", 5) #100
+        self.MAX_PROCESSES = max_params.get("MAX_PROCESSES", 10) #100
         self.MAX_CONNECTIONS = max_params.get("MAX_CONNECTIONS", 2)
         self.MAX_VULNERABILITIES = max_params.get("MAX_VULNERABILITIES", 1)
         self.MAX_INTERFACES = max_params.get("MAX_INTERFACES", 2) # 4
@@ -63,21 +62,26 @@ class FixedFlatWrapper(BaseWrapper):
     #     return action_space
 
     def observation_change(self, obs: dict) -> list:
-        numeric_obs = obs['hosts']
+        numeric_obs = obs["hosts"]
         flat_obs = []
+        # the following pads the obs dict up to max hosts
+        # so that the flat_obs will be appropriately padded.
         while len(numeric_obs) < self.MAX_HOSTS:
             hostid = str(random.randint(0, self.MAX_HOSTS+1))
             if hostid not in numeric_obs.keys():
                 numeric_obs[hostid] = {}
 
         while len(numeric_obs) > self.MAX_HOSTS:
-            numeric_obs.popitem()
-            # raise ValueError("Too many hosts in observation for fixed size")
+            #numeric_obs.popitem()
+            raise ValueError("Too many hosts in observation for fixed size")
 
         for key_name, host in numeric_obs.items():
-            if key_name == 'success':
-                flat_obs.append(float(host.value)/3)
-            elif not isinstance(host, dict):
+            # host.value doesn't seem to resolve so now using a fixed success value
+            if obs["success"]:
+               flat_obs.append(1.0)
+            else:
+               flat_obs.append(-1.0)
+            if not isinstance(host, dict):
                 raise ValueError('Host data must be a dict')
             else:
                 if 'SystemInfo' in host:
@@ -176,8 +180,8 @@ class FixedFlatWrapper(BaseWrapper):
                 while len(host["Processes"]) < self.MAX_PROCESSES:
                     host["Processes"].append({})
                 while len(host["Processes"]) > self.MAX_PROCESSES:
-                    host["Processes"].pop()
-                    # raise ValueError("Too many processes in observation for fixed size")
+                    # host["Processes"].pop()
+                    raise ValueError("Too many processes in observation for fixed size")
 
                 for proc_idx, process in enumerate(host['Processes']):
                     if "PID" in process:
@@ -190,8 +194,8 @@ class FixedFlatWrapper(BaseWrapper):
                     else:
                             flat_obs.append(-1.0)
 
-                    if "Process Name" in process:
-                        element = process["Process Name"]
+                    if "ProcessName" in process:
+                        element = process["ProcessName"]
                         if element not in self.process_name:
                             self.process_name[element] = len(self.process_name)
                         element = self.process_name[element]
@@ -222,7 +226,7 @@ class FixedFlatWrapper(BaseWrapper):
                     #        element = process["Known Process"].value / len(ProcessName.__members__)
                     #    else:
                     #        element = -1.0
-                    #    
+                    #
                     #    flat_obs.append(float(element))
                     #else:
                     #    flat_obs.append(-1.0)
@@ -260,6 +264,9 @@ class FixedFlatWrapper(BaseWrapper):
                         process["Connections"] = []
                     while len(process["Connections"]) < self.MAX_CONNECTIONS:
                         process["Connections"].append({})
+                    while len(process["Connections"]) > self.MAX_CONNECTIONS:
+                       # process["Connections"].pop()
+                       raise ValueError("Too many connections in observation for fixed size")
 
                     for conn_idx, connection in enumerate(process["Connections"]):
                         if "local_port" in connection:
@@ -316,8 +323,8 @@ class FixedFlatWrapper(BaseWrapper):
                 while len(host["Files"]) < self.MAX_FILES:
                     host["Files"].append({})
                 while len(host["Files"]) > self.MAX_FILES:
-                    host["Files"].pop()
-                    # raise ValueError("Too many files in observation for fixed size")
+                    # host["Files"].pop()
+                    raise ValueError("Too many files in observation for fixed size")
 
                 for file_idx, file in enumerate(host['Files']):
                     if "Path" in file:
@@ -434,8 +441,8 @@ class FixedFlatWrapper(BaseWrapper):
                 while len(host["UserInfo"]) < self.MAX_USERS:
                     host["UserInfo"].append({})
                 while len(host["UserInfo"]) > self.MAX_USERS:
-                    host["UserInfo"].pop()
-                    # raise ValueError("Too many users in observation for fixed size")
+                    # host["UserInfo"].pop()
+                    raise ValueError("Too many users in observation for fixed size")
 
                 for user_idx, user in enumerate(host['UserInfo']):
                     if "Username" in user:
@@ -491,8 +498,8 @@ class FixedFlatWrapper(BaseWrapper):
                     while len(user["Groups"]) < self.MAX_GROUPS:
                         user["Groups"].append({})
                     while len(user['Groups']) > self.MAX_GROUPS:
-                        user['Groups'].pop()
-                        # raise ValueError("Too many groups in observation for fixed size")
+                        # user['Groups'].pop()
+                        raise ValueError("Too many groups in observation for fixed size")
                     for group_idx, group in enumerate(user["Groups"]):
                         if 'Builtin Group' in group:
                             if group["Builtin Group"] != -1:  # TODO test if this is ever not true
@@ -522,8 +529,8 @@ class FixedFlatWrapper(BaseWrapper):
                 while len(host["Sessions"]) < self.MAX_SESSIONS:
                     host["Sessions"].append({})
                 while len(host["Sessions"]) > self.MAX_SESSIONS:
-                    host["Sessions"].pop()
-                    # raise ValueError("Too many sessions in observation for fixed size")
+                    # host["Sessions"].pop()
+                    raise ValueError("Too many sessions in observation for fixed size")
 
                 for session_idx, session in enumerate(host['Sessions']):
                     if "Username" in session:
@@ -560,7 +567,7 @@ class FixedFlatWrapper(BaseWrapper):
                         flat_obs.append(-1.0)
 
                     if "Routes" not in session:
-                           session["Routes"] = []
+                        session["Routes"] = []
                     while len(session["Routes"]) < self.MAX_INTERFACES:
                            session["Routes"].append(None)
                     if len(session["Routes"]) > self.MAX_INTERFACES:
@@ -581,8 +588,8 @@ class FixedFlatWrapper(BaseWrapper):
                 while len(host["Interface"]) < self.MAX_INTERFACES:
                     host["Interface"].append({})
                 while len(host["Interface"]) > self.MAX_INTERFACES:
-                    host["Interface"].pop()
-                    # raise ValueError("Too many interfaces in observation for fixed size")
+                    # host["Interface"].pop()
+                    raise ValueError("Too many interfaces in observation for fixed size")
 
                 if 'Interface' in host:
                     for interface_idx, interface in enumerate(host['Interface']):

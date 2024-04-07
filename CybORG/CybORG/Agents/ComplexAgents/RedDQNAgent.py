@@ -3,7 +3,6 @@ import hashlib
 from CybORG.Agents.SimpleAgents.BaseAgent import BaseAgent
 from gym import spaces
 from CybORG.Shared import Results
-from CybORG.Shared.State import State
 import numpy as np
 # following libraries are for Schwartz implementation
 import torch
@@ -23,7 +22,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.prioritized_replay_buffer import PrioritizedReplayBuffer
 
 
-class RedSB3DQNFCAgent(BaseAgent):
+class RedDQNAgent(BaseAgent):
 
     """ a red agent that uses Double Q network with a fully connected layer """
     """ this uses the stable_baselines3 implementation """
@@ -47,8 +46,6 @@ class RedSB3DQNFCAgent(BaseAgent):
 
         input_size=env.observation_space.shape[0]
         net_arch=[input_size]
-        #net_arch=[1024,256,64]
-        #net_arch=[input_size,int(input_size/2)]
 
         learning_rate=float(0.0001)
         # LR is provided as a schedule
@@ -117,7 +114,7 @@ class RedSB3DQNFCAgent(BaseAgent):
                 gamma=gamma,
                 train_freq=1, #default is 4
                 gradient_steps=1, #default
-                replay_buffer_class=PrioritizedReplayBuffer, # later will implement PrioritizedReplayBuffer, None resolves to BufferReplay
+                replay_buffer_class=PrioritizedReplayBuffer, # None resolves to BufferReplay
                 replay_buffer_kwargs=per_buffer_args, #default is None
                 optimize_memory_usage=False, # default
                 target_update_interval=target_network_update_freq, #default
@@ -135,14 +132,6 @@ class RedSB3DQNFCAgent(BaseAgent):
 
         # specific to policy
         self.num_actions = self.env.action_space.n
-        #print(self.num_actions)
-        #obs_dim = state_space.shape
-        #print(obs_dim)
-        #hidden_sizes = [64,64] # schwartz default. why this?
-        #hidden_sizes = [256] # schwartz reported arch
-        # should perhaps re-use schwartz' architecture of one 256 layer.
-        # how many "features" does the state space contain??
-        # 
 
         self.learn_callback = LearnCallback(self.model)
 
@@ -160,48 +149,14 @@ class LearnCallback(BaseCallback):
         env = None
 
     def _on_training_start(self):
-        #print(self.globals)
-        #print(self.training_env)
-        #print(dir(self.training_env))
-        #print(self.training_env.envs)
         self.env=self.training_env.envs[0]
-        # Monitor class
-        #print(dir(self.env))
-        #print(self.locals)
-        # OpenAIGymWrapper class
-        #print(env.env)
-        # FixedFlatObsWrapper class
-        #print(env.env.env)
-        #print(self.training_env.observation_space)
         return True
 
     def _on_step(self):
-        #print(self.env.render)
-        #self.env.render(self,mode=None,kwargs=None) 
-        #print(self.locals)
-        #print(self.globals)
-        # see if we can print the following 3 steps
         print("Step {}".format(int(self.locals["eps_steps"]) + 1))
         print("Random Action" if not self.locals["computed_actions"] else "Computed Action")
-        #print(action_qvals)
-
-        #print("Num Collected Episodes: {}".format(self.locals["num_collected_episodes"]))
-        #print("Num Collected Steps: {}".format(self.locals["num_collected_steps"]))
-        #print()
-        # infos observation is unwrapped (ie python list not a numpy array)
-        #print("Infos: {}".format(self.locals["infos"]))
-        #print("Obs: {}".format(self.locals["infos"][0]["state"]))
-        ##print("Obs Hash: {}".format(State.get_state_hash(self.locals["infos"][0]["state"])))
-        #print("New Obs: {}".format(self.locals["new_obs"][0]))
-        #print("Comp Obs: {}".format(np.array_equal(self.locals["infos"][0]["state"],self.locals["new_obs"][0])))
-        #diff = np.subtract(self.locals["infos"][0]["state"],self.locals["new_obs"][0])
-        #print("Diff obs: {}".format(diff))
-        #print("Diff shape: {}".format(diff.shape))
-        ##print("New Obs Hash: {}".format(State.get_state_hash(self.locals["new_obs"][0])))
         print("Action: {}".format(self.locals["actions"][0]))
         print("Reward: {}".format(self.locals["rewards"][0]))
         print("Done: {}".format(self.locals["dones"][0]))
         print()
         return True
-        #pass
-

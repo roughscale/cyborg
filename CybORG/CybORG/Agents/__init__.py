@@ -8,14 +8,9 @@ from CybORG.Agents.SimpleAgents.BlueReactAgent import BlueReactRemoveAgent,BlueR
 from CybORG.Agents.SimpleAgents.KeyboardAgent import KeyboardAgent
 from CybORG.Agents.SimpleAgents.RedKillChainAgent import RedKillChainAgent
 from CybORG.Agents.SimpleAgents.RedRandomAgent import RedRandomAgent
-from .ComplexAgents.RedSB3DRQNAgent import RedSB3DRQNAgent
-from .ComplexAgents.RedTabQAgent import RedTabQAgent
-#from .ComplexAgents.RedDQNFCAgent import RedDQNFCAgent
-#from .ComplexAgents.RedSB2DQNFCAgent import RedSB2DQNFCAgent
-from .ComplexAgents.RedSB3DQNFCAgent import RedSB3DQNFCAgent
+from .ComplexAgents.RedDRQNAgent import RedDRQNAgent
+from .ComplexAgents.RedDQNAgent import RedDQNAgent
 from .ComplexAgents.RedPPOAgent import RedPPOAgent
-from .ComplexAgents.RedTRPOAgent import RedTRPOAgent
-from .ComplexAgents.RedA2CAgent import RedA2CAgent
 from .ComplexAgents.RedRecurrentPPOAgent import RedRecurrentPPOAgent
 from .SimpleAgents.TestAgent import TestAgent
 from .SimpleAgents.HeuristicRed import HeuristicRed

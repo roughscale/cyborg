@@ -7,8 +7,8 @@ from CybORG.Simulator.State import State
 
 # Call ps from a meterpreter session - gives a list of processes with PID, name, user and path
 class MeterpreterPS(MeterpreterAction):
-    def __init__(self, session: int, agent: str, target_session: int):
-        super().__init__(session=session, agent=agent, target_session=target_session)
+    def __init__(self, session: int, agent: str):
+        super().__init__(session=session, agent=agent)
 
     def sim_execute(self, state: State):
         obs = Observation()

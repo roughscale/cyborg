@@ -55,13 +55,9 @@ class EscalateAction(ConcreteAction):
         for proc in necessary_processes:
             if proc.decoy_type & DecoyType.ESCALATE:
                 obs.set_success(False)
-                # why do we add a process on the target server if the action fails?
-                # how is this process cleaned up?
                 obs.add_process(hostid=target_host.hostname, process_name=proc.name)
                 return obs
 
-        # escalatable processes are present on the host
-        # at the moment, this also works even if there are no necessary_processes.
         obs = self.__upgrade_session(user, target_host, target_session)
         return obs
 
@@ -117,7 +113,6 @@ class ExploreHost(ConcreteAction):
                 or self.target_session not in state.sessions[self.agent]):
             return Observation(success=False)
         target_host = state.hosts[state.sessions[self.agent][self.target_session].host]
-        # obs now needs to have a top level hosts key
-        obs = state.get_true_state({"hosts": target_host.info})
+        obs = state.get_true_state(target_host.info)
         obs.set_success(True)
         return obs

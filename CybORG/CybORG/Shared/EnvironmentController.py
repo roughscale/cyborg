@@ -12,7 +12,6 @@ from CybORG.Shared.Results import Results
 from CybORG.Shared.Observation import Observation
 from CybORG.Shared.Actions import Action, FindFlag, Monitor
 from CybORG.Shared.AgentInterface import AgentInterface
-from CybORG.Simulator.TrueState import TrueState
 
 import CybORG.Agents
 
@@ -301,7 +300,7 @@ class EnvironmentController:
         return done
 
     # Is this needed for the Emulated case??
-    def get_true_state(self, info: dict) -> TrueState:
+    def get_true_state(self, info: dict) -> Observation:
         """Get current True state
 
         Returns

@@ -7,8 +7,8 @@ from CybORG.Simulator.State import State
 
 # Call getpid from a meterpreter session - gives the process id of the session
 class GetPid(MeterpreterAction):
-    def __init__(self, session: int, agent: str, target_session: int):
-        super().__init__(session=session, agent=agent, target_session=target_session)
+    def __init__(self, session: int, agent: str):
+        super().__init__(session=session, agent=agent)
 
     def sim_execute(self, state: State):
         obs = Observation()

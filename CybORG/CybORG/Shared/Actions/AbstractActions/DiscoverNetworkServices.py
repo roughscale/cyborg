@@ -24,10 +24,8 @@ class DiscoverNetworkServices(Action):
         # run portscan on the target ip address from the selected session
         sub_action = Portscan(session=self.session, agent=self.agent, ip_address=self.ip_address, target_session=session)
         obs = sub_action.sim_execute(state)
-        # Multi-homed hosts may have more than 1 ip address
-        hostid = state.ip_addresses[self.ip_address]
-        if hostid in obs.data['hosts']:
-            for proc in obs.data['hosts'][hostid]["Processes"]:
+        if str(self.ip_address) in obs.data:
+            for proc in obs.data[str(self.ip_address)]["Processes"]:
                 for conn in proc['Connections']:
                     port = conn["local_port"]
                     state.sessions[self.agent][self.session].addport(self.ip_address, port)

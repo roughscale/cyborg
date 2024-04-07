@@ -22,7 +22,6 @@ class Portscan(ConcreteAction):
         from_host = state.sessions['Red'][self.session].host
         session = state.sessions['Red'][self.session]
 
-
         if not session.active:
             obs.set_success(False)
             return obs
@@ -30,10 +29,6 @@ class Portscan(ConcreteAction):
             target_host: Host = state.hosts[from_host]
             ports = ['all']
         else:
-            # state.ip_addresses is a dict of type IPv4Adddress keys. 
-            # so self.ip_address needs to be of type IPv4Address
-            # state.subnets seems to a dict of type str keys (why is this?)
-            # hosts.interfaces.subnet is of type IPv4Network. use str representation for dict keys
             target_host: Host = state.hosts[state.ip_addresses[self.ip_address]]
             ports = self.check_routable([state.subnets[i.subnet] for i in state.hosts[from_host].interfaces if i.ip_address != lo], [s for s in state.subnets.values() if self.ip_address in s.cidr])
 
@@ -53,9 +48,7 @@ class Portscan(ConcreteAction):
                             if i.subnet == from_subnet:
                                 originating_ip_address = i.ip_address
                     # internal so avoids nacls
-                    # multi homed hosts have more than 1 ip address
-                    hostid = state.ip_addresses[self.ip_address]
-                    obs.add_process(hostid=hostid, local_port=conn["local_port"], local_address=self.ip_address)
+                    obs.add_process(hostid=str(self.ip_address), local_port=conn["local_port"], local_address=self.ip_address)
                     target_host.events['NetworkConnections'].append({'local_address': self.ip_address,
                                                                      'local_port': conn["local_port"],
                                                                      'remote_address': originating_ip_address,
