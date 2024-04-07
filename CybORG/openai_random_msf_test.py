@@ -1,11 +1,7 @@
 from CybORG import CybORG
 from CybORG.Agents.Wrappers.EnumActionWrapper import EnumActionWrapper
 from CybORG.Agents.Wrappers.FixedFlatWrapper import FixedFlatWrapper
-from CybORG.Agents.Wrappers.FixedFlatStateWrapper import FixedFlatStateWrapper
 from CybORG.Agents.Wrappers.OpenAIGymWrapper import OpenAIGymWrapper
-#from CybORG.Agents.SimpleAgents.RedRandomAgent import RedRandomAgent
-from CybORG.Shared.Results import Results
-from CybORG.Shared.State import State
 from stable_baselines3.common.env_util import make_vec_env
 import inspect
 import sys
@@ -34,7 +30,7 @@ cyborg = CybORG(path,'sim', env_config=env_config)
 
 # the following returns the AgentInterface
 agent=cyborg.environment_controller.agent_interfaces["Red"]
-wrapped_env = FixedFlatStateWrapper(EnumActionWrapper(cyborg))
+wrapped_env = FixedFlatWrapper(EnumActionWrapper(cyborg))
 env = OpenAIGymWrapper(env=wrapped_env, agent_name="Red")
 
 observation=env.reset()

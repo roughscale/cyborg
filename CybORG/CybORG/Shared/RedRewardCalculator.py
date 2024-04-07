@@ -54,13 +54,10 @@ class GoalRewardCalculator(RewardCalculator):
     # don't set any 0 reward. this can train the agent to repeatedly prefer these actions over others
     def calculate_reward(self, current_state: dict, action_dict: dict, agent_observations: dict, done: bool):
         action = action_dict[self.agent_name]
-        #print("calculate reward")
-        #print(agent_observations)
         if isinstance(agent_observations[self.agent_name],Observation):
           action_success = agent_observations[self.agent_name].success # is an Observation/State object
         else:
             action_success = agent_observations[self.agent_name]["success"] # is a dict
-        #print(action_success)
         if done:
             reward = 100.0
         elif action_success == TrinaryEnum.TRUE:
@@ -116,7 +113,6 @@ class PwnRewardCalculator(RewardCalculator):
     def calculate_reward(self, current_state: dict, action: dict, agent_observations: dict, done: bool):
         root_sessions = 0
         system_sessions = 0
-        #pprint(current_state['hosts'])
         for host, info in current_state['hosts'].items():
             # ignore external host processes
             if 'SystemInfo' in info and info['SystemInfo']['Hostname'] == "Attacker0":
@@ -125,7 +121,6 @@ class PwnRewardCalculator(RewardCalculator):
             if 'Sessions' in info:
                 for session in info['Sessions']:
                     if session['Agent'] == self.agent_name:
-                        #print(host)
                         # count the number of root sessions
                         if session['Username'] == 'root' and info['SystemInfo']['OSType'] == OperatingSystemType.LINUX:
                             root_sessions += self.mapping[self.scenario.get_host(host).get('ConfidentialityValue', 'Low')]
