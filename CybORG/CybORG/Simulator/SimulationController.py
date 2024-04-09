@@ -74,7 +74,7 @@ class SimulationController(EnvironmentController):
         return scenario_dict
 
     def _create_environment(self):
-        self.state = State(self.scenario, self.randomize_env)
+        self.state = State(self.scenario)
         self.hostname_ip_map = {ip: h for ip, h in self.state.ip_addresses.items()}
         self.subnet_cidr_map = self.state.subnet_name_to_cidr
 

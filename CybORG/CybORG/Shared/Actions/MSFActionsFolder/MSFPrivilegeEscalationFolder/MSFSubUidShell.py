@@ -58,8 +58,8 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
           obs.add_session_info(hostid=hostname, **sess.get_state())
           return obs
 
-        if len(sessions) > 1:
-          target_host_session = sessions[0]
+        # choosing first session
+        target_host_session = sessions[0]
 
         # what is the effect of the escalate sandbox?
         if target_host_session.is_escalate_sandbox:

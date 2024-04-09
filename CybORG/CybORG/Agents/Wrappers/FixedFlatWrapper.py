@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from CybORG.Agents.Wrappers.BaseWrapper import BaseWrapper
-from CybORG.Shared import Observation
+from CybORG.Shared import Observation, Results
 from CybORG.Shared.Actions import ShellSleep
 from CybORG.Shared.Enums import OperatingSystemType, SessionType, ProcessName, Path, ProcessType, ProcessVersion, \
     AppProtocol, FileType, ProcessState, Vulnerability, Vendor, PasswordHashType, BuiltInGroups, \
@@ -9,6 +9,7 @@ from CybORG.Shared.Enums import OperatingSystemType, SessionType, ProcessName, P
     OperatingSystemPatch, FileVersion
 
 import inspect, random
+import copy
 
 class FixedFlatWrapper(BaseWrapper):
     def __init__(self, env: BaseWrapper=None, agent=None, max_params: dict = {}):
@@ -60,6 +61,12 @@ class FixedFlatWrapper(BaseWrapper):
     #                                 'vagrant': action_space['password']['vagrant']}
     #     action_space['port'] = {22: action_space['port'][22]}
     #     return action_space
+
+    def step(self, agent=None, action=None) -> Results:
+        result = self.env.step(agent, action)
+        result.observation = self.observation_change(copy.deepcopy(result.observation))
+        result.action_space = self.action_space_change(result.action_space)
+        return result
 
     def observation_change(self, obs: dict) -> list:
         numeric_obs = obs["hosts"]
