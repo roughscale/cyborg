@@ -3,7 +3,6 @@ from CybORG.Agents.Wrappers.EnumActionWrapper import EnumActionWrapper
 from CybORG.Agents.Wrappers.FixedFlatWrapper import FixedFlatWrapper
 from CybORG.Agents.Wrappers.FixedFlatStateWrapper import FixedFlatStateWrapper
 from CybORG.Agents.Wrappers.OpenAIGymWrapper import OpenAIGymWrapper
-#from CybORG.Agents.SimpleAgents.RedRandomAgent import RedRandomAgent
 from CybORG.Shared.Results import Results
 from CybORG.Shared.State import State
 from stable_baselines3.common.env_util import make_vec_env
@@ -13,12 +12,33 @@ import sys
 import time
 import copy
 import os
+import json
+import psutil
+import subprocess
+import argparse
+import signal
 
-args = sys.argv
-model_name = args[1]
+def signal_handler(sig, frame):
+    msfrpcd.terminate()
+    sys.exit(0)
 
-# number of evaulation episodes
-n_eval_eps=100
+signal.signal(signal.SIGINT, signal_handler)
+
+parser = argparse.ArgumentParser(
+        prog="get_env_cfg",
+        description="Get the AWS network configuration")
+parser.add_argument("--env-file",dest="env_file",required=True)
+parser.add_argument("--model-name",dest="model_name",required=True)
+args=parser.parse_args()
+
+# start msfrcpd
+msfrpcd = subprocess.Popen(["/opt/metasploit-framework/bin/msfrpcd","-P","password"],close_fds=True)
+msfrpcd.wait()
+# wait until service is available
+time.sleep(5)
+
+# number of evaluation episodes
+n_eval_eps=1
 
 env_config = {
    "fully_obs": False,
@@ -36,13 +56,18 @@ env_config = {
    }
 }
 
+# get emulated config from file
+emu_conf_file = open(args.env_file,"r")
+emu_config = json.load(emu_conf_file)
+env_config.update(emu_config)
+
 path = str(inspect.getfile(CybORG))
 n_envs=1
 
 scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionDRQNScenario.yaml"
-model_path=path[:-17] + "/exports/" + model_name
+model_path=path[:-17] + "/exports/" + args.model_name
 
-cyborg = CybORG(scenario_path,'sim',env_config=env_config)
+cyborg = CybORG(scenario_path,'aws', env_config=env_config)
 
 agent=cyborg.environment_controller.agent_interfaces["Red"]
 wrapped_env = FixedFlatStateWrapper(EnumActionWrapper(cyborg),max_params=env_config["max_params"])
@@ -54,14 +79,11 @@ model=agent.agent.load("DeepRecurrentQNetwork",model_path)
 start=time.time()
 print("Evaluation start: {}".format(time.ctime(start)))
 print()
-#agent.agent.dqn.learn(total_timesteps=total_steps,log_interval=1,callback=callback)
 mean_reward, std_reward = evaluate_policy(model.model.policy, env, n_eval_episodes=n_eval_eps, deterministic=True)
-#rewards, lengths = evaluate_policy(model.model.policy, env, n_eval_episodes=n_eval_eps, deterministic=True, return_episode_rewards=True)
 end=time.time()
 print(mean_reward)
 print(std_reward)
-#print(rewards)
-#print(lengths)
 print("Evaluation end: {}".format(time.ctime(end)))
-print("Evaluation duration: {}".format(end-start))
+print("Evaluation duration: {}s".format(end-start))
+msfrpcd.terminate()
 

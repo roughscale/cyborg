@@ -145,6 +145,11 @@ class RedDRQNAgent(BaseAgent):
 
         self.learn_callback = LearnCallback(self.model)
 
+    def load(self,classtype,file):
+        ModelClass = DeepRecurrentQNetwork
+        self.model = ModelClass.load(file)
+        return self
+
 class LearnCallback(BaseCallback):
 
     def __init__(self, model):
