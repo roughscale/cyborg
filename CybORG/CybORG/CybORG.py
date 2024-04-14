@@ -6,6 +6,7 @@ from CybORG.Shared import Observation, Results, CybORGLogger
 from CybORG.Shared.EnvironmentController import EnvironmentController
 
 from CybORG.Simulator.SimulationController import SimulationController
+from CybORG.Emulator.AWSClientController import AWSClientController
 
 
 class CybORG (CybORGLogger):
@@ -71,7 +72,7 @@ class CybORG (CybORGLogger):
         ----------
         """
         if self.env == 'sim':
-            return SimulationController(self.scenario_file, agents=agents)
+            return SimulationController(self.scenario_file, agents=agents, **env_config)
         if self.env == 'aws':
 
             if env_config:

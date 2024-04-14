@@ -20,7 +20,8 @@ from CybORG.Simulator.Interface import Interface
 from CybORG.Simulator.LocalGroup import LocalGroup
 from CybORG.Simulator.MSFServerSession import MSFServerSession
 from CybORG.Simulator.Process import Process
-from CybORG.Simulator.Session import VelociraptorServer, RedAbstractSession, Session
+from CybORG.Simulator.Session import VelociraptorServer, RedAbstractSession
+from CybORG.Simulator.Session import MSFSession as Session
 
 from CybORG.Simulator.User import User
 
@@ -34,7 +35,7 @@ class Host(Entity):
 
     def __init__(self, system_info: dict, hostname: str = None, users: dict = None,
                  files: list = None, sessions: dict = None, processes: list = None, interfaces: list = None, info: dict = None,
-                 services: dict = None):
+                 services: dict = None, enable_ephemeral=True):
         super().__init__()
         self.original_services = {}
         self.os_type = OperatingSystemType.parse_string(system_info["OSType"])
@@ -66,6 +67,7 @@ class Host(Entity):
         self.original_files = deepcopy(self.files)
 
         self.sessions = {}
+
         if sessions is not None:
             for agent_name, session in sessions.items():
                 self.add_session(agent=agent_name, **session)
@@ -77,7 +79,7 @@ class Host(Entity):
             for process in processes:
                 self.processes.append(
                     Process(pid=process.get('PID'), parent_pid=process.get('PPID'), username=process.get("Username"),
-                            process_name=process.get('Process Name'), path=process.get('Path'),
+                            process_name=process.get('ProcessName'), path=process.get('Path'),
                             open_ports=process.get('Connections'), properties=process.get('Properties'),
                             process_type=process.get('Process Type')))
         self.original_processes = deepcopy(self.processes)
@@ -97,6 +99,10 @@ class Host(Entity):
         self.info = info if info is not None else {}
         self.events = {'NetworkConnections': [], 'ProcessCreation': []}
 
+        self.enable_ephemeral = enable_ephemeral
+        self.global_ephemeral_port = 50000
+        self.global_pid = 32000
+
     def get_state(self):
         observation = {"os_type": self.os_type, "os_distribution": self.distribution, "os_version": self.version,
                        "os_patches": self.patches, "os_kernel": self.kernel, "hostname": self.hostname,
@@ -104,23 +110,39 @@ class Host(Entity):
         return observation
 
     def get_ephemeral_port(self):
-        port = randrange(49152, 60000)
-        if port in self.ephemeral_ports:
+        if self.enable_ephemeral:
+          port = randrange(49152, 60000)
+          count_port = 0
+          while port in self.ephemeral_ports:
             port = randrange(49152, 60000)
-        self.ephemeral_ports.append(port)
+            count_port += 1
+            # avoid port exhaustion in cases of divergence
+            if count_port > 10848:
+                sys.exit(1)
+          self.ephemeral_ports.append(port)
+        else:
+          port = self.global_ephemeral_port
+          self.global_ephemeral_port += 1
+          if self.global_ephemeral_port > 50004:
+              self.global_ephemeral_port = 50000
         return port
 
-    def add_session(self, username, ident, agent, parent, timeout=0, pid=None, session_type="Shell", name=None, artifacts=None,
-            is_escalate_sandbox:bool=False):
+    def add_session(self, username, ident, agent, parent, timeout=0, pid=None, session_type="Shell", name=None, routes=[], artifacts=None,
+            is_escalate_sandbox:bool=False, ip_addr=None):
+        if ip_addr is None:
+            primary_interface = [ i.ip_address for i in self.interfaces if i.name == "eth0" ]
+            ip_addr = primary_interface[0]
         if parent is not None:
             parent_id = parent.ident
         else:
             parent_id = None
         if pid is None:
             pid = self.add_process(name=str(session_type), user=username).pid
+        else:
+            pid = self.add_process(name=str(session_type), user=username, pid=pid).pid
         if session_type == 'MetasploitServer':
-            new_session = MSFServerSession(host=self.hostname, user=username, ident=ident, agent=agent, process=pid,
-                                           timeout=timeout, session_type=session_type, name=name)
+            new_session = MSFServerSession(host=self.hostname, ip_addr=ip_addr, user=username, ident=ident, agent=agent, process=pid,
+                    timeout=timeout, session_type=session_type, name=name, routes=routes)
         elif session_type == 'RedAbstractSession':
             new_session = RedAbstractSession(host=self.hostname, agent=agent, username=username, ident=ident, pid=pid,
                                              timeout=timeout, session_type=session_type, name=name)
@@ -128,8 +150,8 @@ class Host(Entity):
             new_session = VelociraptorServer(host=self.hostname, agent=agent, username=username, ident=ident, pid=pid,
                                              timeout=timeout, session_type=session_type, name=name, artifacts=artifacts)
         else:
-            new_session = Session(host=self.hostname, agent=agent, username=username, ident=ident, pid=pid,
-                                  timeout=timeout, parent=parent_id, session_type=session_type, name=name, is_escalate_sandbox=is_escalate_sandbox)
+            new_session = Session(host=self.hostname, ip_addr=ip_addr, agent=agent, username=username, ident=ident, pid=pid,
+                                  timeout=timeout, parent=parent_id, session_type=session_type, name=name, is_escalate_sandbox=is_escalate_sandbox, routes=routes)
 
         if parent is not None:
             parent.children[new_session.ident] = new_session
@@ -138,7 +160,7 @@ class Host(Entity):
         #     raise ValueError(f"New Session of type {new_session.session_type.name} requires parent but none has been set")
         if agent not in self.sessions:
             self.sessions[agent] = []
-        self.sessions[agent].append(new_session.ident)
+        self.sessions[agent].append(new_session)
         return new_session
 
     def add_process(self, name: str, user: str, pid: int = None, ppid: int = None, path: str = None,
@@ -148,9 +170,21 @@ class Host(Entity):
             pids = []
             for process in self.processes:
                 pids.append(process.pid)
-            pid = 0
-            while pid == 0 or pid in pids:
+            if self.enable_ephemeral:
+              pid = randrange(32768)
+              count_pid = 0
+              while pid in pids:
                 pid = randrange(32768)
+                count_pid += 1
+                # avoid pid exhaustion loop
+                if count_pid > 32768:
+                    sys.exit(1)
+            else:
+              pid = self.global_pid
+              self.global_pid += 1
+              if self.global_pid > 32004:
+                 self.global_pid = 32000
+
         if type(open_ports) is dict:
             open_ports = [open_ports]
 
@@ -212,6 +246,8 @@ class Host(Entity):
 
     def get_interface(self, name=None, cidr=None, ip_address=None, subnet_name=None):
         """A method to get an interface with a selected name, subnet, or IP Address"""
+        if isinstance(ip_address,str):
+            ip_address = IPv4Address(ip_address)
         for interface in self.interfaces:
             if name is not None:
                 if interface.name == name:

@@ -2,24 +2,27 @@
 
 import sys
 from inspect import signature
+from ipaddress import IPv4Address, IPv4Network
 
 from CybORG.Shared.Enums import SessionType
 
-MAX_SUBNETS = 10
-MAX_ADDRESSES = 10
-MAX_SESSIONS = 8
-MAX_USERNAMES = 10
-MAX_PASSWORDS = 10
-MAX_PROCESSES = 50
-MAX_PORTS = 50
-MAX_GROUPS = 15
-MAX_FILES = 20
-MAX_PATHS = 20
+# These are the maximum for the Action Space parameter vector
+MAX_SUBNETS = 3
+MAX_ADDRESSES = 6
+MAX_SESSIONS = 10
+MAX_USERNAMES = 8
+MAX_PASSWORDS = 8
+MAX_PROCESSES = 10 # We will use ProcessName instead of PID
+MAX_PORTS = 11 # 6 static and 5 ephermal ports
+# Following not used in this Class
+#MAX_GROUPS = 5
+#MAX_FILES = 10
+#MAX_PATHS = 10
 
 
 class ActionSpace:
 
-    def __init__(self, actions, agent, allowed_subnets):
+    def __init__(self, actions, agent, allowed_subnets, external_hosts):
         # load in the stuff that the agent is allowed to know about
 
         # save all params
@@ -28,8 +31,8 @@ class ActionSpace:
         for action in self.actions:
             self.action_params[action] = signature(action).parameters
         self.allowed_subnets = allowed_subnets
-        self.subnet = {}
-        self.ip_address = {}
+        self.subnet = {} # dict keys to be IPv4Network
+        self.ip_address = {} # dict keys to be IPv4Address
         self.server_session = {}
         self.client_session = {i: False for i in range(MAX_SESSIONS)}
         self.username = {}
@@ -38,6 +41,7 @@ class ActionSpace:
         self.port = {}
         self.hostname = {}
         self.agent = {agent: True}
+        self.external_hosts = external_hosts
 
     def get_name(self, action: int) -> str:
         pass
@@ -75,6 +79,22 @@ class ActionSpace:
             'target_session': self.client_session,
             'agent': self.agent,
             'hostname': self.hostname
+        }
+        return max_action
+
+    def get_action_space_size(self):
+        max_action = {
+            'action': len(self.actions),
+            'subnet': len(self.subnet),
+            'ip_address': len(self.ip_address),
+            'session': len(self.server_session),
+            'username': len(self.username),
+            'password': len(self.password),
+            'process': len(self.process),
+            'port': len(self.port),
+            'target_session': len(self.client_session),
+            'agent': len(self.agent),
+            'hostname': len(self.hostname)
         }
         return max_action
 
@@ -118,41 +138,67 @@ class ActionSpace:
                 )
         return size
 
-    def update(self, observation: dict, known: bool = True):
+    def update(self, observation: dict, known: bool = True, init: bool = False):
+        # use init=True to set up the initial action space, as updates will depend upon
+        # the initialised action_space
         if observation is None:
             return
-        for key, info in observation.items():
-            if key == "success" or key == 'Valid' or key == 'action':
-                continue
+        for key, info in observation['hosts'].items():
             if not isinstance(info, dict):
                 continue
-            if "System info" in info:
-                if "Hostname" in info["System info"]:
-                    self.hostname[info["System info"]["Hostname"]] = known
+            if key in self.external_hosts:
+                # only add Attacker session action space parameters
+                if "Sessions" in info:
+                  for session in info["Sessions"]:
+                    if "ID" in session and session['Agent'] in self.agent:
+                        if "Type" in session and (session["Type"] == SessionType.MSF_SERVER or session["Type"] == SessionType.RED_ABSTRACT_SESSION):
+                            if session['Active']:
+                               self.server_session[session["ID"]] = known
+                            else:
+                                self.server_session[session["ID"]] = False # remove inactive sessions from action parameter space
+                        else:
+                            # assume if not a server session then its a client session
+                            if session['Active']:
+                               self.client_session[session["ID"]] = known
+                            else:
+                               self.client_session[session["ID"]] = False
+
+                continue
+            if "SystemInfo" in info:
+                if "Hostname" in info["SystemInfo"]:
+                  # TODO:
+                  # we should only ignore external host for non-blue type agents
+                  # as blue agents may need to take actions against an external host
+                  if info["SystemInfo"]["Hostname"] not in self.external_hosts:
+                    self.hostname[info["SystemInfo"]["Hostname"]] = known
             if "Interface" in info:
                 for interface in info["Interface"]:
                     if "Subnet" in interface:
-                        self.subnet[interface["Subnet"]] = known
+                       self.subnet[interface["Subnet"]] = known
                     if "IP Address" in interface:
                         self.ip_address[interface["IP Address"]] = known
 
             if "Processes" in info:
                 for process in info["Processes"]:
-                    if "PID" in process:
-                        self.process[process["PID"]] = known
+                    # only update for process entries already in the action parameter space
+                    if "ProcessName" in process and (process["ProcessName"] in self.process or init):
+                        self.process[process["ProcessName"]] = known
                     if "Connections" in process:
                         for connection in process["Connections"]:
-                            if "local_port" in connection:
+                            if "local_port" in connection and (connection["local_port"] in self.port or init):
                                 self.port[connection["local_port"]] = known
-                            if "remote_port" in connection:
+                            if "remote_port" in connection and (connection["remote_port"] in self.port or init):
                                 self.port[connection["remote_port"]] = known
 
-            if "User Info" in info:
-                for user in info["User Info"]:
-                    if "Username" in user:
+            if "UserInfo" in info:
+                for user in info["UserInfo"]:
+                    if "Username" in user and (user["Username"] in self.username or init):
                         self.username[user["Username"]] = known
                     if "Password" in user:
-                        self.password[user["Password"]] = known
+                        if user["Password"] not in self.password and not init:
+                            print("password {0} not in action parameter space".format(user["Password"]))
+                        else:
+                            self.password[user["Password"]] = known
 
             if "Sessions" in info:
                 for session in info["Sessions"]:
@@ -162,3 +208,6 @@ class ActionSpace:
                         else:
                             # assume if not a server session then its a client session
                             self.client_session[session["ID"]] = known
+        if 'subnets' in observation['network']:
+            for subnet in observation['network']['subnets']:
+                self.subnet[IPv4Network(subnet)] = known

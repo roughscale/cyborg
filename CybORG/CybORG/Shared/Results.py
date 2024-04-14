@@ -18,6 +18,7 @@ class Results:
                  error: Exception = None,
                  error_msg: str = None,
                  next_observation=None,
+                 state=None,
                  action=None,
                  action_name: str = None):
         self.observation = observation
@@ -31,6 +32,9 @@ class Results:
         self.error = error
         self.error_msg = error_msg
         self.action_name = action_name
+        # the following is for fully_obs implementation.
+        # NOTE: We should be able to reuse observation and next_observation
+        self.state = state
         self.selection_masks = None
 
     def has_error(self):
@@ -56,6 +60,11 @@ class Results:
             copy_kwargs["next_observation"] = self.next_observation.copy()
         else:
             copy_kwargs["next_observation"] = deepcopy(self.next_observation)
+
+        if isinstance(self.state, Observation):
+            copy_kwargs["state"] = self.state.copy()
+        else:
+            copy_kwargs["state"] = deepcopy(self.state)
 
         return Results(**copy_kwargs)
 

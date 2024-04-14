@@ -2,8 +2,20 @@
 from CybORG.Shared import Scenario
 from CybORG.Shared.Actions import FindFlag, Impact
 from CybORG.Shared.Actions.Action import Action
-from CybORG.Shared.Enums import OperatingSystemType
+from CybORG.Shared.Actions.AbstractActions.DiscoverNetworkServices import DiscoverNetworkServices
+from CybORG.Shared.Actions.AbstractActions.ExploitRemoteService import ExploitRemoteService
+from CybORG.Shared.Actions.AbstractActions.DiscoverRemoteSystems import DiscoverRemoteSystems
+from CybORG.Shared.Actions.AbstractActions.PrivilegeEscalate import PrivilegeEscalate
+from CybORG.Shared.Actions.MSFActionsFolder.MSFScannerFolder.MSFPingsweep import MSFPingsweep
+from CybORG.Shared.Actions.MSFActionsFolder.MSFScannerFolder.MSFPortscan import MSFPortscan
+from CybORG.Shared.Actions.MSFActionsFolder.RemoteCodeExecutionFolder.SSHLoginExploit import SSHLoginExploit
+from CybORG.Shared.Actions.MSFActionsFolder.RemoteCodeExecutionFolder.MS17_010_PSExec import MS17_010_PSExec
+
+from CybORG.Shared.Enums import OperatingSystemType, TrinaryEnum
 from CybORG.Shared.RewardCalculator import RewardCalculator
+from CybORG.Shared.Observation import Observation
+from CybORG.Simulator.Session import RedAbstractSession
+from pprint import pprint
 
 WIN_REWARD = 0
 LOSE_REWARD = 0
@@ -15,6 +27,75 @@ LOSE_ROOT_SESSION_REWARD = 0
 REWARD_MAX_DECIMAL_PLACES = 1
 
 
+class GoalRewardCalculator(RewardCalculator):
+    # this reward calculator provides rewards to Red related to a specific goal
+    def __init__(self, agent_name: str, scenario: Scenario):
+        super().__init__(agent_name)
+        self.old_total = 0
+        self.scenario = scenario
+        self.mapping = {'None': 0.0,
+                        'Low': 0.1,
+                        'Medium': 1.0,
+                        'High': 10.0}
+
+        self.discovered_hosts = []
+        self.compromised_hosts = []
+        self.privileged_hosts = []
+        self.discovered_subnets = []
+
+    def reset(self):
+        self.old_total = 0
+        self.discovered_hosts = []
+        self.compromised_hosts = []
+        self.privileged_hosts = []
+        self.discovered_subnets = []
+
+    # assign reward when goal is done. set small penalty per action step.
+    # don't set any 0 reward. this can train the agent to repeatedly prefer these actions over others
+    def calculate_reward(self, current_state: dict, action_dict: dict, agent_observations: dict, done: bool):
+        action = action_dict[self.agent_name]
+        if isinstance(agent_observations[self.agent_name],Observation):
+          action_success = agent_observations[self.agent_name].success # is an Observation/State object
+        else:
+            action_success = agent_observations[self.agent_name]["success"] # is a dict
+        if done:
+            reward = 100.0
+        elif action_success == TrinaryEnum.TRUE:
+            if isinstance(action,DiscoverNetworkServices) or isinstance(action,MSFPortscan):
+                if action.ip_address not in self.discovered_hosts:
+                    self.discovered_hosts.append(action.ip_address)
+                    reward = 1.0
+                else:
+                    reward = -1.0
+            elif isinstance(action,ExploitRemoteService) or \
+                 isinstance(action,MS17_010_PSExec) or \
+                 isinstance(action,SSHLoginExploit):
+                if action.ip_address not in self.compromised_hosts:
+                    #print("adding compromised host")
+                    self.compromised_hosts.append(action.ip_address)
+                    reward = 1.0
+                else:
+                    #print("host already compromised")
+                    reward = -1.0
+            elif isinstance(action,DiscoverRemoteSystems) or isinstance(action,MSFPingsweep):
+                if action.subnet not in self.discovered_subnets:
+                    self.discovered_subnets.append(action.subnet)
+                    reward = 1.0
+                else:
+                    reward = -1.0
+            elif isinstance(action,PrivilegeEscalate):
+                if action.hostname not in self.privileged_hosts:
+                    self.privileged_hosts.append(action.hostname)
+                    reward = 1.0
+                else:
+                    reward = -1.0
+            else:
+                # at this moment, this will penalise successful Impact
+                reward = -1.0
+        else:
+            reward = -1.0
+        return round(reward, REWARD_MAX_DECIMAL_PLACES)
+ 
 class PwnRewardCalculator(RewardCalculator):
     # this reward calculator provides a reward to Red due to changes in the number of privileged sessions
     def __init__(self, agent_name: str, scenario: Scenario):
@@ -32,19 +113,20 @@ class PwnRewardCalculator(RewardCalculator):
     def calculate_reward(self, current_state: dict, action: dict, agent_observations: dict, done: bool):
         root_sessions = 0
         system_sessions = 0
-        for host, info in current_state.items():
-            if host == 'success':
+        for host, info in current_state['hosts'].items():
+            # ignore external host processes
+            if 'SystemInfo' in info and info['SystemInfo']['Hostname'] == "Attacker0":
                 continue
 
             if 'Sessions' in info:
                 for session in info['Sessions']:
                     if session['Agent'] == self.agent_name:
                         # count the number of root sessions
-                        if session['Username'] == 'root' and info['System info']['OSType'] == OperatingSystemType.LINUX:
+                        if session['Username'] == 'root' and info['SystemInfo']['OSType'] == OperatingSystemType.LINUX:
                             root_sessions += self.mapping[self.scenario.get_host(host).get('ConfidentialityValue', 'Low')]
                             break
                         # count the number of SYSTEM sessions
-                        if session['Username'] == 'SYSTEM' and info['System info']['OSType'] == OperatingSystemType.WINDOWS:
+                        if session['Username'] == 'SYSTEM' and info['SystemInfo']['OSType'] == OperatingSystemType.WINDOWS:
                             system_sessions += self.mapping[self.scenario.get_host(host).get('ConfidentialityValue', 'Low')]
                             break
 
@@ -76,24 +158,29 @@ class DistruptRewardCalculator(RewardCalculator):
         disrupted = []
         if self.ots is None:
             self.ots = []
-            for host_info in current_state.values():
-                if type(host_info) is not dict:
+            for host, info in current_state.items():
+                if host == "Attacker0":
                     continue
-                if 'Processes' in host_info:
-                    for proc in host_info['Processes']:
+                if type(info) is not dict:
+                    continue
+                if 'Processes' in info:
+                    for proc in info['Processes']:
                         if proc['Process Name'] == 'OTService':
-                            self.ots.append(host_info['System info']['Hostname'])
-        for host_info in current_state.values():
+                            self.ots.append(info['System info']['Hostname'])
+        for host,info in current_state['hosts'].items():
             working = False
-            if type(host_info) is not dict:
+            # ignore external host processes
+            if 'SystemInfo' in info and info['SystemInfo']['Hostname'] == "Attacker0":
                 continue
-            if host_info['System info']['Hostname'] in self.ots:
-                if 'Processes' in host_info:
-                    for proc in host_info['Processes']:
+            if type(info) is not dict:
+                continue
+            if info['SystemInfo']['Hostname'] in self.ots:
+                if 'Processes' in info:
+                    for proc in info['Processes']:
                         if proc['Process Name'] == 'OTService':
                             working = True
                     if not working:
-                        disrupted.append(host_info['System info']['Hostname'])
+                        disrupted.append(info['System info']['Hostname'])
         # if type(agent_action) is Impact and agent_observations[self.agent_name].data['success'] == True:
         #     if agent_action.hostname not in disrupted:
         #         disrupted.append(agent_action.hostname)

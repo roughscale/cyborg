@@ -5,7 +5,7 @@ from .MSFActionsFolder import \
     TomcatCredentialScanner, TomcatExploit, PSExec, SSHLoginExploit, GetPid, \
     GetShell, GetUid, MeterpreterPS, MeterpreterReboot, SysInfo, MSFAutoroute, \
     MSFEternalBlue, MSFPortscan, MSFPingsweep, MS17_010_PSExec, MeterpreterIPConfig, \
-    ServicePersistenceWindows
+    ServicePersistenceWindows, MSFJuicyPotato, MSFSubUidShell
 from .ShellActionsFolder import \
     AddUserLinux, AddUserWindows, DeleteFileWindows, \
     RemoveUserFromGroupWindows, DisableUserWindows, PingSweep, \
@@ -23,3 +23,4 @@ from .LocalShellActions import \
 from .AgentActions import AgentSleep
 from .AbstractActions import Monitor, DiscoverNetworkServices, DiscoverRemoteSystems, ExploitRemoteService, Analyse, Remove, Restore, Misinform, PrivilegeEscalate, Impact
 from .GreenActions import GreenPingSweep, GreenPortScan, GreenConnection
+from .ConcreteActions import V4L2KernelExploit, JuicyPotato

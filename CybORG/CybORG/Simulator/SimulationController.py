@@ -24,13 +24,16 @@ class SimulationController(EnvironmentController):
     Most methods are either disabled or delegate their functionality to the State attribute.
     The main thing this class currently does is parse the scenario file.
     """
-    def __init__(self, scenario_filepath: str = None, scenario_mod: dict = None, agents: dict = None, verbose=True):
+    def __init__(self, scenario_filepath: str = None, scenario_mod: dict = None, agents: dict = None, **kwargs):
         self.state = None
-        super().__init__(scenario_filepath, scenario_mod=scenario_mod, agents=agents)
+        # TEST: if this is still necessary. doesn't seem to be used in this class
+        #self.randomize_env = kwargs.get("randomize_env",True)
+        super().__init__(scenario_filepath, scenario_mod=scenario_mod, agents=agents, **kwargs)
 
     def reset(self, agent=None):
         self.state.reset()
-        self.hostname_ip_map = {h: ip for ip, h in self.state.ip_addresses.items()}
+        # allow for multi-homed hosts
+        self.hostname_ip_map = {ip: h for ip, h in self.state.ip_addresses.items()}
         self.subnet_cidr_map = self.state.subnet_name_to_cidr
         return super(SimulationController, self).reset(agent)
 
@@ -72,7 +75,7 @@ class SimulationController(EnvironmentController):
 
     def _create_environment(self):
         self.state = State(self.scenario)
-        self.hostname_ip_map = {h: ip for ip, h in self.state.ip_addresses.items()}
+        self.hostname_ip_map = {ip: h for ip, h in self.state.ip_addresses.items()}
         self.subnet_cidr_map = self.state.subnet_name_to_cidr
 
     def run_schtasks(self):

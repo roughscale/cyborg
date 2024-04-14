@@ -6,21 +6,21 @@ Test_Host:
     PID: 3368
     PPID: 5956
     Path: C:\Program Files\OpenSSH\usr\sbin
-    Process Name: sshd.exe
+    ProcessName: sshd.exe
     Username: sshd_server
   - Connections:
     - local_address: 0.0.0.0
       local_port: 135
     PID: 832
     PPID: 4
-    Process Name: svchost.exe
+    ProcessName: svchost.exe
     Username: SYSTEM
   - Connections:
     - local_address: 0.0.0.0
       local_port: 3389
     PID: 4400
     PPID: 4
-    Process Name: svchost.exe
+    ProcessName: svchost.exe
     Username: SYSTEM
   - Connections:
     - local_address: 0.0.0.0
@@ -29,7 +29,7 @@ Test_Host:
       local_port: 139
     PID: 4
     PPID: 372
-    Process Name: smss.exe
+    ProcessName: smss.exe
     Username: SYSTEM
   - Connections:
     - local_address: 0.0.0.0
@@ -39,16 +39,16 @@ Test_Host:
     PID: 3404
     PPID: 4
     Username: NetworkService
-    Process Name: tomcat8.exe
-    Process Type: webserver
+    ProcessName: tomcat8.exe
+    ProcessType: webserver
     Properties:
       - rfi
-  System info:
+  SystemInfo:
     Architecture: x64
     OSDistribution: WINDOWS_SVR_2008
     OSType: WINDOWS
     OSVersion: W6_1_7601
-  User Info:
+  UserInfo:
     - Groups:
         - GID: 0
           Group Name: ADMINISTRATORS

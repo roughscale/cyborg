@@ -6,6 +6,11 @@ from CybORG.Agents.SimpleAgents.GreenAgent import GreenAgent
 from CybORG.Agents.SimpleAgents.TestFlatFixed import TestFlatFixedAgent
 from CybORG.Agents.SimpleAgents.BlueReactAgent import BlueReactRemoveAgent,BlueReactRestoreAgent
 from CybORG.Agents.SimpleAgents.KeyboardAgent import KeyboardAgent
+from CybORG.Agents.SimpleAgents.RedRandomAgent import RedRandomAgent
+from .ComplexAgents.RedDRQNAgent import RedDRQNAgent
+from .ComplexAgents.RedDQNAgent import RedDQNAgent
+from .ComplexAgents.RedPPOAgent import RedPPOAgent
+from .ComplexAgents.RedRecurrentPPOAgent import RedRecurrentPPOAgent
 from .SimpleAgents.TestAgent import TestAgent
 from .SimpleAgents.HeuristicRed import HeuristicRed
 from .SimpleAgents.DebuggingAgent import DebuggingAgent

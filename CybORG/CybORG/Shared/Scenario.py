@@ -44,8 +44,23 @@ class ScenarioSession:
     def name(self) -> str:
         return self._info.get("name", None)
 
+    # Allow fixed pid assignment to sessions processes for starting sessions
+    @property
+    def pid(self) -> str:
+        return self._info.get("pid", None)
+
+    # Allow Scenario to declare session id (WORKAROUND for client session)
+    @property
+    def ident(self) -> str:
+        return self._info.get("ident", None)
+
+    # Allow MSFServerSession to set initial session routes
+    @property
+    def routes(self) -> list:
+        return self._info.get("routes", [])
+
     def __str__(self):
-        return f"Session {self.name}, {self.parent} -> {self.username}@{self.hostname}: {self.session_type}"
+        return f"Session {self.name}, {self.parent} -> {self.username}@{self.hostname}: {self.session_type} -> {self.pid}"
 
 
 class ScenarioAgent:
@@ -95,6 +110,14 @@ class ScenarioAgent:
     @property
     def allowed_subnets(self) -> List[str]:
         return self._info.get("AllowedSubnets", [])
+
+    @property
+    def external_hosts(self) -> List[str]:
+        return self._info.get("external_hosts", [])
+
+    @property
+    def external_subnets(self) -> List[str]:
+        return self._info.get("external_subnets",[])
 
     @property
     def adversary(self) -> str:

@@ -11,12 +11,14 @@ class KeyboardAgent(BaseAgent):
     def __init__(self,screen_width=94):
         self.step = 1
         self.screen_width = screen_width # Sets width of the printed bars
+        # following param reduces action list to only valid actions
+        self.reduce_actions = False
 
     def get_action(self, observation, action_space, sessions=None):
         self._print_observation(observation)
         self._print_action_success(observation)
 
-        valid_commands = self._get_valid_commands(action_space)
+        valid_commands = self._get_valid_commands(action_space,self.reduce_actions)
         command = self._choose_from_options('Command',list(valid_commands.keys()))
         action = self._select_parameters(valid_commands[command])
         
@@ -45,7 +47,7 @@ class KeyboardAgent(BaseAgent):
         else:
             print(self.screen_width * '-', 'The action failed!', self.screen_width * '*', sep='\n')
 
-    def _get_valid_commands(self,action_space):
+    def _get_valid_commands(self,action_space,reduce_actions):
         print('',f' Turn {self.step}: Command Selection '.center(self.screen_width, '*'),'',sep='\n')
         valid_commands = {}
         for command in action_space['action'].keys():
@@ -57,7 +59,10 @@ class KeyboardAgent(BaseAgent):
 
                 option_dict = action_space[parameter]
                 filter_f = lambda key : option_dict[key]
-                valid_options = list(filter(filter_f,option_dict.keys()))
+                if reduce_actions:
+                  valid_options = list(filter(filter_f,option_dict.keys()))
+                else:
+                  valid_options = list(option_dict.keys())
                 if not valid_options:
                     break
                 parameter_dict[parameter] = valid_options
