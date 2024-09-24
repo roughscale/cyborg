@@ -54,6 +54,7 @@ env_config = {
 path = str(inspect.getfile(CybORG))
 curr_dir = os.getcwd()
 tensorboard_log="./runs/ppo/"
+device = "auto"  # set to "cuda" or "mps" manually if desired
 
 path = path[:-10] + "/Shared/Scenarios/TestMSFSessionPPOScenario.yaml"
 
@@ -77,7 +78,8 @@ agent.agent.initialise(env,gamma=gamma,
         gae_lambda=gae_lambda,
         target_kl=target_kl,
         net_arch=net_arch,
-        tensorboard_log=tensorboard_log)
+        tensorboard_log=tensorboard_log,
+        device=device)
 
 callback=agent.agent.learn_callback
 
@@ -89,4 +91,3 @@ end=time.time()
 print("Episodes end: {}".format(time.ctime(end)))
 # save model to file
 agent.agent.model.save(curr_dir+"/exports/ppo.zip")
-

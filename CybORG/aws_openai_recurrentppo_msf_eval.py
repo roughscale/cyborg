@@ -47,6 +47,7 @@ env_config.update(emu_config)
 
 path = str(inspect.getfile(CybORG))
 n_envs=1
+device = "auto"  # set to "cuda" or "mps" manually if desired
 
 scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionRecurrentPPOScenario.yaml"
 model_path=path[:-17] + "/exports/" + model_name
@@ -59,7 +60,7 @@ wrapped_env = FixedFlatWrapper(EnumActionWrapper(cyborg),max_params=env_config["
 env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n_envs=n_envs)
 
 # load agent from export file
-model=agent.agent.load("RecurrentPPO",model_path)
+model=agent.agent.load("RecurrentPPO",model_path,device=device)
 
 start=time.time()
 print("Evaluation start: {}".format(time.ctime(start)))
@@ -70,4 +71,3 @@ print(mean_reward)
 print(std_reward)
 print("Evaluation end: {}".format(time.ctime(end)))
 print("Evaluation duration: {}s".format(end-start))
-

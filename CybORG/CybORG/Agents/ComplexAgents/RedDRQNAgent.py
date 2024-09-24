@@ -1,7 +1,8 @@
 import random
 import hashlib
 from CybORG.Agents.SimpleAgents.BaseAgent import BaseAgent
-from gymnasium import spaces
+#from gymnasium import spaces
+from gym import spaces
 from CybORG.Shared import Results
 import numpy as np
 # following libraries are for Schwartz implementation
@@ -31,6 +32,8 @@ class RedDRQNAgent(BaseAgent):
     def __init__(self):
 
         self.model = None
+        self.device = "auto"
+        self.debug = False
 
     def end_episode(self):
         pass
@@ -48,11 +51,15 @@ class RedDRQNAgent(BaseAgent):
             num_prev_seq=10,
             double=None, # double not implemented yet
             dueling=None, # dueling not implement yet,
-            tensorboard_log=None
+            tensorboard_log=None,
+            device="auto",
+            debug=False
             ):
         """ set up DQN """
         """ lr_schedule needs to be of Schedule type """
         self.env = env
+        self.device = device
+        self.debug = debug
 
         input_size=env.observation_space.shape[0]
         net_arch=[input_size,input_size]
@@ -87,15 +94,11 @@ class RedDRQNAgent(BaseAgent):
         print("Final Epsilon: {}".format(final_eps))
         print("Exploration Fraction: {}".format(exploration_fraction))
         print("Gamma: {}".format(gamma))
-        #print("Double: {}".format(double))
-        #print("Dueling: {}".format(dueling))
         print("Learning Rate (Constant): {}".format(learning_rate))
         print("Exp Replay Batch Size: {}".format(batch_size))
         print("PER Num Prev Transitions: {}".format(num_prev_seq))
         print("PER Alpha: {}".format(prioritized_replay_alpha))
         print("PER Beta0: {}".format(prioritized_replay_beta0))
-        # Not provided in implementation
-        #print("PER Beta Iterations: {}".format(prioritized_replay_beta_iters))
         print("Learning Starts {}".format(learning_starts))
         print("Replay Buffer Size {}".format(buffer_size))
         print("Target network update freq: {}".format(target_network_update_freq))
@@ -135,7 +138,7 @@ class RedDRQNAgent(BaseAgent):
                 policy_kwargs={"net_arch": net_arch}, #default is None
                 verbose=1,
                 seed=None, #default
-                device="auto", #default
+                device=device,
                 _init_setup_model=True # default
         )
 
@@ -145,9 +148,10 @@ class RedDRQNAgent(BaseAgent):
 
         self.learn_callback = LearnCallback(self.model)
 
-    def load(self,classtype,file):
+    def load(self,classtype,file,device="auto"):
         ModelClass = DeepRecurrentQNetwork
-        self.model = ModelClass.load(file)
+        self.device = device
+        self.model = ModelClass.load(file, device=device)
         return self
 
 class LearnCallback(BaseCallback):
@@ -162,11 +166,12 @@ class LearnCallback(BaseCallback):
         return True
 
     def _on_step(self):
-        print("Random Action" if not self.locals["computed_actions"] else "Computed Action")
-        print("Action: {}".format(self.locals["actions"][0]))
-        print("Reward: {}".format(self.locals["rewards"][0]))
-        print("Done: {}".format(self.locals["dones"][0]))
-        print()
+        if self.debug:
+          print("Random Action" if not self.locals["computed_actions"] else "Computed Action")
+          print("Action: {}".format(self.locals["actions"][0]))
+          print("Reward: {}".format(self.locals["rewards"][0]))
+          print("Done: {}".format(self.locals["dones"][0]))
+          print()
         return True
 
     def _on_training_end(self):

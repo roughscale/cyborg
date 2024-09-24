@@ -11,16 +11,21 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 from stable_baselines3 import DQN
-from sb3_contrib.ddqn.doubledqn import DoubleDQN
+try:
+    from sb3_contrib.ddqn.doubledqn import DoubleDQN
+except ImportError:
+    DoubleDQN = None
 from sb3_contrib.dueling_dqn import DuelingDQN
 from sb3_contrib.dueling_dqn.policies import DuelingDQNPolicy
-from sb3_contrib.dueling_dqn.double_dueling_dqn import DoubleDuelingDQN
+try:
+    from sb3_contrib.dueling_dqn.double_dueling_dqn import DoubleDuelingDQN
+except ImportError:
+    DoubleDuelingDQN = None
 from stable_baselines3.dqn.policies import DQNPolicy
 from stable_baselines3.common.torch_layers import FlattenExtractor
 from stable_baselines3.common.utils import get_linear_fn, constant_fn
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.prioritized_replay_buffer import PrioritizedReplayBuffer
-
 
 class RedDQNAgent(BaseAgent):
 
@@ -32,6 +37,8 @@ class RedDQNAgent(BaseAgent):
         self.model = None
         self.dqn_policy = None
         self.steps_done = 0
+        self.device = "auto"
+        self.debug = False
 
     def end_episode(self):
         pass
@@ -39,10 +46,12 @@ class RedDQNAgent(BaseAgent):
     def set_initial_values(self, action_space, observation):
         pass
 
-    def initialise(self, env, gamma, initial_eps, final_eps, total_steps, double=False, dueling=False, tensorboard_log=None):
+    def initialise(self, env, gamma, initial_eps, final_eps, total_steps, double=False, dueling=False, tensorboard_log=None, device="auto", debug=False):
         """ set up DQN """
         """ lr_schedule needs to be of Schedule type """
         self.env = env
+        self.device = device
+        self.debug = debug
 
         input_size=env.observation_space.shape[0]
         net_arch=[input_size]
@@ -62,10 +71,16 @@ class RedDQNAgent(BaseAgent):
         prioritized_replay_beta_iters=int(total_steps/50)
 
         if double and dueling:
-            ModelClass = DoubleDuelingDQN
+            if DoubleDuelingDQN is not None:
+                ModelClass = DoubleDuelingDQN
+            else:
+                ModelClass = DuelingDQN
             PolicyClass = DuelingDQNPolicy
         elif double and not dueling:
-            ModelClass = DoubleDQN
+            if DoubleDQN is not None:
+                ModelClass = DoubleDQN
+            else:
+                ModelClass = DQN
             PolicyClass = DQNPolicy
         elif not double and dueling:
             ModelClass = DuelingDQN
@@ -126,7 +141,7 @@ class RedDQNAgent(BaseAgent):
                 policy_kwargs={"net_arch": net_arch}, #default is None
                 verbose=1,
                 seed=None, #default
-                device="auto", #default
+                device=device,
                 _init_setup_model=True # default
         )
 
@@ -135,10 +150,13 @@ class RedDQNAgent(BaseAgent):
 
         self.learn_callback = LearnCallback(self.model)
 
-    def load(self,classtype,file):
+    def load(self,classtype,file,device="auto"):
         if classtype == "DuelingDQN":
             ModelClass = DuelingDQN
-        self.model = ModelClass.load(file)
+        else:
+            ModelClass = DQN
+        self.device = device
+        self.model = ModelClass.load(file, device=device)
         return self
 
 class LearnCallback(BaseCallback):
@@ -153,10 +171,11 @@ class LearnCallback(BaseCallback):
         return True
 
     def _on_step(self):
-        print("Step {}".format(int(self.locals["eps_steps"]) + 1))
-        print("Random Action" if not self.locals["computed_actions"] else "Computed Action")
-        print("Action: {}".format(self.locals["actions"][0]))
-        print("Reward: {}".format(self.locals["rewards"][0]))
-        print("Done: {}".format(self.locals["dones"][0]))
-        print()
+        if self.debug:
+           print("Step {}".format(int(self.locals["eps_steps"]) + 1))
+           print("Random Action" if not self.locals["computed_actions"] else "Computed Action")
+           print("Action: {}".format(self.locals["actions"][0]))
+           print("Reward: {}".format(self.locals["rewards"][0]))
+           print("Done: {}".format(self.locals["dones"][0]))
+           print()
         return True

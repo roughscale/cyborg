@@ -24,6 +24,8 @@ class RedPPOAgent(BaseAgent):
 
         self.model = None
         self.steps_done = 0
+        self.device = "auto"
+        self.debug = False
 
     def end_episode(self):
         pass
@@ -45,11 +47,15 @@ class RedPPOAgent(BaseAgent):
             target_kl = None, # default
             net_arch = [ 1.0, 1.0 ],
             n_envs=1,
-            tensorboard_log=None
+            tensorboard_log=None,
+            device="auto",
+            debug=False
             ):
         """ set up PPO """
         """ lr_schedule needs to be of Schedule type """
         self.env = env
+        self.device = device
+        self.debug = debug
 
         input_size=env.observation_space.shape[0]
         net_arch=[ int(input_size * n) for n in net_arch ]
@@ -96,7 +102,7 @@ class RedPPOAgent(BaseAgent):
                 policy_kwargs={"net_arch": net_arch},
                 verbose=1,
                 seed=None, #default
-                device="auto", #default
+                device=device,
                 _init_setup_model=True # default
         )
 
@@ -105,10 +111,11 @@ class RedPPOAgent(BaseAgent):
 
         self.learn_callback = LearnCallback(self.model)
 
-    def load(self,classtype,file):
+    def load(self,classtype,file,device="auto"):
         # PPO only has one model class type.
         ModelClass = PPO
-        self.model = ModelClass.load(file)
+        self.device = device
+        self.model = ModelClass.load(file, device=device)
         return self
 
 class LearnCallback(BaseCallback):
@@ -123,10 +130,11 @@ class LearnCallback(BaseCallback):
         return True
 
     def _on_step(self):
-        print("Action: {}".format(self.locals["actions"][0]))
-        print("Reward: {}".format(self.locals["rewards"][0]))
-        print("Done: {}".format(self.locals["dones"][0]))
-        print()
+        if self.debug:
+          print("Action: {}".format(self.locals["actions"][0]))
+          print("Reward: {}".format(self.locals["rewards"][0]))
+          print("Done: {}".format(self.locals["dones"][0]))
+          print()
         return True
 
     def _on_training_end(self):

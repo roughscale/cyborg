@@ -1,11 +1,10 @@
 from CybORG import CybORG
 from CybORG.Agents.Wrappers.EnumActionWrapper import EnumActionWrapper
 from CybORG.Agents.Wrappers.FixedFlatWrapper import FixedFlatWrapper
-from CybORG.Agents.Wrappers.FixedFlatStateWrapper import FixedFlatStateWrapper
+#from CybORG.Agents.Wrappers.FixedFlatStateWrapper import FixedFlatStateWrapper
 from CybORG.Agents.Wrappers.OpenAIGymWrapper import OpenAIGymWrapper
 #from CybORG.Agents.SimpleAgents.RedRandomAgent import RedRandomAgent
 from CybORG.Shared.Results import Results
-from CybORG.Shared.State import State
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 import inspect
@@ -14,14 +13,24 @@ import time
 import copy
 import os
 
-args = sys.argv
-model_name = args[1]
+# set vars
+# initialise Q learning parameters
+gamma = .99   # discount rate
+initial_epsilon = 1.0 # high explore factor
+final_epsilon = 0.02  # explore/exploit factor
+batch_size=32
+num_prev_seq=16
 
-# number of evaulation episodes
-n_eval_eps=100
+# given larger action space.
+total_steps=1000000
+double=False
+dueling=True
+tensorboard_log="./runs/drqn"
+device = "auto"  # set to "cuda" or "mps" manually if desired
 
 env_config = {
    "fully_obs": False,
+   "randomize_env": False,
    "max_params": {
         "MAX_HOSTS": 5,
         "MAX_PROCESSES": 2,
@@ -37,31 +46,39 @@ env_config = {
 }
 
 path = str(inspect.getfile(CybORG))
+curr_dir = os.getcwd()
+
 n_envs=1
 
 scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionDRQNScenario.yaml"
-model_path=path[:-17] + "/exports/" + model_name
 
 cyborg = CybORG(scenario_path,'sim',env_config=env_config)
 
 agent=cyborg.environment_controller.agent_interfaces["Red"]
-wrapped_env = FixedFlatStateWrapper(EnumActionWrapper(cyborg),max_params=env_config["max_params"])
+wrapped_env = FixedFlatWrapper(EnumActionWrapper(cyborg),max_params=env_config["max_params"])
 env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n_envs=n_envs)
 
-# load agent from export file
-model=agent.agent.load("DeepRecurrentQNetwork",model_path)
+# initialise agent learning
+agent.agent.initialise(env,
+        gamma=gamma,
+        initial_eps=initial_epsilon,
+        final_eps=final_epsilon,
+        total_steps=total_steps,
+        batch_size=batch_size,
+        num_prev_seq=num_prev_seq,
+        dueling=dueling,
+        tensorboard_log=tensorboard_log,
+        device=device)
+
+callback=agent.agent.learn_callback
 
 start=time.time()
-print("Evaluation start: {}".format(time.ctime(start)))
+print("Training start: {}".format(time.ctime(start)))
 print()
-#agent.agent.dqn.learn(total_timesteps=total_steps,log_interval=1,callback=callback)
-mean_reward, std_reward = evaluate_policy(model.model.policy, env, n_eval_episodes=n_eval_eps, deterministic=True)
-#rewards, lengths = evaluate_policy(model.model.policy, env, n_eval_episodes=n_eval_eps, deterministic=True, return_episode_rewards=True)
+print(agent.agent)
+print(dir(agent.agent))
+agent.agent.model.learn(total_timesteps=total_steps,log_interval=1,callback=callback)
 end=time.time()
-print(mean_reward)
-print(std_reward)
-#print(rewards)
-#print(lengths)
-print("Evaluation end: {}".format(time.ctime(end)))
-print("Evaluation duration: {}".format(end-start))
-
+print("Training end: {}".format(time.ctime(end)))
+print("Training duration: {}".format(end-start))
+agent.agent.model.save(curr_dir+"/exports/drqn.zip")

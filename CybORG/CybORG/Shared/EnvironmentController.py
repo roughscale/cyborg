@@ -15,7 +15,6 @@ from CybORG.Shared.AgentInterface import AgentInterface
 
 import CybORG.Agents
 
-
 class EnvironmentController:
     """The abstract base controller for all CybORG environment controllers.
 
@@ -454,13 +453,12 @@ class EnvironmentController:
         # next for each parameter in the action
         for parameter_name, parameter_value in action.get_params().items():
             if parameter_name not in action_space:
-                print("parameter name {} not in action_space".format(parameter_name))
+                print("parameter name %s not in action_space", parameter_name)
                 continue
             if parameter_value not in action_space[parameter_name]:
-                print("parameter value {} not in parameter name {}".format(parameter_value, parameter_name))
+                print"parameter value %s not in parameter name %s", parameter_value, parameter_name)
                 return False
             if not action_space[parameter_name][parameter_value]:
-                print("parameter {}/{} not known".format(parameter_name,parameter_value))
+                print("parameter %s/%s not known", parameter_name, parameter_value)
                 return False
         return True
-

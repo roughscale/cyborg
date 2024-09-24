@@ -1,5 +1,6 @@
 import numpy as np
-from gymnasium import spaces, Env
+#from gymnasium import spaces, Env
+from gym import spaces, Env
 from typing import Union, List
 from prettytable import PrettyTable
 

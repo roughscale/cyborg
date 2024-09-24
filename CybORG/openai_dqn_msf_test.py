@@ -20,6 +20,7 @@ total_steps=200000
 double=False
 dueling=True
 tensorboard_log="./runs/dqn"
+device = "auto"  # set to "cuda" or "mps" manually if desired
 
 # set n_envs to 1 initially. No parallelisation
 n_envs=1
@@ -62,7 +63,8 @@ agent.agent.initialise(env,
         final_eps=final_epsilon,
         total_steps=total_steps,
         dueling=dueling,
-        tensorboard_log=tensorboard_log)
+        tensorboard_log=tensorboard_log,
+        device=device)
 
 callback=agent.agent.learn_callback
 
@@ -74,4 +76,3 @@ end=time.time()
 print("Episodes end: {}".format(time.ctime(end)))
 # save model to file
 agent.agent.model.save(curr_dir+"/exports/dqn.zip")
-

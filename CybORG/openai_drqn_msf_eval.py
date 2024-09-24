@@ -1,7 +1,10 @@
 from CybORG import CybORG
 from CybORG.Agents.Wrappers.EnumActionWrapper import EnumActionWrapper
 from CybORG.Agents.Wrappers.FixedFlatWrapper import FixedFlatWrapper
+#from CybORG.Agents.Wrappers.FixedFlatStateWrapper import FixedFlatStateWrapper
 from CybORG.Agents.Wrappers.OpenAIGymWrapper import OpenAIGymWrapper
+#from CybORG.Agents.SimpleAgents.RedRandomAgent import RedRandomAgent
+from CybORG.Shared.Results import Results
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
 import inspect
@@ -9,9 +12,6 @@ import sys
 import time
 import copy
 import os
-
-args = sys.argv
-model_name = args[1]
 
 # number of evaulation episodes
 n_eval_eps=100
@@ -34,28 +34,30 @@ env_config = {
 
 path = str(inspect.getfile(CybORG))
 n_envs=1
-device = "auto"  # set to "cuda" or "mps" manually if desired
 
-scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionRecurrentPPOScenario.yaml"
+scenario_path = path[:-10] + "/Shared/Scenarios/TestMSFSessionDRQNScenario.yaml"
 model_path=path[:-17] + "/exports/" + model_name
 
 cyborg = CybORG(scenario_path,'sim',env_config=env_config)
 
 agent=cyborg.environment_controller.agent_interfaces["Red"]
 wrapped_env = FixedFlatWrapper(EnumActionWrapper(cyborg),max_params=env_config["max_params"])
-#env = OpenAIGymWrapper(env=wrapped_env, agent_name="Red")
-# wraps env in DummyVecEnv VecEnv environment
 env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n_envs=n_envs)
 
 # load agent from export file
-model=agent.agent.load("RecurrentPPO",model_path,device=device)
+model=agent.agent.load("DeepRecurrentQNetwork",model_path)
 
 start=time.time()
 print("Evaluation start: {}".format(time.ctime(start)))
 print()
+#agent.agent.dqn.learn(total_timesteps=total_steps,log_interval=1,callback=callback)
 mean_reward, std_reward = evaluate_policy(model.model.policy, env, n_eval_episodes=n_eval_eps, deterministic=True)
+#rewards, lengths = evaluate_policy(model.model.policy, env, n_eval_episodes=n_eval_eps, deterministic=True, return_episode_rewards=True)
 end=time.time()
 print(mean_reward)
 print(std_reward)
+#print(rewards)
+#print(lengths)
 print("Evaluation end: {}".format(time.ctime(end)))
-print("Evalaution duration: {}s".format(end-start))
+print("Evaluation duration: {}".format(end-start))
+
