@@ -57,7 +57,8 @@ class MSFJuicyPotato(MSFPrivilegeEscalation):
           return obs
 
         if len(target_sessions) > 1:
-            print("more than one nonpriv sesssion on host.  choosing the first")
+            if False:
+               print("more than one nonpriv sesssion on host.  choosing the first")
         target_host_session = target_sessions[0]
 
         # what is the effect of the escalate sandbox?

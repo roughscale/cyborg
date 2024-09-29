@@ -160,6 +160,7 @@ class LearnCallback(BaseCallback):
         super().__init__(self)
         super().init_callback(model)
         env = None
+        self.debug = False
 
     def _on_training_start(self):
         self.env=self.training_env.envs[0]
