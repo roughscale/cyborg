@@ -17,7 +17,7 @@ final_epsilon = 0.02  # explore/exploit factor
 
 # given larger action space.
 total_steps=200000
-double=False
+double=True
 dueling=True
 tensorboard_log="./runs/dqn"
 device = "auto"  # set to "cuda" or "mps" manually if desired
@@ -62,6 +62,7 @@ agent.agent.initialise(env,
         initial_eps=initial_epsilon,
         final_eps=final_epsilon,
         total_steps=total_steps,
+        double=double,
         dueling=dueling,
         tensorboard_log=tensorboard_log,
         device=device)

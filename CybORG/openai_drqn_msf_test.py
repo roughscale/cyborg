@@ -1,9 +1,7 @@
 from CybORG import CybORG
 from CybORG.Agents.Wrappers.EnumActionWrapper import EnumActionWrapper
 from CybORG.Agents.Wrappers.FixedFlatWrapper import FixedFlatWrapper
-#from CybORG.Agents.Wrappers.FixedFlatStateWrapper import FixedFlatStateWrapper
 from CybORG.Agents.Wrappers.OpenAIGymWrapper import OpenAIGymWrapper
-#from CybORG.Agents.SimpleAgents.RedRandomAgent import RedRandomAgent
 from CybORG.Shared.Results import Results
 from stable_baselines3.common.env_util import make_vec_env
 from stable_baselines3.common.evaluation import evaluate_policy
@@ -19,11 +17,11 @@ gamma = .99   # discount rate
 initial_epsilon = 1.0 # high explore factor
 final_epsilon = 0.02  # explore/exploit factor
 batch_size=32
-num_prev_seq=16
+num_prev_seq=20
 
 # given larger action space.
-total_steps=1000000
-double=False
+total_steps=500000
+double=True  # Use Double DQN to prevent Q-value overestimation and divergence
 dueling=True
 tensorboard_log="./runs/drqn"
 device = "auto"  # set to "cuda" or "mps" manually if desired
@@ -66,6 +64,7 @@ agent.agent.initialise(env,
         total_steps=total_steps,
         batch_size=batch_size,
         num_prev_seq=num_prev_seq,
+        double=double,
         dueling=dueling,
         tensorboard_log=tensorboard_log,
         device=device)

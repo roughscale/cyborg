@@ -12,7 +12,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 from stable_baselines3 import DQN
-from sb3_contrib.drqn.drqn import DeepRecurrentQNetwork
+from sb3_contrib.drqn.drqn import DeepRecurrentQNetwork, DoubleDRQN
 from sb3_contrib.drqn.policies import DRQNetwork, DRQNPolicy
 from sb3_contrib.drqn.dueling_policies import DuelingDRQNPolicy
 from stable_baselines3.dqn.policies import DQNPolicy
@@ -49,8 +49,8 @@ class RedDRQNAgent(BaseAgent):
             total_steps,
             batch_size=32,
             num_prev_seq=10,
-            double=None, # double not implemented yet
-            dueling=None, # dueling not implement yet,
+            double=None,
+            dueling=None,
             tensorboard_log=None,
             device="auto",
             debug=False
@@ -63,21 +63,37 @@ class RedDRQNAgent(BaseAgent):
 
         input_size=env.observation_space.shape[0]
         net_arch=[input_size,input_size]
+        #net_arch=[input_size]
 
         learning_rate=float(0.0001)
+        # DRQN specific
+        #learning_rate=float(0.00005)
         # LR is provided as a schedule
         lr_schedule=constant_fn(learning_rate)
 
-        buffer_size = int(total_steps/5)
+        #buffer_size = int(total_steps/5)
+        buffer_size =  100000
         exploration_fraction=float(0.9)
-        learning_starts = int(total_steps/200) # make it very small for testing
-        target_network_update_freq = int(total_steps/5000)
+        #learning_starts = int(total_steps/100) # match DQN
+        #learning_starts = int(total_steps/200) # original DRQN. make it very small for testing
+        learning_starts = 30000
+        #target_network_update_freq = int(total_steps/5000)
+        target_network_update_freq = 1000
 
         prioritized_replay_alpha=float(0.9)
         prioritized_replay_beta0=float(0.4)
         prioritized_replay_beta_iters=int(total_steps/50)
 
-        if dueling:
+        # Select model and policy based on double and dueling parameters
+        # Double controls the algorithm (DeepRecurrentQNetwork vs DoubleDRQN)
+        # Dueling controls the policy (DRQNPolicy vs DuelingDRQNPolicy)
+        if double and dueling:
+            ModelClass = DoubleDRQN
+            PolicyClass = DuelingDRQNPolicy
+        elif double and not dueling:
+            ModelClass = DoubleDRQN
+            PolicyClass = DRQNPolicy
+        elif not double and dueling:
             ModelClass = DeepRecurrentQNetwork
             PolicyClass = DuelingDRQNPolicy
         else:
@@ -86,6 +102,8 @@ class RedDRQNAgent(BaseAgent):
 
         print("ModelClass: {}".format(ModelClass.__name__))
         print("PolicyClass: {}".format(PolicyClass.__name__))
+        print("Double: {}".format(double))
+        print("Dueling: {}".format(dueling))
         print("Hyperparameters:")
         print("Total Steps {}".format(total_steps))
         print("Input Size {}".format(input_size))
@@ -133,7 +151,7 @@ class RedDRQNAgent(BaseAgent):
                 exploration_fraction=exploration_fraction, #default is 0.1
                 exploration_initial_eps=initial_eps,
                 exploration_final_eps=final_eps,
-                max_grad_norm=10, #default
+                max_grad_norm=1.0, #default 10
                 tensorboard_log=tensorboard_log, #default is None
                 policy_kwargs={"net_arch": net_arch}, #default is None
                 verbose=1,
