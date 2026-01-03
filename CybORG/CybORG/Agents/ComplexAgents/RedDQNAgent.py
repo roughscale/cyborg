@@ -11,16 +11,8 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 from stable_baselines3 import DQN
-try:
-    from sb3_contrib.ddqn.doubledqn import DoubleDQN
-except ImportError:
-    DoubleDQN = None
-from sb3_contrib.dueling_dqn import DuelingDQN
+from sb3_contrib.ddqn.ddqn import DoubleDQN
 from sb3_contrib.dueling_dqn.policies import DuelingDQNPolicy
-try:
-    from sb3_contrib.dueling_dqn.double_dueling_dqn import DoubleDuelingDQN
-except ImportError:
-    DoubleDuelingDQN = None
 from stable_baselines3.dqn.policies import DQNPolicy
 from stable_baselines3.common.torch_layers import FlattenExtractor
 from stable_baselines3.common.utils import get_linear_fn, constant_fn
@@ -70,20 +62,17 @@ class RedDQNAgent(BaseAgent):
         prioritized_replay_beta0=float(0.4)
         prioritized_replay_beta_iters=int(total_steps/50)
 
+        # Select model and policy based on double and dueling parameters
+        # Double controls the algorithm (DQN vs DoubleDQN)
+        # Dueling controls the policy (DQNPolicy vs DuelingDQNPolicy)
         if double and dueling:
-            if DoubleDuelingDQN is not None:
-                ModelClass = DoubleDuelingDQN
-            else:
-                ModelClass = DuelingDQN
+            ModelClass = DoubleDQN
             PolicyClass = DuelingDQNPolicy
         elif double and not dueling:
-            if DoubleDQN is not None:
-                ModelClass = DoubleDQN
-            else:
-                ModelClass = DQN
+            ModelClass = DoubleDQN
             PolicyClass = DQNPolicy
         elif not double and dueling:
-            ModelClass = DuelingDQN
+            ModelClass = DQN
             PolicyClass = DuelingDQNPolicy
         else:
             ModelClass = DQN
