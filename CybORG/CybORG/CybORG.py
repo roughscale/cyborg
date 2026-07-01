@@ -38,7 +38,7 @@ class CybORG (CybORGLogger):
     def __init__(self,
                  scenario_file: str,
                  environment: str = "sim",
-                 env_config=None,
+                 env_config: dict = {},
                  agents: dict = None):
         """Instantiates the CybORG class.
 

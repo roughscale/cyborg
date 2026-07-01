@@ -1,4 +1,5 @@
 from CybORG import CybORG
+from CybORG.Agents.Wrappers.ObsHistoryWrapper import ObsHistoryWrapper
 from CybORG.Agents.Wrappers.EnumActionWrapper import EnumActionWrapper
 from CybORG.Agents.Wrappers.FixedFlatWrapper import FixedFlatWrapper
 from CybORG.Agents.Wrappers.OpenAIGymWrapper import OpenAIGymWrapper
@@ -28,7 +29,6 @@ n_envs=1
 # set max params for observation vector size
 # other than MAX_HOSTS, they are max per host
 env_config = {
-   "fully_obs": True,
    "max_params": {
         "MAX_HOSTS": 5,
         "MAX_PROCESSES": 5,
@@ -51,7 +51,7 @@ path = path[:-10] + "/Shared/Scenarios/TestMSFSessionDQNScenario.yaml"
 cyborg = CybORG(path,'sim', env_config=env_config)
 
 agent=cyborg.environment_controller.agent_interfaces["Red"]
-wrapped_env = FixedFlatWrapper(EnumActionWrapper(cyborg), max_params=env_config["max_params"])
+wrapped_env = FixedFlatWrapper(EnumActionWrapper(ObsHistoryWrapper(cyborg)), max_params=env_config["max_params"])
 #env = OpenAIGymWrapper(env=wrapped_env, agent_name="Red")
 # wraps env in DummyVecEnv VecEnv environment
 env = make_vec_env(lambda: OpenAIGymWrapper(env=wrapped_env, agent_name="Red"),n_envs=n_envs)

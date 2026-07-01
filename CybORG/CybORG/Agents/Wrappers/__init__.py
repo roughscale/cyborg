@@ -1,5 +1,6 @@
 from .BaseWrapper import BaseWrapper
 from .FixedFlatWrapper import FixedFlatWrapper
+from .ObsHistoryWrapper import ObsHistoryWrapper
 from .OpenAIGymWrapper import OpenAIGymWrapper
 from .BlueTableWrapper import BlueTableWrapper
 from .RedTableWrapper import RedTableWrapper
