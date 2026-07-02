@@ -43,9 +43,14 @@ class MSFSubUidShell(MSFPrivilegeEscalation):
         # find session on the chosen host
         hostname = state.ip_addresses[self.ip_address]
 
-        sessions = [ s for s in state.sessions[self.agent] if s.ip_addr == self.ip_address ]
+        # Only actual shell sessions (METERPRETER, MSF_SHELL, SSH) can be escalated
+        # Bare connections from port scans should not allow privilege escalation
+        sessions = [ s for s in state.sessions[self.agent]
+                    if s.ip_addr == self.ip_address
+                    and s.session_type in (SessionType.METERPRETER, SessionType.MSF_SHELL, SessionType.SSH)
+                    and s.active ]
         if len(sessions) == 0:
-            # no valid session could be found on chosen host
+            # no valid shell session could be found on chosen host
             return Observation(success=False)
 
         # find if any sessions are already priv

@@ -38,7 +38,8 @@ class UpgradeToMeterpreter(MSFAction):
         for qual_session in target_sessions: 
 
           # action fails if there is not suitable session (ie not active or of the correct type)
-          if (qual_session.session_type == SessionType.MSF_SHELL or qual_session.session_type == SessionType.METERPRETER) and qual_session.active:
+          # Only MSF_SHELL sessions can be upgraded; METERPRETER sessions are already upgraded
+          if qual_session.session_type == SessionType.MSF_SHELL and qual_session.active:
             suitable_sessions.append(qual_session)
 
         # no suitable sessions
