@@ -214,7 +214,7 @@ class Observation:
             if "PID" in proc and "PID" in new_process and proc["PID"] == new_process["PID"] and proc["PID"] is not None:
                 # merge new_process with existing
                 # need to deep merge connections
-                if "Connection" in proc and "Connections" in new_process:
+                if "Connections" in proc and "Connections" in new_process:
                     # for now just to a straight list extension
                     # we update the new proc with the existing connections
                     # as this will overwrite the existing connection in later dict update
@@ -585,7 +585,7 @@ class Observation:
                          pid: int = None,
                          session_type: str = None,
                          active: bool = True,
-                         routes: list = [],
+                         routes: list = None,
                          **kwargs):
         if hostid is None:
             hostid = str(len(self.data['hosts']))
@@ -621,10 +621,8 @@ class Observation:
 
         if session_type == CyEnums.SessionType.METERPRETER:
             # add Meterpreter specific attributes
-            if not bool(routes): 
-                routes = kwargs.get("Routes", None)
             if routes is None:
-                routes = []
+                routes = kwargs.get("Routes", [])
             new_session["Routes"] = routes
 
         if pid is None:
