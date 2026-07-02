@@ -98,7 +98,7 @@ class AccumulatedState:
                 num_host_processes += len(self.data["hosts"][host]["Processes"])
                 for proc in self.data["hosts"][host]["Processes"]:
                     if "Connections" in proc:
-                        num_proc_connections += 1
+                        num_proc_connections = max(num_proc_connections, len(proc["Connections"]))
                 if num_proc_connections > num_connections:
                     num_connections = num_proc_connections
                 if num_host_processes > num_processes:
@@ -247,9 +247,11 @@ class AccumulatedState:
 
             # Handle inactive sessions
             if session_info.get("Active") == False:
-                inactive_ident = session_info.get("ID")
-                if inactive_ident is not None:
-                    self.data['hosts'][hostid]["Sessions"].pop(inactive_ident)
+                inactive_id = session_info.get("ID")
+                for idx, s in enumerate(self.data['hosts'][hostid]["Sessions"]):
+                    if s.get("ID") == inactive_id:
+                        self.data['hosts'][hostid]["Sessions"].pop(idx)
+                        break
                 return
 
         # Add as new session
@@ -385,7 +387,7 @@ class AccumulatedState:
                         pid: int = None,
                         session_type: str = None,
                         active: bool = True,
-                        routes: list = [],
+                        routes: list = None,
                         **kwargs):
         """Build session info dict (used by merge_session_info)."""
         if hostid is None:
@@ -422,10 +424,8 @@ class AccumulatedState:
             new_session["Type"] = session_type
 
         if session_type == CyEnums.SessionType.METERPRETER:
-            if not bool(routes):
-                routes = kwargs.get("Routes", None)
             if routes is None:
-                routes = []
+                routes = kwargs.get("Routes", [])
             new_session["Routes"] = routes
 
         if pid is not None:
@@ -644,12 +644,29 @@ class AccumulatedState:
         elif "Processes" not in self.data['hosts'][hostid]:
             self.data['hosts'][hostid]["Processes"] = []
 
-        # Check for PID merge
+        # Check for PID merge — mirrors AgentState.merge_process PID-match logic
         proc_merged = False
         for p_idx, proc in enumerate(self.data["hosts"][hostid]["Processes"]):
             if ("PID" in proc and "PID" in process and
                 proc["PID"] == process["PID"] and proc["PID"] is not None):
-                self.data["hosts"][hostid]["Processes"][p_idx].update(process)
+                if "Connections" in process and "Connections" in proc:
+                    merged_conn = copy.deepcopy(proc["Connections"])
+                    for new_c in process["Connections"]:
+                        match = False
+                        for e_idx, e in enumerate(proc["Connections"]):
+                            if new_c.get("local_address") == e.get("local_address") and \
+                               e.get("remote_address") is not None and \
+                               new_c.get("remote_address") is not None and \
+                               new_c["remote_address"] == e["remote_address"]:
+                                if new_c.get("remote_port") == e.get("remote_port") or \
+                                   new_c.get("local_port") == e.get("local_port"):
+                                    merged_conn[e_idx] = new_c
+                                    match = True
+                                    break
+                        if not match:
+                            merged_conn.append(new_c)
+                    process["Connections"] = merged_conn
+                self.data["hosts"][hostid]["Processes"][p_idx] = process
                 proc_merged = True
                 break
 

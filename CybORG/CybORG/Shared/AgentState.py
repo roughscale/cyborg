@@ -50,7 +50,7 @@ class AgentState(Observation):
               num_host_processes += len(self.data["hosts"][host]["Processes"])
               for proc in self.data["hosts"][host]["Processes"]:
                   if "Connections" in proc:
-                      num_proc_connections += 1
+                      num_proc_connections = max(num_proc_connections, len(proc["Connections"]))
               if num_proc_connections > num_connections:
                   num_connections = num_proc_connections
               if num_host_processes > num_processes:
@@ -171,8 +171,11 @@ class AgentState(Observation):
                       self.data['hosts'][hostid]["Sessions"][i] = self.get_session_info(hostid=hostid,agent=agent,**session_info)
                 return
             if session_info.get("Active") == False:
-                inactive_ident = session_info.get("ID")
-                self.data['hosts'][hostid]["Sessions"].pop(inactive_ident)
+                inactive_id = session_info.get("ID")
+                for idx, s in enumerate(self.data['hosts'][hostid]["Sessions"]):
+                    if s.get("ID") == inactive_id:
+                        self.data['hosts'][hostid]["Sessions"].pop(idx)
+                        break
                 return
         self.add_session_info(hostid=hostid, agent=agent, **session_info)
 
@@ -185,7 +188,7 @@ class AgentState(Observation):
                          pid: int = None,
                          session_type: str = None,
                          active: bool = True,
-                         routes: list = [],
+                         routes: list = None,
                          **kwargs):
         if hostid is None:
             hostid = str(len(self.data['hosts']))
@@ -222,10 +225,8 @@ class AgentState(Observation):
 
         if session_type == CyEnums.SessionType.METERPRETER:
             # add Meterpreter specific attributes
-            if not bool(routes):
-                routes = kwargs.get("Routes", None)
             if routes is None:
-                routes = []
+                routes = kwargs.get("Routes", [])
             new_session["Routes"] = routes
 
         if pid is None:
