@@ -1,25 +1,21 @@
 from CybORG import CybORG
 from CybORG.Agents.Wrappers.EnumActionWrapper import EnumActionWrapper
 from CybORG.Agents.Wrappers.FixedFlatWrapper import FixedFlatWrapper
-from CybORG.Agents.Wrappers.FixedFlatStateWrapper import FixedFlatStateWrapper
+from CybORG.Agents.Wrappers.ObsHistoryWrapper import ObsHistoryWrapper
 from CybORG.Agents.Wrappers.OpenAIGymWrapper import OpenAIGymWrapper
-from CybORG.Shared.Results import Results
-from CybORG.Shared.State import State
-from stable_baselines3.common.env_util import make_vec_env
 import inspect
 import psutil
 import json
 import sys
 import time
-import copy
 import os
 import subprocess
 import signal
 import argparse
 
-def signal_handler(sig, frame):
-    os.killpg(os.getpgid(msfrpcd_proc.pid),signal.SIGKILL)
-    #msfrpcd.terminate()
+def signal_handler(_sig, _frame):
+    if msfrpcd_proc is not None:
+        os.killpg(os.getpgid(msfrpcd_proc.pid), signal.SIGKILL)
     sys.exit(0)
 
 signal.signal(signal.SIGINT, signal_handler)
@@ -81,8 +77,7 @@ path = path[:-10] + "/Shared/Scenarios/TestMSFSessionRandomScenario.yaml"
 cyborg = CybORG(path,'aws', env_config=env_config)
 
 agent=cyborg.environment_controller.agent_interfaces["Red"]
-action_env=EnumActionWrapper(cyborg)
-wrapped_env = FixedFlatStateWrapper(action_env, max_params=env_config["max_params"])
+wrapped_env = FixedFlatWrapper(EnumActionWrapper(ObsHistoryWrapper(cyborg)), max_params=env_config["max_params"])
 env = OpenAIGymWrapper(env=wrapped_env, agent_name="Red")
 
 observation=env.reset()
