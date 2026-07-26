@@ -54,7 +54,8 @@ Agents:
       name: MSFShell
       pid: 1500
       ident: 0
-    wrappers: []  
+      routes: [ External ]
+    wrappers: []
 Hosts:
   Attacker0:
     AWS_Info: []

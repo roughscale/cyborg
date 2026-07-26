@@ -1,5 +1,8 @@
 # Copyright DST Group. Licensed under the MIT license.
+import re
 from ipaddress import IPv4Address, IPv4Network
+
+_IP_RE = re.compile(r'\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b')
 
 from CybORG.Shared.Actions.MSFActionsFolder.MSFScannerFolder.MSFScanner import MSFScanner
 from CybORG.Shared.Enums import InterfaceType, SessionType, ProcessType, ProcessVersion, AppProtocol
@@ -63,13 +66,18 @@ class MSFPingsweep(MSFScanner):
              obs.set_success(False)
              return obs
           for line in output.split("\n"):
-                # if line includes subnet gw address (defined as .1 here)
-                # won't apply in cloud network settings
-                if line == "" or line.split(".")[3] == "1":
+                if line == "":
                     continue
-                ip_address = line
-                #session_handler._log_debug(f"New IP Address found: {ip_address}")
-                obs.add_interface_info(hostid=str(ip_address), ip_address=ip_address, subnet=self.subnet)
+                # MSF console decorates output (e.g. "[+] 1.2.3.4 - 1.2.3.4:22 - TCP OPEN")
+                # so extract the first IP address from the line rather than treating the whole line as an IP
+                m = _IP_RE.search(line)
+                if not m:
+                    continue
+                ip_address = m.group(1)
+                # skip gateway (.1 host) — won't apply in cloud networks but kept for safety
+                if ip_address.split(".")[3] == "1":
+                    continue
+                obs.add_interface_info(hostid=ip_address, ip_address=ip_address, subnet=self.subnet)
           obs.set_success(True)
           session_handler._log_debug(output)
         else:
